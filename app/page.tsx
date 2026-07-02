@@ -1,10 +1,12 @@
+"use client";
+
 // app/page.tsx — UONotes Homepage (Next.js 15 App Router)
-// Drop this in app/page.tsx. Assets go in /public/ (see public/ folder).
 
 import Image from "next/image";
 import Link from "next/link";
+import Marquee from "react-fast-marquee";
 
-// ─── Inline SVG helpers (pulled directly from Figma exports) ─────────────────
+// ─── Inline SVG helpers ───────────────────────────────────────────────────────
 
 function FileTextIcon() {
   return (
@@ -67,7 +69,7 @@ function BookmarkIcon() {
 
 function BookOpenIcon() {
   return (
-    <svg width="32" height="32" viewBox="0 0 60 60" fill="none" aria-hidden>
+    <svg width="48" height="48" viewBox="0 0 60 60" fill="none" aria-hidden>
       <path d="M30 17.5C30 14.848 28.946 12.304 27.071 10.429C25.196 8.554 22.652 7.5 20 7.5H5V45H22.5C24.489 45 26.397 45.79 27.803 47.197C29.21 48.603 30 50.511 30 52.5M30 17.5V52.5M30 17.5C30 14.848 31.054 12.304 32.929 10.429C34.804 8.554 37.348 7.5 40 7.5H55V45H37.5C35.511 45 33.603 45.79 32.197 47.197C30.79 48.603 30 50.511 30 52.5"
         stroke="#8F0018" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
@@ -76,7 +78,7 @@ function BookOpenIcon() {
 
 function UsersIcon() {
   return (
-    <svg width="32" height="32" viewBox="0 0 60 60" fill="none" aria-hidden>
+    <svg width="48" height="32" viewBox="0 0 60 60" fill="none" aria-hidden>
       <path d="M42.5 52.5V47.5C42.5 44.848 41.446 42.304 39.571 40.429C37.696 38.554 35.152 37.5 32.5 37.5H12.5C9.848 37.5 7.304 38.554 5.429 40.429C3.554 42.304 2.5 44.848 2.5 47.5V52.5M57.5 52.5V47.5C57.498 45.284 56.761 43.132 55.403 41.381C54.046 39.63 52.145 38.379 50 37.825M40 7.825C42.151 8.376 44.058 9.627 45.419 11.381C46.781 13.135 47.52 15.292 47.52 17.513C47.52 19.733 46.781 21.89 45.419 23.644C44.058 25.398 42.151 26.649 40 27.2M32.5 17.5C32.5 23.023 28.023 27.5 22.5 27.5C16.977 27.5 12.5 23.023 12.5 17.5C12.5 11.977 16.977 7.5 22.5 7.5C28.023 7.5 32.5 11.977 32.5 17.5Z"
         stroke="#8F0018" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
@@ -85,7 +87,7 @@ function UsersIcon() {
 
 function TrendingUpIcon() {
   return (
-    <svg width="32" height="32" viewBox="0 0 60 60" fill="none" aria-hidden>
+    <svg width="48" height="48" viewBox="0 0 60 60" fill="none" aria-hidden>
       <path d="M57.5 15L33.75 38.75L21.25 26.25L2.5 45M57.5 30V15H42.5"
         stroke="#8F0018" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
@@ -98,7 +100,8 @@ function Navbar() {
   return (
     <nav className="navbar">
       <Link href="/" className="nav-logo">
-        <Image src="/logo.png" alt="UONotes" width={120} height={36} />
+        <Image src="/logo.png" alt="" width={44} height={44} style={{ objectFit: "contain", width: "auto", height: "clamp(28px, 4vw, 44px)" }} />
+        <span className="nav-logo-text">UONotes</span>
       </Link>
       <div className="nav-links">
         <Link href="/" className="nav-link active">Home</Link>
@@ -129,7 +132,7 @@ function Hero() {
       </div>
       <p className="hero-description">
         A student-driven platform making academic resources more accessible across
-        <br />all faculties at the University of Ottawa.
+        all faculties at the University of Ottawa.
       </p>
     </section>
   );
@@ -176,9 +179,7 @@ function NoteCard({ title = "Note title", course = "Course title and code", thum
         {thumb ? (
           <Image src={thumb} alt={title} fill style={{ objectFit: "cover" }} />
         ) : (
-          <div className="note-thumb-placeholder">
-            <Image src="/images/placeholder.png" alt="" width={40} height={40} />
-          </div>
+          <Image src="/images/placeholder.png" alt="" fill style={{ objectFit: "cover" }} />
         )}
       </div>
       <div className="note-info">
@@ -288,15 +289,16 @@ function Sponsors() {
   return (
     <section className="section sponsors">
       <h2 className="section-title red">Thank you to our sponsors!</h2>
-      <div className="sponsors-row">
-        {SPONSORS.map((s) => (
-          <div key={s.name} className="sponsor-logo">
-            <Image src={s.src} alt={s.name} width={100} height={40} style={{ objectFit: "contain" }} />
-          </div>
-        ))}
+      <div className="sponsors-marquee-wrapper">
+        <Marquee speed={40} gradient={false} pauseOnHover autoFill>
+          {SPONSORS.map((s, i) => (
+            <div key={i} className="sponsor-logo">
+              <Image src={s.src} alt={s.name} fill sizes="200px" style={{ objectFit: "contain" }} />
+            </div>
+          ))}
+        </Marquee>
       </div>
       <div className="sponsor-actions">
-        {/* "Become a sponsor" → Google Form; "Why sponsor" → PDF in new tab */}
         <a href="https://forms.google.com" target="_blank" rel="noopener" className="btn-outline">
           Become a sponsor
         </a>
@@ -352,7 +354,10 @@ function Footer() {
     <footer className="footer">
       <div className="footer-inner">
         <div className="footer-brand">
-          <Image src="/logo.png" alt="UONotes" width={110} height={32} />
+          <Link href="/" className="nav-logo">
+            <Image src="/logo.png" alt="" width={44} height={44} style={{ objectFit: "contain", width: "auto", height: "clamp(24px, 3vw, 36px)" }} />
+            <span className="nav-logo-text" style={{ fontSize: "clamp(0.9rem, 2vw, 1.25rem)" }}>UONotes</span>
+          </Link>
         </div>
         <div className="footer-cols">
           <div className="footer-col">
@@ -372,18 +377,15 @@ function Footer() {
             <p>Ottawa, ON, K1N 6N5</p>
             <a href="mailto:uofnotes@gmail.com">uofnotes@gmail.com</a>
             <div className="footer-socials">
-              {/* Instagram */}
               <a href="#" aria-label="Instagram">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
                   <path d="M16.2 2C19.4 2 22 4.6 22 7.8V16.2C22 19.4 19.4 22 16.2 22H7.8C4.6 22 2 19.4 2 16.2V7.8C2 4.6 4.6 2 7.8 2H16.2ZM7.6 4C6.645 4 5.73 4.38 5.055 5.055C4.38 5.73 4 6.645 4 7.6V16.4C4 18.39 5.61 20 7.6 20H16.4C17.355 20 18.27 19.62 18.945 18.945C19.62 18.27 20 17.355 20 16.4V7.6C20 5.61 18.39 4 16.4 4H7.6ZM12 7C14.761 7 17 9.239 17 12C17 14.761 14.761 17 12 17C9.239 17 7 14.761 7 12C7 9.239 9.239 7 12 7ZM12 9C10.343 9 9 10.343 9 12C9 13.657 10.343 15 12 15C13.657 15 15 13.657 15 12C15 10.343 13.657 9 12 9ZM17.25 5.5C17.94 5.5 18.5 6.06 18.5 6.75C18.5 7.44 17.94 8 17.25 8C16.56 8 16 7.44 16 6.75C16 6.06 16.56 5.5 17.25 5.5Z"
                     fill="#454545" />
                 </svg>
               </a>
-              {/* TikTok */}
               <a href="#" aria-label="TikTok">
                 <Image src="/images/tiktok.png" alt="TikTok" width={18} height={18} />
               </a>
-              {/* LinkedIn */}
               <a href="#" aria-label="LinkedIn">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
                   <path d="M19 3C19.53 3 20.04 3.211 20.414 3.586C20.789 3.961 21 4.47 21 5V19C21 19.53 20.789 20.04 20.414 20.414C20.04 20.789 19.53 21 19 21H5C4.47 21 3.96 20.789 3.586 20.414C3.211 20.04 3 19.53 3 19V5C3 4.47 3.211 3.96 3.586 3.586C3.96 3.211 4.47 3 5 3H19ZM5.5 18.5H8.27V10.13H5.5V18.5ZM15.24 9.94C14.39 9.94 13.4 10.46 12.92 11.24V10.13H10.13V18.5H12.92V13.57C12.92 12.8 13.54 12.17 14.31 12.17C14.681 12.17 15.037 12.318 15.3 12.58C15.562 12.843 15.71 13.199 15.71 13.57V18.5H18.5V13.2C18.5 12.336 18.156 11.506 17.545 10.895C16.934 10.283 16.104 9.94 15.24 9.94ZM6.88 5.19C6.432 5.19 6.001 5.368 5.685 5.685C5.368 6.001 5.19 6.432 5.19 6.88C5.19 7.81 5.95 8.56 6.88 8.56C7.325 8.56 7.753 8.383 8.068 8.068C8.383 7.753 8.56 7.325 8.56 6.88C8.56 5.95 7.81 5.19 6.88 5.19Z"
