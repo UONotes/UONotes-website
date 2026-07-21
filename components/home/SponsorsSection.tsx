@@ -12,24 +12,20 @@ const SPONSORS = [
 
 export function SponsorsSection() {
   return (
-    <section className="section sponsors">
-      <h2 className="section-title red">Thank you to our sponsors!</h2>
-      <div className="sponsors-marquee-wrapper">
+    <section className="section-wrapper text-center">
+      <h2 className="section-title">Thank you to our sponsors!</h2>
+      <div className="w-full mb-8 overflow-hidden">
         <Marquee speed={40} gradient={false} pauseOnHover autoFill>
           {SPONSORS.map((s, i) => (
-            <div key={i} className="sponsor-logo">
-              <Image src={s.src} alt={s.name} fill sizes="200px" style={{ objectFit: "contain" }} />
+            <div key={i} className="relative flex items-center justify-center mx-4 w-[140px] h-[60px] md:w-[200px] md:h-[96px] shrink-0">
+              <Image src={s.src} alt={s.name} fill sizes="200px" className="object-contain" />
             </div>
           ))}
         </Marquee>
       </div>
-      <div className="sponsor-actions">
-        <a href="https://forms.google.com" target="_blank" rel="noopener" className="btn-outline">
-          Become a sponsor
-        </a>
-        <a href="/sponsorship-package.pdf" target="_blank" rel="noopener" className="btn-outline">
-          Why sponsor UONotes?
-        </a>
+      <div className="flex gap-3 justify-center">
+        <a href="#" className="btn-outline">Become a sponsor</a>
+        <a href="#" className="btn-outline">Why sponsor UONotes?</a>
       </div>
     </section>
   );
