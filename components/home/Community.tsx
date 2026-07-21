@@ -3,7 +3,7 @@ import { TrendingUpIcon, UsersIcon, BookOpenIcon } from "../icons";
 
 export function Community() {
   const stats = [
-    { icon: <TrendingUpIcon />, value: "100,000+", label: "Interactions" },
+    { icon: <TrendingUpIcon />, value: "1,500,000+", label: "Interactions" },
     { icon: <UsersIcon />,      value: "100+",     label: "Contributors" },
     { icon: <BookOpenIcon />,   value: "10",        label: "Faculties covered" },
   ];
