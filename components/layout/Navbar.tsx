@@ -1,11 +1,21 @@
 "use client";
 import Image from "next/image";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useState } from "react";
+
+const navLinks = [
+  { href: "/", label: "Home" },
+  { href: "/notes", label: "Notes" },
+  { href: "/about", label: "About" },
+  { href: "/sponsors", label: "Sponsors" },
+  { href: "/contact", label: "Contact" },
+];
 
 export function Navbar() {
   const [lang, setLang] = useState<"EN" | "FR">("EN");
   const toggleLang = () => setLang(prev => prev === "EN" ? "FR" : "EN");
+  const pathname = usePathname();
 
   return (
     <nav className="flex items-center gap-8 max-w-site mx-auto px-6 py-4">
@@ -13,20 +23,31 @@ export function Navbar() {
         <Image src="/logo.png" alt="" width={44} height={44} className="object-contain w-auto h-[clamp(28px,4vw,44px)]" />
         <span className="font-logo font-semibold text-[clamp(1rem,2.5vw,1.5rem)] text-brand-red leading-relaxed">UONotes</span>
       </Link>
-      
+
       <div className="hidden sm:flex gap-6 flex-1">
-        <Link href="/" className="text-sm text-brand-red font-medium transition-colors">Home</Link>
-        <Link href="/notes" className="text-sm text-brand-body hover:text-brand-red transition-colors">Notes</Link>
-        <Link href="/about" className="text-sm text-brand-body hover:text-brand-red transition-colors">About</Link>
-        <Link href="/sponsors" className="text-sm text-brand-body hover:text-brand-red transition-colors">Sponsors</Link>
-        <Link href="/contact" className="text-sm text-brand-body hover:text-brand-red transition-colors">Contact</Link>
+        {navLinks.map(({ href, label }) => {
+          const active = pathname === href;
+          return (
+            <Link
+              key={href}
+              href={href}
+              className={
+                active
+                  ? "font-logo italic font-bold text-base text-brand-red transition-colors"
+                  : "font-logo font-bold text-base text-brand-dark hover:text-brand-red transition-colors"
+              }
+            >
+              {label}
+            </Link>
+          );
+        })}
       </div>
 
       <div className="flex items-center gap-3 ml-auto">
-        <button onClick={toggleLang} className="text-xs text-brand-body bg-brand-surface border border-brand-border-light rounded px-2.5 py-1.5">
+        <button onClick={toggleLang} className="text-sm font-semibold text-brand-red bg-white border border-brand-red rounded-md px-4 py-2 hover:bg-brand-pink transition-colors">
           {lang} / {lang === "EN" ? "FR" : "EN"}
         </button>
-        <Link href="/signin" className="btn-primary">Sign in</Link>
+        <Link href="/signin" className="btn-primary !text-sm !px-6 !py-2">Sign in</Link>
       </div>
     </nav>
   );

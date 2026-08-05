@@ -66,6 +66,15 @@ export function FileTextIcon() {
     );
   }
   
+  export function MailIcon() {
+    return (
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
+        <path d="M4 5H20C21.105 5 22 5.895 22 7V17C22 18.105 21.105 19 20 19H4C2.895 19 2 18.105 2 17V7C2 5.895 2.895 5 4 5Z" stroke="#8F0018" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+        <path d="M22 7L12 14L2 7" stroke="#8F0018" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    );
+  }
+
   export function TrendingUpIcon() {
     return (
       <svg width="48" height="48" viewBox="0 0 60 60" fill="none" aria-hidden>
