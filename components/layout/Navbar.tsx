@@ -3,18 +3,20 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
+import { AccountMenu } from "./AccountMenu";
 
 const navLinks = [
   { href: "/", label: "Home" },
   { href: "/notes", label: "Notes" },
   { href: "/about", label: "About" },
   { href: "/sponsors", label: "Sponsors" },
-  { href: "/contact", label: "Contact" },
+  { href: "/contact", label: "Contact Us" },
 ];
 
 export function Navbar() {
   const [lang, setLang] = useState<"EN" | "FR">("EN");
   const toggleLang = () => setLang(prev => prev === "EN" ? "FR" : "EN");
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
   const pathname = usePathname();
 
   return (
@@ -44,10 +46,16 @@ export function Navbar() {
       </div>
 
       <div className="flex items-center gap-3 ml-auto">
-        <button onClick={toggleLang} className="text-sm font-semibold text-brand-red bg-white border border-brand-red rounded-md px-4 py-2 hover:bg-brand-pink transition-colors">
-          {lang} / {lang === "EN" ? "FR" : "EN"}
-        </button>
-        <Link href="/signin" className="btn-primary !text-sm !px-6 !py-2">Sign in</Link>
+        {isLoggedIn ? (
+          <AccountMenu lang={lang} toggleLang={toggleLang} onSignOut={() => setIsLoggedIn(false)} />
+        ) : (
+          <>
+            <button onClick={toggleLang} className="text-sm font-semibold text-brand-red bg-white border border-brand-red rounded-md px-4 py-2 hover:bg-brand-pink transition-colors">
+              {lang} / {lang === "EN" ? "FR" : "EN"}
+            </button>
+            <button onClick={() => setIsLoggedIn(true)} className="btn-primary !text-sm !px-6 !py-2">Sign in</button>
+          </>
+        )}
       </div>
     </nav>
   );
