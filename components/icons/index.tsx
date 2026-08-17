@@ -75,6 +75,76 @@ export function FileTextIcon() {
     );
   }
 
+  export function SearchIcon() {
+    return (
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
+        <circle cx="11" cy="11" r="7" stroke="#80746C" strokeWidth="1.8" />
+        <path d="M21 21L16.65 16.65" stroke="#80746C" strokeWidth="1.8" strokeLinecap="round" />
+      </svg>
+    );
+  }
+
+  export function UserIcon() {
+    return (
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
+        <circle cx="12" cy="8" r="4" stroke="white" strokeWidth="1.8" />
+        <path d="M4 20C4 16.134 7.582 13 12 13C16.418 13 20 16.134 20 20" stroke="white" strokeWidth="1.8" strokeLinecap="round" />
+      </svg>
+    );
+  }
+
+  export function ChevronDownIcon({ className }: { className?: string }) {
+    return (
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden className={className}>
+        <path d="M6 9L12 15L18 9" stroke="#8F0018" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    );
+  }
+
+  export function StarFilledIcon({ active = false }: { active?: boolean }) {
+    return (
+      <svg width="15" height="15" viewBox="0 0 24 24" fill={active ? "#8F0018" : "none"} aria-hidden>
+        <path d="M12 2L14.944 8.31L21.9 9.24L16.8 13.87L18.18 20.76L12 17.27L5.82 20.76L7.2 13.87L2.1 9.24L9.056 8.31L12 2Z" stroke={active ? "#8F0018" : "#454545"} strokeWidth="1.5" strokeLinejoin="round" />
+      </svg>
+    );
+  }
+
+  export function UploadIcon() {
+    return (
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
+        <path d="M12 16V4M12 4L7 9M12 4L17 9" stroke="#454545" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+        <path d="M4 16V18C4 19.105 4.895 20 6 20H18C19.105 20 20 19.105 20 18V16" stroke="#454545" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    );
+  }
+
+  export function EditSmallIcon() {
+    return (
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
+        <path d="M12 20H21M16.5 3.5C16.898 3.102 17.437 2.879 18 2.879C18.563 2.879 19.102 3.102 19.5 3.5C19.898 3.898 20.121 4.437 20.121 5C20.121 5.563 19.898 6.102 19.5 6.5L7 19L3 20L4 16L16.5 3.5Z" stroke="#454545" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    );
+  }
+
+  export function GlobeIcon() {
+    return (
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
+        <circle cx="12" cy="12" r="9" stroke="#454545" strokeWidth="1.8" />
+        <path d="M3 12H21M12 3C14.5 5.5 15.75 8.5 15.75 12C15.75 15.5 14.5 18.5 12 21C9.5 18.5 8.25 15.5 8.25 12C8.25 8.5 9.5 5.5 12 3Z" stroke="#454545" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    );
+  }
+
+  export function LogoutIcon() {
+    return (
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
+        <path d="M9 21H5C4.46957 21 3.96086 20.7893 3.58579 20.4142C3.21071 20.0391 3 19.5304 3 19V5C3 4.46957 3.21071 3.96086 3.58579 3.58579C3.96086 3.21071 4.46957 3 5 3H9" stroke="#454545" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+        <path d="M16 17L21 12L16 7" stroke="#454545" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+        <path d="M21 12H9" stroke="#454545" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    );
+  }
+
   export function TrendingUpIcon() {
     return (
       <svg width="48" height="48" viewBox="0 0 60 60" fill="none" aria-hidden>
