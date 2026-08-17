@@ -28,11 +28,17 @@ export function Footer() {
 
           <div className="flex flex-col gap-2">
             <p className="text-sm text-brand-body leading-relaxed">75 Laurier Ave E<br/>Ottawa, ON, K1N 6N5</p>
-            <a href="mailto:uonotes@gmail.com" className="text-sm text-brand-body hover:text-brand-red transition-colors">uonotes@gmail.com</a>
-            <div className="flex gap-2.5 mt-1.5">
-              <a href="#" className="text-xs font-semibold text-brand-muted hover:text-brand-red">IG</a>
-              <a href="#" className="text-xs font-semibold text-brand-muted hover:text-brand-red">TikTok</a>
-              <a href="#" className="text-xs font-semibold text-brand-muted hover:text-brand-red">IN</a>
+            <a href="mailto:uofnotes@gmail.com" className="text-sm text-brand-red font-medium hover:text-brand-red-hover transition-colors">uofnotes@gmail.com</a>
+            <div className="flex items-center gap-3 mt-1.5">
+              <a href="#" aria-label="Instagram" className="opacity-80 hover:opacity-100 transition-opacity">
+                <Image src="/icons/Icon.svg" alt="" width={20} height={20} />
+              </a>
+              <a href="#" aria-label="TikTok" className="opacity-80 hover:opacity-100 transition-opacity">
+                <Image src="/images/tiktok.png" alt="" width={18} height={20} />
+              </a>
+              <a href="#" aria-label="LinkedIn" className="opacity-80 hover:opacity-100 transition-opacity">
+                <Image src="/icons/linkedin.svg" alt="" width={20} height={20} />
+              </a>
             </div>
           </div>
         </div>

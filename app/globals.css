@@ -4,7 +4,7 @@
 
 @layer base {
   body {
-    @apply text-brand-body antialiased min-h-screen overflow-x-hidden;
+    @apply font-logo text-brand-body antialiased min-h-screen overflow-x-hidden;
     /* Restoring your exact gradient stops */
     background: linear-gradient(180deg, #FFF0F0 54%, #FFF7F7 78%, #FFFBFB 89%, #FFFFFF 100%);
   }
