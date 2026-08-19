@@ -1,12 +1,7 @@
 import type { Metadata } from "next";
-import { EB_Garamond } from "next/font/google";
 import "./globals.css";
-
-const ebGaramond = EB_Garamond({
-  subsets: ["latin"],
-  weight: ["600"],
-  variable: "--font-logo",
-});
+import { Navbar } from "@/components/layout/Navbar";
+import { Footer } from "@/components/layout/Footer";
 
 export const metadata: Metadata = {
   title: "UONotes",
@@ -15,12 +10,23 @@ export const metadata: Metadata = {
 
 export default function RootLayout({
   children,
-}: {
+}: Readonly<{
   children: React.ReactNode;
-}) {
+}>) {
   return (
-    <html lang="en" className={ebGaramond.variable}>
-      <body>{children}</body>
+    <html lang="en">
+      <body className="antialiased bg-[#fdfafb] flex flex-col min-h-screen">
+        {/* The Navbar sits at the top of the DOM tree, outside the page routing */}
+        <Navbar />
+        
+        {/* The dynamic page content is injected here */}
+        <main className="flex-1 flex flex-col w-full">
+          {children}
+        </main>
+        
+        {/* The Footer anchors the bottom */}
+        <Footer />
+      </body>
     </html>
   );
 }
