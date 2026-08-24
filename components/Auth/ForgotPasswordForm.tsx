@@ -24,7 +24,7 @@ export function ForgotPasswordForm() {
   }
 
   return (
-    <div className="w-full max-w-[480px] bg-white p-8 md:p-10 rounded-2xl shadow-sm border border-brand-red/10">
+    <div className="w-full flex flex-col">
       <h1 className="text-center font-logo text-3xl font-bold leading-tight text-brand-red mb-2">
         Forgot password?
       </h1>
@@ -48,7 +48,7 @@ export function ForgotPasswordForm() {
           {emailError && <p className="mt-2 text-xs font-medium text-brand-red">{emailError}</p>}
         </div>
 
-        <button type="submit" className="w-full mt-4 bg-brand-red text-white text-base font-semibold px-8 py-3.5 rounded-md transition-transform hover:bg-brand-red/90 active:scale-[0.98] shadow-md">
+        <button type="submit" className="w-full mt-4 bg-brand-red text-white text-base font-semibold px-8 py-3.5 rounded-md transition-transform hover:bg-brand-red/90 active:scale-[0.98] shadow-md cursor-pointer">
           Send reset link
         </button>
 

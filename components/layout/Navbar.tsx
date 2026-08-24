@@ -6,14 +6,16 @@ import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { AccountMenu } from "@/components/layout/AccountMenu";
+import { ShieldAlert } from "lucide-react";
 
 export function Navbar() {
   const [lang, setLang] = useState<"EN" | "FR">("EN");
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [hoveredLink, setHoveredLink] = useState<string | null>(null);
 
-  // TODO: Replace this hardcoded boolean with your actual authentication provider hook
-  const isLoggedIn = false;
+  // TODO: Replace these hardcoded booleans with your actual authentication provider hook
+  const isLoggedIn = true;
+  const isAdmin = true; // <-- HARDCODED FOR UI TESTING
 
   const toggleLang = () => setLang((prev) => (prev === "EN" ? "FR" : "EN"));
   const pathname = usePathname();
@@ -26,7 +28,7 @@ export function Navbar() {
     { name: "Home", href: "/" },
     { name: "Notes", href: "/notes" },
     { name: "About", href: "/about" },
-    { name: "Sponsors", href: "/sponsors" },
+    { name: "Events", href: "/events" },
     { name: "Contact", href: "/contact" },
   ];
 
@@ -76,7 +78,7 @@ export function Navbar() {
                 onMouseEnter={() => setHoveredLink(link.name)}
                 className={`relative px-4 py-2 font-logo text-[17px] font-semibold transition-colors duration-200 z-10 ${
                   isActive
-                    ? "text-brand-red italic"
+                    ? "text-brand-red"
                     : "text-brand-body hover:text-brand-red"
                 }`}
               >
@@ -97,6 +99,17 @@ export function Navbar() {
               </Link>
             );
           })}
+
+          {/* Admin Entry Point - Desktop */}
+          {isAdmin && (
+            <Link
+              href="/admin/queue"
+              className="ml-2 flex items-center gap-1.5 px-3.5 py-2 bg-gray-900 text-white font-logo text-xs font-bold uppercase tracking-wider rounded-lg hover:bg-gray-800 transition-colors shadow-sm"
+            >
+              <ShieldAlert className="w-4 h-4 text-brand-red" />
+              Admin
+            </Link>
+          )}
         </div>
 
         {/* 3. Desktop Actions */}
@@ -180,13 +193,25 @@ export function Navbar() {
                     href={link.href}
                     onClick={() => setIsMobileMenuOpen(false)}
                     className={`font-logo text-lg font-semibold transition-colors duration-200 ${
-                      isActive ? "text-brand-red italic" : "text-brand-body"
+                      isActive ? "text-brand-red" : "text-brand-body"
                     }`}
                   >
                     {link.name}
                   </Link>
                 );
               })}
+
+              {/* Admin Entry Point - Mobile */}
+              {isAdmin && (
+                <Link
+                  href="/admin/queue"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className="flex items-center gap-2 mt-2 px-6 py-2.5 bg-gray-900 text-white font-logo text-sm font-bold uppercase tracking-wider rounded-xl shadow-sm"
+                >
+                  <ShieldAlert className="w-4 h-4 text-brand-red" />
+                  Admin Panel
+                </Link>
+              )}
               
               <div className="flex gap-4 mt-2">
                 

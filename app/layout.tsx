@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
-import { Navbar } from "@/components/layout/Navbar";
-import { Footer } from "@/components/layout/Footer";
+import { AppShell } from "@/components/layout/AppShell";
 
 export const metadata: Metadata = {
   title: "UONotes",
@@ -15,17 +14,13 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className="antialiased bg-[#fdfafb] flex flex-col min-h-screen">
-        {/* The Navbar sits at the top of the DOM tree, outside the page routing */}
-        <Navbar />
-        
-        {/* The dynamic page content is injected here */}
-        <main className="flex-1 flex flex-col w-full">
+      <body className="antialiased flex flex-col min-h-screen relative overflow-x-hidden">
+        {/* Slow Moving Background Layer */}
+        <div className="fixed inset-0 pointer-events-none z-0 animated-grid-bg" />
+
+        <AppShell>
           {children}
-        </main>
-        
-        {/* The Footer anchors the bottom */}
-        <Footer />
+        </AppShell>
       </body>
     </html>
   );

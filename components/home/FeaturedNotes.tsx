@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { motion, Variants } from "framer-motion";
-import { FileText } from "lucide-react";
+import { NoteCard } from "@/components/ui/NoteCard";
 
 const fadeUp: Variants = {
   hidden: { opacity: 0, y: 30 },
@@ -11,40 +11,33 @@ const fadeUp: Variants = {
 
 const staggerContainer: Variants = {
   hidden: { opacity: 0 },
-  visible: { opacity: 1, transition: { staggerChildren: 0.2 } }
+  visible: { opacity: 1, transition: { staggerChildren: 0.1 } }
 };
 
 export function FeaturedNotes() {
   return (
     <motion.section 
       initial="hidden" whileInView="visible" viewport={{ once: true, margin: "-100px" }} variants={staggerContainer}
-      className="py-20 max-w-7xl mx-auto px-4"
+      className="py-16 md:py-24 max-w-7xl mx-auto px-6 sm:px-8 lg:px-12 relative z-10 text-center"
     >
-      <motion.div variants={fadeUp} className="flex items-center justify-center gap-4 mb-12">
-        <FileText className="w-8 h-8 text-brand-red" />
-        <h2 className="text-4xl font-bold font-logo text-brand-red">Featured notes</h2>
+      <motion.div variants={fadeUp} className="flex flex-col items-center justify-center gap-3 mb-16">
+        <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold font-logo text-brand-red tracking-tight">
+          Featured notes
+        </h2>
+        <p className="text-gray-600 text-base sm:text-lg max-w-xl">
+          Explore top-rated study guides, cheat sheets, and summaries shared by students across faculties.
+        </p>
       </motion.div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
-        {[1, 2, 3, 4].map((i) => (
-          <motion.div key={i} variants={fadeUp} whileHover={{ y: -5 }} className="bg-[#fef5f6] rounded-xl shadow-sm border border-brand-red/10 overflow-hidden flex flex-col">
-            <div className="h-40 bg-brand-red/5 w-full flex items-center justify-center text-brand-red/30">
-              <FileText className="w-12 h-12" />
-            </div>
-            <div className="p-5 flex-1 flex flex-col items-center text-center">
-              <h3 className="font-bold text-gray-900 mb-1">Note title</h3>
-              <p className="text-sm text-gray-500 mb-4">Course title and code</p>
-              <div className="mt-auto flex gap-2 w-full justify-center">
-                <button className="px-4 py-1.5 text-xs font-medium border border-brand-red/20 text-brand-red rounded hover:bg-brand-red/5 transition-colors">View PDF</button>
-                <button className="px-4 py-1.5 text-xs font-medium border border-brand-red/20 text-brand-red rounded hover:bg-brand-red/5 transition-colors">Save</button>
-              </div>
-            </div>
-          </motion.div>
-        ))}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-12 text-left">
+        <NoteCard title="Data Structures and Algorithms - Midterm Prep" course="CSI 2110" />
+        <NoteCard title="Introduction to Microeconomics Cheat Sheet" course="ECO 1104" />
+        <NoteCard title="Organic Chemistry I - Full Reaction Mechanisms" course="CHM 2120" />
+        <NoteCard title="Calculus II - Integration Formulas" course="MAT 1322" />
       </div>
 
       <motion.div variants={fadeUp} className="flex justify-center">
-        <Link href="/notes" className="bg-brand-red text-white px-8 py-3 rounded-md shadow-md hover:bg-brand-red/90 transition-transform active:scale-95 font-medium">
+        <Link href="/notes" className="px-8 py-3.5 rounded-lg bg-brand-red text-white font-semibold text-base shadow-lg shadow-brand-red/20 hover:bg-brand-red/90 transition-all active:scale-95 text-center">
           View all notes
         </Link>
       </motion.div>

@@ -11,7 +11,6 @@ function SignInFormLogic() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  // Read the '?from=' redirect parameter directly from the URL on the client
   const fromParam = searchParams.get("from");
   const returnPath = fromParam && fromParam.startsWith("/") && !fromParam.startsWith("//") ? fromParam : "/";
 
@@ -28,12 +27,11 @@ function SignInFormLogic() {
     }
 
     setLoginError("");
-    // Redirect to the return path after successful login
     router.replace(returnPath);
   }
 
   return (
-    <div className="w-full max-w-[480px] bg-white p-8 md:p-10 rounded-2xl shadow-sm border border-brand-red/10">
+    <div className="w-full flex flex-col">
       <h1 className="text-center font-logo text-3xl font-bold leading-tight text-brand-red mb-2">
         Welcome back
       </h1>
@@ -71,7 +69,7 @@ function SignInFormLogic() {
 
         <button
           type="submit"
-          className="w-full mt-4 bg-brand-red text-white text-base font-semibold px-8 py-3.5 rounded-md transition-transform hover:bg-brand-red/90 active:scale-[0.98] shadow-md"
+          className="w-full mt-4 bg-brand-red text-white text-base font-semibold px-8 py-3.5 rounded-md transition-transform hover:bg-brand-red/90 active:scale-[0.98] shadow-md cursor-pointer"
         >
           Sign in
         </button>
@@ -89,10 +87,9 @@ function SignInFormLogic() {
   );
 }
 
-// Wrap the form in a Suspense boundary to satisfy Next.js static build requirements for useSearchParams
 export function SignInForm() {
   return (
-    <Suspense fallback={<div className="w-full max-w-[480px] h-[450px] bg-white rounded-2xl shadow-sm border border-brand-red/10 animate-pulse" />}>
+    <Suspense fallback={<div className="w-full h-[450px] animate-pulse" />}>
       <SignInFormLogic />
     </Suspense>
   );

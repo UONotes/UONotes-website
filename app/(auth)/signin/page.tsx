@@ -7,9 +7,5 @@ export const metadata: Metadata = {
 };
 
 export default function SignInPage() {
-  return (
-    <div className="w-full min-h-[calc(100vh-80px)] flex flex-col items-center justify-center bg-[#fef5f6] py-12 px-4 overflow-hidden">
-      <SignInForm />
-    </div>
-  );
+  return <SignInForm />;
 }

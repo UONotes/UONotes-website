@@ -21,11 +21,10 @@ export function SignUpForm() {
     }
 
     setEmailError("");
-    // Backend logic goes here
   }
 
   return (
-    <div className="w-full max-w-[540px] bg-white p-8 md:p-10 rounded-2xl shadow-sm border border-brand-red/10">
+    <div className="w-full flex flex-col">
       <h1 className="text-center font-logo text-3xl font-bold leading-tight text-brand-red mb-2">
         Create an account
       </h1>
@@ -61,7 +60,7 @@ export function SignUpForm() {
           <FormField id="signup-confirm-password" label="Confirm Password" name="confirmPassword" type="password" placeholder="••••••••" autoComplete="new-password" required />
         </div>
 
-        <button type="submit" className="w-full mt-4 bg-brand-red text-white text-base font-semibold px-8 py-3.5 rounded-md transition-transform hover:bg-brand-red/90 active:scale-[0.98] shadow-md">
+        <button type="submit" className="w-full mt-4 bg-brand-red text-white text-base font-semibold px-8 py-3.5 rounded-md transition-transform hover:bg-brand-red/90 active:scale-[0.98] shadow-md cursor-pointer">
           Create account
         </button>
 
