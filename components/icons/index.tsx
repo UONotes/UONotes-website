@@ -14,9 +14,9 @@ export function FileTextIcon() {
     );
   }
   
-  export function StarIcon() {
+  export function StarIcon({ size = 64 }: { size?: number }) {
     return (
-      <svg width="64" height="64" viewBox="0 0 87 87" fill="none" aria-hidden>
+      <svg width={size} height={size} viewBox="0 0 87 87" fill="none" aria-hidden>
         <path d="M43.5 7.25L54.7013 29.9425L79.75 33.6038L61.625 51.2575L65.9025 76.1975L43.5 64.4163L21.0975 76.1975L25.375 51.2575L7.25 33.6038L32.2987 29.9425L43.5 7.25Z" stroke="#8F0018" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />
       </svg>
     );
@@ -30,29 +30,29 @@ export function FileTextIcon() {
     );
   }
   
-  export function EyeIcon() {
+  export function EyeIcon({ size = 14, color = "#2A2A2A" }: { size?: number; color?: string }) {
     return (
-      <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden>
+      <svg width={size} height={size} viewBox="0 0 16 16" fill="none" aria-hidden>
         <g clipPath="url(#eye-clip)">
-          <path d="M0.667 8C0.667 8 3.333 2.667 8 2.667C12.667 2.667 15.333 8 15.333 8C15.333 8 12.667 13.333 8 13.333C3.333 13.333 0.667 8 0.667 8Z" stroke="#2A2A2A" strokeLinecap="round" strokeLinejoin="round" />
-          <path d="M8 10C9.105 10 10 9.105 10 8C10 6.895 9.105 6 8 6C6.895 6 6 6.895 6 8C6 9.105 6.895 10 8 10Z" stroke="#2A2A2A" strokeLinecap="round" strokeLinejoin="round" />
+          <path d="M0.667 8C0.667 8 3.333 2.667 8 2.667C12.667 2.667 15.333 8 15.333 8C15.333 8 12.667 13.333 8 13.333C3.333 13.333 0.667 8 0.667 8Z" stroke={color} strokeLinecap="round" strokeLinejoin="round" />
+          <path d="M8 10C9.105 10 10 9.105 10 8C10 6.895 9.105 6 8 6C6.895 6 6 6.895 6 8C6 9.105 6.895 10 8 10Z" stroke={color} strokeLinecap="round" strokeLinejoin="round" />
         </g>
         <defs><clipPath id="eye-clip"><rect width="16" height="16" fill="white" /></clipPath></defs>
       </svg>
     );
   }
-  
-  export function BookmarkIcon() {
+
+  export function BookmarkIcon({ size = 14, color = "#1E1E1E" }: { size?: number; color?: string }) {
     return (
-      <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden>
-        <path d="M12.667 14L8 10.667L3.333 14V3.333C3.333 2.98 3.474 2.641 3.724 2.391C3.974 2.14 4.313 2 4.667 2H11.333C11.687 2 12.026 2.14 12.276 2.391C12.526 2.641 12.667 2.98 12.667 3.333V14Z" stroke="#1E1E1E" strokeLinecap="round" strokeLinejoin="round" />
+      <svg width={size} height={size} viewBox="0 0 16 16" fill="none" aria-hidden>
+        <path d="M12.667 14L8 10.667L3.333 14V3.333C3.333 2.98 3.474 2.641 3.724 2.391C3.974 2.14 4.313 2 4.667 2H11.333C11.687 2 12.026 2.14 12.276 2.391C12.526 2.641 12.667 2.98 12.667 3.333V14Z" stroke={color} strokeLinecap="round" strokeLinejoin="round" />
       </svg>
     );
   }
-  
-  export function BookOpenIcon() {
+
+  export function BookOpenIcon({ size = 48 }: { size?: number }) {
     return (
-      <svg width="48" height="48" viewBox="0 0 60 60" fill="none" aria-hidden>
+      <svg width={size} height={size} viewBox="0 0 60 60" fill="none" aria-hidden>
         <path d="M30 17.5C30 14.848 28.946 12.304 27.071 10.429C25.196 8.554 22.652 7.5 20 7.5H5V45H22.5C24.489 45 26.397 45.79 27.803 47.197C29.21 48.603 30 50.511 30 52.5M30 17.5V52.5M30 17.5C30 14.848 31.054 12.304 32.929 10.429C34.804 8.554 37.348 7.5 40 7.5H55V45H37.5C35.511 45 33.603 45.79 32.197 47.197C30.79 48.603 30 50.511 30 52.5" stroke="#8F0018" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />
       </svg>
     );
@@ -141,6 +141,14 @@ export function FileTextIcon() {
         <path d="M9 21H5C4.46957 21 3.96086 20.7893 3.58579 20.4142C3.21071 20.0391 3 19.5304 3 19V5C3 4.46957 3.21071 3.96086 3.58579 3.58579C3.96086 3.21071 4.46957 3 5 3H9" stroke="#454545" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
         <path d="M16 17L21 12L16 7" stroke="#454545" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
         <path d="M21 12H9" stroke="#454545" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    );
+  }
+
+  export function FolderIcon({ size = 40 }: { size?: number }) {
+    return (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden>
+        <path d="M3 7C3 5.895 3.895 5 5 5H9L11 7H19C20.105 7 21 7.895 21 9V17C21 18.105 20.105 19 19 19H5C3.895 19 3 18.105 3 17V7Z" fill="#D9A79E" />
       </svg>
     );
   }

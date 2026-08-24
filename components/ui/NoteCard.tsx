@@ -1,7 +1,7 @@
 import Image from "next/image";
 import { EyeIcon, BookmarkIcon } from "../icons";
 
-export function NoteCard({ title = "Note title", course = "Course title and code", thumb }: { title?: string; course?: string; thumb?: string; }) {
+export function NoteCard({ title = "Note title", course = "Course title and code", thumb, saved = false }: { title?: string; course?: string; thumb?: string; saved?: boolean; }) {
   return (
     <div className="custom-card">
       <div className="relative h-[120px] bg-brand-surface">
@@ -12,7 +12,7 @@ export function NoteCard({ title = "Note title", course = "Course title and code
         <p className="text-xs text-brand-muted mb-2">{course}</p>
         <div className="flex gap-1.5">
           <button className="btn-tag"><EyeIcon /> View PDF</button>
-          <button className="btn-tag"><BookmarkIcon /> Save</button>
+          <button className="btn-tag"><BookmarkIcon /> {saved ? "Saved" : "Save"}</button>
         </div>
       </div>
     </div>
