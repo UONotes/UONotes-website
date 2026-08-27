@@ -1,0 +1,56 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply text-brand-body antialiased min-h-screen overflow-x-hidden;
+    background-color: #FFF0F0;
+  }
+}
+
+@layer components {
+  .custom-card {
+    @apply bg-white border border-brand-border-light rounded-lg overflow-hidden;
+    transition: box-shadow 0.15s;
+  }
+  .custom-card:hover {
+    box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+  }
+  .section-wrapper {
+    @apply max-w-site mx-auto px-6 py-12;
+  }
+  .section-title {
+    @apply font-logo text-brand-red text-[clamp(1.75rem,3vw,2.5rem)] font-semibold text-center tracking-tight leading-snug mb-10;
+  }
+  .btn-primary {
+    @apply inline-flex items-center gap-1.5 bg-brand-red text-white text-base font-medium px-7 py-3 rounded-md transition-colors hover:bg-brand-red-hover;
+  }
+  .btn-outline {
+    @apply inline-flex items-center gap-1.5 bg-transparent text-brand-red text-[clamp(0.875rem,1.2vw,1.1rem)] font-medium px-[clamp(20px,2.5vw,32px)] py-[clamp(10px,1.2vw,14px)] rounded-md border-[1.5px] border-brand-red transition-all hover:bg-brand-red hover:text-white;
+  }
+  .btn-outline-sm {
+    @apply inline-flex items-center text-brand-red text-xs font-medium px-3 py-1.5 rounded border border-brand-red transition-all hover:bg-brand-red hover:text-white;
+  }
+  .btn-tag {
+    @apply inline-flex items-center gap-1 bg-brand-pink text-brand-body text-[0.7rem] px-2 py-1 rounded border border-brand-border transition-colors hover:bg-[#ffe0e0];
+  }
+}
+
+/* --- MOVING GRID BACKGROUND ANIMATION --- */
+@keyframes slowDrift {
+  0% {
+    background-position: 0px 0px;
+  }
+  100% {
+    background-position: 32px 32px;
+  }
+}
+
+.animated-grid-bg {
+  background-image: 
+    linear-gradient(rgba(168, 49, 66, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(168, 49, 66, 0.05) 1px, transparent 1px);
+  background-size: 32px 32px;
+  animation: slowDrift 25s linear infinite;
+}
