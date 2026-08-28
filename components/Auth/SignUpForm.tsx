@@ -4,6 +4,7 @@ import type { FormEvent } from "react";
 import { useState } from "react";
 import Link from "next/link";
 import { FormField } from "@/components/ui/FormField";
+<<<<<<< HEAD
 import { createClient } from "@/lib/supabase/client";
 
 export function SignUpForm() {
@@ -23,10 +24,24 @@ export function SignUpForm() {
     const confirmPassword = String(formData.get("confirmPassword") ?? "");
 
     const isValidUOttawaEmail = /^[^\s@]+@uottawa\.ca$/i.test(email);
+=======
+
+export function SignUpForm() {
+  const [emailError, setEmailError] = useState("");
+
+  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const formData = new FormData(event.currentTarget);
+    const email = String(formData.get("email") ?? "").trim();
+
+    const isValidUOttawaEmail = /^[^\s@]+@uottawa\.ca$/i.test(email);
+
+>>>>>>> 65232cb17346aabc37cd4372e222a2338e691dc4
     if (!isValidUOttawaEmail) {
       setEmailError("Please enter a valid @uottawa.ca email address.");
       return;
     }
+<<<<<<< HEAD
     setEmailError("");
 
     if (password !== confirmPassword) {
@@ -85,6 +100,10 @@ export function SignUpForm() {
         </p>
       </div>
     );
+=======
+
+    setEmailError("");
+>>>>>>> 65232cb17346aabc37cd4372e222a2338e691dc4
   }
 
   return (
@@ -115,10 +134,19 @@ export function SignUpForm() {
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+<<<<<<< HEAD
+=======
+          <FormField id="signup-student-number" label="Student Number" name="studentNumber" type="text" inputMode="numeric" placeholder="123456789" autoComplete="off" required />
+          <FormField id="signup-program" label="Program of Study" name="program" type="text" placeholder="Computer Science" autoComplete="organization-title" required />
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+>>>>>>> 65232cb17346aabc37cd4372e222a2338e691dc4
           <FormField id="signup-password" label="Password" name="password" type="password" placeholder="••••••••" autoComplete="new-password" required />
           <FormField id="signup-confirm-password" label="Confirm Password" name="confirmPassword" type="password" placeholder="••••••••" autoComplete="new-password" required />
         </div>
 
+<<<<<<< HEAD
         {formError && <p className="text-xs font-medium text-brand-red text-center">{formError}</p>}
 
         <button
@@ -127,6 +155,10 @@ export function SignUpForm() {
           className="w-full mt-4 bg-brand-red text-white text-base font-semibold px-8 py-3.5 rounded-md transition-transform hover:bg-brand-red/90 active:scale-[0.98] shadow-md cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
         >
           {isSubmitting ? "Creating account..." : "Create account"}
+=======
+        <button type="submit" className="w-full mt-4 bg-brand-red text-white text-base font-semibold px-8 py-3.5 rounded-md transition-transform hover:bg-brand-red/90 active:scale-[0.98] shadow-md cursor-pointer">
+          Create account
+>>>>>>> 65232cb17346aabc37cd4372e222a2338e691dc4
         </button>
 
         <p className="mt-4 text-center text-sm text-gray-600">
