@@ -13,8 +13,14 @@ function SignInFormLogic() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
+  const AUTH_PATHS = ["/signin", "/signup", "/forgot-password", "/reset-password"];
   const fromParam = searchParams.get("from");
-  const returnPath = fromParam && fromParam.startsWith("/") && !fromParam.startsWith("//") ? fromParam : "/";
+  const isSafeReturnPath =
+    fromParam &&
+    fromParam.startsWith("/") &&
+    !fromParam.startsWith("//") &&
+    !AUTH_PATHS.some((path) => fromParam.startsWith(path));
+  const returnPath = isSafeReturnPath ? fromParam : "/";
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
