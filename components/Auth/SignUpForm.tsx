@@ -3,26 +3,30 @@
 import type { FormEvent } from "react";
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { FormField } from "@/components/ui/FormField";
 import { createClient } from "@/lib/supabase/client";
 
 export function SignUpForm() {
+  const [step, setStep] = useState<"details" | "code">("details");
+  const [email, setEmail] = useState("");
   const [emailError, setEmailError] = useState("");
   const [formError, setFormError] = useState("");
+  const [codeError, setCodeError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [submittedEmail, setSubmittedEmail] = useState<string | null>(null);
+  const router = useRouter();
 
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleDetailsSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setFormError("");
 
     const formData = new FormData(event.currentTarget);
     const fullName = String(formData.get("fullName") ?? "").trim();
-    const email = String(formData.get("email") ?? "").trim();
+    const enteredEmail = String(formData.get("email") ?? "").trim();
     const password = String(formData.get("password") ?? "");
     const confirmPassword = String(formData.get("confirmPassword") ?? "");
 
-    const isValidUOttawaEmail = /^[^\s@]+@uottawa\.ca$/i.test(email);
+    const isValidUOttawaEmail = /^[^\s@]+@uottawa\.ca$/i.test(enteredEmail);
     if (!isValidUOttawaEmail) {
       setEmailError("Please enter a valid @uottawa.ca email address.");
       return;
@@ -44,11 +48,10 @@ export function SignUpForm() {
 
     const supabase = createClient();
     const { data, error } = await supabase.auth.signUp({
-      email,
+      email: enteredEmail,
       password,
       options: {
         data: { full_name: fullName },
-        emailRedirectTo: `${window.location.origin}/callback`,
       },
     });
 
@@ -64,36 +67,89 @@ export function SignUpForm() {
       return;
     }
 
-    setSubmittedEmail(email);
+    setEmail(enteredEmail);
+    setStep("code");
   }
 
-  if (submittedEmail) {
+  async function handleCodeSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const formData = new FormData(event.currentTarget);
+    const code = String(formData.get("code") ?? "").trim();
+
+    if (code.length !== 8) {
+      setCodeError("Enter the 8-digit code from your email.");
+      return;
+    }
+    setCodeError("");
+    setIsSubmitting(true);
+
+    const supabase = createClient();
+    const { error } = await supabase.auth.verifyOtp({
+      email,
+      token: code,
+      type: "signup",
+    });
+
+    setIsSubmitting(false);
+
+    if (error) {
+      setCodeError("That code is incorrect or has expired. Request a new one below.");
+      return;
+    }
+
+    router.replace("/dashboard");
+  }
+
+  if (step === "code") {
     return (
-      <div className="w-full flex flex-col items-center text-center">
-        <h1 className="font-logo text-3xl font-bold leading-tight text-brand-red mb-2">
-          Check your email
+      <div key="code-step" className="w-full flex flex-col">
+        <h1 className="text-center font-logo text-3xl font-bold leading-tight text-brand-red mb-2">
+          Verify your email
         </h1>
-        <p className="text-sm text-gray-600 mb-6">
-          We sent a confirmation link to <span className="font-semibold text-gray-900">{submittedEmail}</span>.
-          Click it to activate your account.
+        <p className="text-center text-sm text-gray-600 mb-8">
+          We sent an 8-digit code to <span className="font-semibold text-gray-900">{email}</span>.
         </p>
-        <p className="text-xs text-gray-500">
-          Didn&apos;t get it? Check your spam folder, or{" "}
+
+        <form onSubmit={handleCodeSubmit} noValidate aria-label="Enter confirmation code" className="flex flex-col gap-5">
+          <div>
+            <FormField
+              id="signup-code"
+              label="8-Digit Code"
+              name="code"
+              type="text"
+              inputMode="numeric"
+              placeholder="12345678"
+              maxLength={8}
+              autoComplete="one-time-code"
+              aria-invalid={codeError ? true : undefined}
+              onChange={() => codeError && setCodeError("")}
+              required
+            />
+            {codeError && <p className="mt-2 text-xs font-medium text-brand-red">{codeError}</p>}
+          </div>
+
+          <button
+            type="submit"
+            disabled={isSubmitting}
+            className="w-full mt-4 bg-brand-red text-white text-base font-semibold px-8 py-3.5 rounded-md transition-transform hover:bg-brand-red/90 active:scale-[0.98] shadow-md cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+          >
+            {isSubmitting ? "Verifying..." : "Verify and continue"}
+          </button>
+
           <button
             type="button"
-            className="font-semibold text-brand-red hover:underline underline-offset-2"
-            onClick={() => setSubmittedEmail(null)}
+            className="text-sm font-medium text-gray-600 hover:text-brand-red transition-colors"
+            onClick={() => { setStep("details"); setCodeError(""); }}
           >
-            try again
+            Use a different email
           </button>
-          .
-        </p>
+        </form>
       </div>
     );
   }
 
   return (
-    <div className="w-full flex flex-col">
+    <div key="details-step" className="w-full flex flex-col">
       <h1 className="text-center font-logo text-3xl font-bold leading-tight text-brand-red mb-2">
         Create an account
       </h1>
@@ -101,7 +157,7 @@ export function SignUpForm() {
         Gain access to bilingual resources. Share your notes, help students, and earn volunteer hours.
       </p>
 
-      <form onSubmit={handleSubmit} noValidate aria-label="Create a UONotes account" className="flex flex-col gap-5">
+      <form onSubmit={handleDetailsSubmit} noValidate aria-label="Create a UONotes account" className="flex flex-col gap-5">
         <FormField id="signup-full-name" label="Full Name" name="fullName" type="text" placeholder="John Doe" autoComplete="name" required />
 
         <div>
