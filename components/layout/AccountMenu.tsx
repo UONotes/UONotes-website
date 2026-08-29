@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { UserIcon, ChevronDownIcon, StarFilledIcon, UploadIcon, EditSmallIcon, GlobeIcon, LogoutIcon } from "../icons";
+import { Settings } from "lucide-react";
 
 export function AccountMenu({ lang, toggleLang, onSignOut }: { lang: "EN" | "FR"; toggleLang: () => void; onSignOut: () => void; }) {
   const [open, setOpen] = useState(false);
@@ -51,6 +52,9 @@ export function AccountMenu({ lang, toggleLang, onSignOut }: { lang: "EN" | "FR"
             </Link>
             <Link href="/notes" onClick={() => setOpen(false)} className={`${itemClass} font-semibold text-gray-700 hover:text-brand-red`}>
               <EditSmallIcon className="w-5 h-5" /> View Notes
+            </Link>
+            <Link href="/settings" onClick={() => setOpen(false)} className={`${itemClass} font-semibold text-gray-700 hover:text-brand-red`}>
+              <Settings className="w-5 h-5" /> Settings
             </Link>
 
             <div className="border-t border-brand-red/10 my-2" />
