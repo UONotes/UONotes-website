@@ -1,13 +1,15 @@
 "use client";
 
 import type { FormEvent } from "react";
-import { useState } from "react";
+import { useState, Suspense } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { FormField } from "@/components/ui/FormField";
 import { createClient } from "@/lib/supabase/client";
 
-export function SignUpForm() {
+const AUTH_PATHS = ["/signin", "/signup", "/forgot-password", "/reset-password"];
+
+function SignUpFormLogic() {
   const [step, setStep] = useState<"details" | "code">("details");
   const [email, setEmail] = useState("");
   const [emailError, setEmailError] = useState("");
@@ -15,6 +17,15 @@ export function SignUpForm() {
   const [codeError, setCodeError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const router = useRouter();
+  const searchParams = useSearchParams();
+
+  const fromParam = searchParams.get("from");
+  const isSafeReturnPath =
+    fromParam &&
+    fromParam.startsWith("/") &&
+    !fromParam.startsWith("//") &&
+    !AUTH_PATHS.some((path) => fromParam.startsWith(path));
+  const returnPath = isSafeReturnPath ? fromParam : "/";
 
   async function handleDetailsSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -97,7 +108,7 @@ export function SignUpForm() {
       return;
     }
 
-    router.replace("/dashboard");
+    router.replace(returnPath);
   }
 
   if (step === "code") {
@@ -198,5 +209,13 @@ export function SignUpForm() {
         </p>
       </form>
     </div>
+  );
+}
+
+export function SignUpForm() {
+  return (
+    <Suspense fallback={<div className="w-full h-[450px] animate-pulse" />}>
+      <SignUpFormLogic />
+    </Suspense>
   );
 }
