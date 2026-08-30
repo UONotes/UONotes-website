@@ -14,8 +14,8 @@ export const TEAM_DATA: TeamSection[] = [
   {
     teamName: "Presidential Team",
     members: [
-      { name: "Kiana G. Vazvani", role: "Founder", imageUrl: "/about/Kiana-Headshot.png"},
-      { name: "Talar Aghazarian", role: "Co-Founder", imageUrl: "/about/Talar-Headshot.png"},
+      { name: "Kiana G. Vazvani", role: "President", imageUrl: "/about/Kiana-Headshot.png"},
+      { name: "Talar Aghazarian", role: "Vice-President", imageUrl: "/about/Talar-Headshot.png"},
     ],
   },
   {

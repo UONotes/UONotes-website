@@ -1,21 +1,57 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { LayoutDashboard, Users, FileText, Settings, ShieldAlert, BookOpen, Flag, ArrowLeft } from "lucide-react";
+import { LayoutDashboard, Users, FileText, Settings, ShieldAlert, BookOpen, ArrowLeft } from "lucide-react";
+import { createClient } from "@/lib/supabase/client";
 
 const ADMIN_NAV = [
   { name: "Overview", href: "/admin", icon: LayoutDashboard },
   { name: "Review Queue", href: "/admin/queue", icon: FileText },
   { name: "Users", href: "/admin/users", icon: Users },
-  { name: "Reports", href: "/admin/reports", icon: Flag },
   { name: "Guidelines", href: "/admin/guidelines", icon: BookOpen },
   { name: "Settings", href: "/admin/settings", icon: Settings },
 ];
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const supabase = createClient();
+  
+  const [adminProfile, setAdminProfile] = useState<{ name: string; email: string; initials: string } | null>(null);
+
+  useEffect(() => {
+    async function fetchAdminData() {
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (user) {
+        const email = user.email || "admin@uonotes.com";
+        const rawName = user.user_metadata?.full_name || email.split("@")[0];
+        
+        // Format the name nicely (capitalize first letters if it fell back to email prefix)
+        const displayName = user.user_metadata?.full_name 
+          ? rawName 
+          : rawName.split(/[._-]/).map((chunk: string) => chunk.charAt(0).toUpperCase() + chunk.slice(1)).join(" ");
+          
+        // Generate up to 2 initials (e.g., "John Doe" -> "JD")
+        const initials = displayName
+          .split(" ")
+          .map((n: string) => n[0])
+          .join("")
+          .substring(0, 2)
+          .toUpperCase();
+
+        setAdminProfile({
+          name: displayName,
+          email: email,
+          initials: initials || "AD",
+        });
+      }
+    }
+
+    fetchAdminData();
+  }, [supabase]);
 
   return (
     <div className="flex h-screen w-full bg-gray-50/50 text-gray-900 font-sans overflow-hidden">
@@ -73,15 +109,19 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           })}
         </nav>
         
-        {/* Admin Profile Footer */}
+        {/* Admin Profile Footer - DYNAMIC */}
         <div className="p-4 border-t border-gray-100/80">
-          <div className="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-gray-50/50 border border-gray-100">
-            <div className="w-8 h-8 rounded-full bg-brand-red text-white flex items-center justify-center font-bold text-xs shrink-0 shadow-sm">
-              JA
+          <div className="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-gray-50/50 border border-gray-100 transition-colors hover:bg-gray-100/80 cursor-default">
+            <div className="w-8 h-8 rounded-full bg-brand-red text-white flex items-center justify-center font-bold text-xs shrink-0 shadow-sm uppercase tracking-wider">
+              {adminProfile?.initials || "..."}
             </div>
             <div className="overflow-hidden">
-              <p className="text-xs font-bold text-gray-900 truncate">Jack (VP)</p>
-              <p className="text-[10px] text-gray-400 font-mono truncate">jack@uonotes.com</p>
+              <p className="text-xs font-bold text-gray-900 truncate">
+                {adminProfile?.name || "Loading..."}
+              </p>
+              <p className="text-[10px] text-gray-400 font-mono truncate">
+                {adminProfile?.email || "Fetching profile..."}
+              </p>
             </div>
           </div>
         </div>

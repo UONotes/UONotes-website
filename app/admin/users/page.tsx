@@ -1,44 +1,70 @@
-import { UserListTable } from "@/components/admin/UserListTable";
-import { AdminUser } from "@/lib/admin";
-import { Search, Filter } from "lucide-react";
+import { createClient } from "@/lib/supabase/server";
+import { UserSearchControls } from "@/components/admin/users/UserSearchControls";
+import { UserListTable } from "@/components/admin/users/UserListTable";
 
-export default async function AdminUsersPage() {
-  // TODO: Secure Server-side fetch.
-  const mockUsers: AdminUser[] = [
-    { id: "usr_1", name: "Caira Nobert", email: "caira@uottawa.ca", role: "STUDENT", status: "ACTIVE", joinedAt: "Sep 2024", submissionCount: 12 },
-    { id: "usr_2", name: "Jack (VP)", email: "jack@uonotes.com", role: "ADMIN", status: "ACTIVE", joinedAt: "Jan 2024", submissionCount: 45 },
-    { id: "usr_3", name: "Spam Bot", email: "scammer@fake.com", role: "STUDENT", status: "BANNED", joinedAt: "Oct 2025", submissionCount: 0 },
-  ];
+export default async function AdminUsersPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ q?: string; role?: string; page?: string }>;
+}) {
+  const supabase = await createClient();
+  
+  // UNWRAP THE PROMISE (Required in Next.js latest versions)
+  const resolvedParams = await searchParams;
+  
+  const query = resolvedParams.q?.trim() || "";
+  const roleFilter = resolvedParams.role || "ALL";
+  const currentPage = parseInt(resolvedParams.page || "1", 10);
+  const PAGE_SIZE = 20;
+
+  let dbQuery = supabase
+    .from("profiles")
+    .select("id, full_name, email, is_admin, status, created_at, notes!notes_uploader_id_fkey(count)", { count: "exact" });
+
+  if (query) {
+    dbQuery.or(`full_name.ilike.%${query}%,email.ilike.%${query}%`);
+  }
+
+  if (roleFilter === "ADMIN") {
+    dbQuery.eq("is_admin", true);
+  } else if (roleFilter === "STUDENT") {
+    dbQuery.eq("is_admin", false);
+  }
+
+  const from = (currentPage - 1) * PAGE_SIZE;
+  const to = from + PAGE_SIZE - 1;
+  const { data: usersData, count: totalUsers, error } = await dbQuery
+    .order("created_at", { ascending: false })
+    .range(from, to);
+
+  if (error) {
+    console.error("Supabase Database Error (Users):", JSON.stringify(error, null, 2));
+  }
+
+  const formattedUsers = (usersData || []).map((user: any) => ({
+    id: user.id,
+    name: user.full_name || "Unknown",
+    email: user.email,
+    role: user.is_admin ? "ADMIN" : "STUDENT",
+    status: user.status || "ACTIVE",
+    joinedAt: new Date(user.created_at).toLocaleDateString("en-US", { month: 'short', year: 'numeric' }),
+    submissionCount: user.notes?.[0]?.count || 0,
+  }));
 
   return (
     <div className="w-full flex flex-col gap-8 animate-in fade-in duration-500">
-      
-      {/* Page Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-2xl sm:text-3xl font-black text-gray-900 tracking-tight">Directory</h1>
-          <p className="text-sm text-gray-500 mt-1">Manage platform users, roles, and access.</p>
+          <p className="text-sm text-gray-500 mt-1">
+            Manage platform users, roles, and access. ({totalUsers || 0} total)
+          </p>
         </div>
       </div>
 
-      {/* Controls & Search */}
-      <div className="flex flex-col sm:flex-row gap-3">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-          <input 
-            type="text" 
-            placeholder="Search by name, email, or ID..." 
-            className="w-full pl-9 pr-4 py-2 bg-white border border-gray-200 rounded-lg text-sm text-gray-900 focus:outline-none focus:border-brand-red focus:ring-1 focus:ring-brand-red transition-shadow shadow-sm"
-          />
-        </div>
-        <button className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors shadow-sm shrink-0">
-          <Filter className="w-4 h-4 text-gray-500" />
-          Filters
-        </button>
-      </div>
+      <UserSearchControls initialQuery={query} initialRole={roleFilter} />
 
-      {/* Table Component */}
-      <UserListTable initialUsers={mockUsers} />
+      <UserListTable users={formattedUsers} />
     </div>
   );
 }
