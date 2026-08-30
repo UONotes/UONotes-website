@@ -1,7 +1,7 @@
 "use client";
 
 import type { FormEvent } from "react";
-import { useState, Suspense } from "react";
+import { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { FormField } from "@/components/ui/FormField";
@@ -9,12 +9,15 @@ import { createClient } from "@/lib/supabase/client";
 import { isStrongPassword, PASSWORD_REQUIREMENTS_TEXT } from "@/lib/passwordValidation";
 
 const AUTH_PATHS = ["/signin", "/signup", "/forgot-password", "/reset-password"];
+const RESEND_COOLDOWN_SECONDS = 60;
 
 function ForgotPasswordFormLogic() {
   const [step, setStep] = useState<"email" | "reset">("email");
   const [email, setEmail] = useState("");
   const [emailError, setEmailError] = useState("");
   const [resetError, setResetError] = useState("");
+  const [resendMessage, setResendMessage] = useState("");
+  const [resendCooldown, setResendCooldown] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -26,6 +29,12 @@ function ForgotPasswordFormLogic() {
     !fromParam.startsWith("//") &&
     !AUTH_PATHS.some((path) => fromParam.startsWith(path));
   const returnPath = isSafeReturnPath ? fromParam : "/";
+
+  useEffect(() => {
+    if (resendCooldown <= 0) return;
+    const timer = setInterval(() => setResendCooldown((s) => Math.max(0, s - 1)), 1000);
+    return () => clearInterval(timer);
+  }, [resendCooldown]);
 
   async function handleEmailSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -41,10 +50,21 @@ function ForgotPasswordFormLogic() {
     setIsSubmitting(true);
 
     const supabase = createClient();
-    await supabase.auth.resetPasswordForEmail(enteredEmail);
+    const { error } = await supabase.auth.resetPasswordForEmail(enteredEmail);
 
     setIsSubmitting(false);
+
+    if (error) {
+      // Safe to show — Supabase never returns an error just because the
+      // email doesn't exist (that case silently "succeeds" on purpose,
+      // to avoid revealing which emails are registered). Anything it
+      // DOES return here, like a cooldown, is fine to surface directly.
+      setEmailError(error.message);
+      return;
+    }
+
     setEmail(enteredEmail);
+    setResendCooldown(RESEND_COOLDOWN_SECONDS);
     setStep("reset");
   }
 
@@ -100,6 +120,23 @@ function ForgotPasswordFormLogic() {
     router.replace(returnPath);
   }
 
+  async function handleResendCode() {
+    if (resendCooldown > 0) return;
+    setResendMessage("");
+    setResetError("");
+
+    const supabase = createClient();
+    const { error } = await supabase.auth.resetPasswordForEmail(email);
+
+    if (error) {
+      setResendMessage(error.message || "Could not resend code. Please try again shortly.");
+      return;
+    }
+
+    setResendCooldown(RESEND_COOLDOWN_SECONDS);
+    setResendMessage("A new code has been sent.");
+  }
+
   if (step === "reset") {
     return (
       <div key="reset-step" className="w-full flex flex-col">
@@ -153,10 +190,22 @@ function ForgotPasswordFormLogic() {
             {isSubmitting ? "Updating password..." : "Update password"}
           </button>
 
+          <div className="flex flex-col items-center gap-2 mt-2">
+            <button
+              type="button"
+              disabled={resendCooldown > 0}
+              onClick={handleResendCode}
+              className="text-sm font-medium text-brand-red hover:underline underline-offset-2 disabled:text-gray-400 disabled:no-underline disabled:cursor-not-allowed transition-colors"
+            >
+              {resendCooldown > 0 ? `Resend code in ${resendCooldown}s` : "Resend code"}
+            </button>
+            {resendMessage && <p className="text-xs text-gray-600">{resendMessage}</p>}
+          </div>
+
           <button
             type="button"
             className="text-sm font-medium text-gray-600 hover:text-brand-red transition-colors"
-            onClick={() => { setStep("email"); setResetError(""); }}
+            onClick={() => { setStep("email"); setResetError(""); setResendMessage(""); }}
           >
             Use a different email
           </button>
