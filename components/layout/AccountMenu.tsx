@@ -4,9 +4,16 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { UserIcon, ChevronDownIcon, StarFilledIcon, UploadIcon, EditSmallIcon, GlobeIcon, LogoutIcon } from "../icons";
-import { Settings } from "lucide-react";
+import { Settings, ShieldAlert } from "lucide-react";
 
-export function AccountMenu({ lang, toggleLang, onSignOut }: { lang: "EN" | "FR"; toggleLang: () => void; onSignOut: () => void; }) {
+interface AccountMenuProps {
+  lang: "EN" | "FR";
+  toggleLang: () => void;
+  onSignOut: () => void;
+  isAdmin: boolean;
+}
+
+export function AccountMenu({ lang, toggleLang, onSignOut, isAdmin }: AccountMenuProps) {
   const [open, setOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -41,9 +48,9 @@ export function AccountMenu({ lang, toggleLang, onSignOut }: { lang: "EN" | "FR"
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -10, scale: 0.95 }}
             transition={{ duration: 0.15, ease: "easeOut" }}
-            // Replaced 'right-0' with '-right-4' to push the menu outward
-            className="absolute -right-4 top-full mt-6 w-64 bg-white rounded-xl shadow-xl border border-brand-red/10 py-2 z-50 origin-top"
+            className="absolute -right-4 top-full mt-6 w-64 bg-white rounded-xl shadow-xl border border-brand-red/10 py-2 z-50 origin-top overflow-hidden"
           >
+            {/* Primary User Links */}
             <Link href="/dashboard" onClick={() => setOpen(false)} className={`${itemClass} font-bold text-brand-red`}>
               <StarFilledIcon active className="text-brand-red w-5 h-5" /> My Dashboard
             </Link>
@@ -57,8 +64,31 @@ export function AccountMenu({ lang, toggleLang, onSignOut }: { lang: "EN" | "FR"
               <Settings className="w-5 h-5" /> Settings
             </Link>
 
-            <div className="border-t border-brand-red/10 my-2" />
+            {/* Admin Section (Only renders if user is an admin) */}
+            {isAdmin && (
+              <>
+                <div className="border-t border-brand-red/10 my-2" />
+                <div className="px-4 py-1">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400 font-logo">
+                    Administration
+                  </span>
+                </div>
+                <div className="px-3 pt-1">
+                  <Link 
+                    href="/admin/" 
+                    onClick={() => setOpen(false)} 
+                    className="flex items-center justify-center gap-2 w-full py-2.5 bg-gray-900 text-white font-logo text-xs font-bold uppercase tracking-wider rounded-lg hover:bg-gray-800 transition-colors shadow-sm"
+                  >
+                    <ShieldAlert className="w-4 h-4 text-brand-red" strokeWidth={2.5} />
+                    Admin
+                  </Link>
+                </div>
+              </>
+            )}
 
+            <div className="border-t border-brand-red/10 my-1.5" />
+
+            {/* Utility Actions */}
             <button onClick={toggleLang} className={`${itemClass} w-full text-left font-semibold text-gray-700 hover:text-brand-red`}>
               <GlobeIcon className="w-5 h-5" /> {lang === "EN" ? "Switch to French" : "Switch to English"}
             </button>

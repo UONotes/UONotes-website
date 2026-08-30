@@ -6,7 +6,6 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { AccountMenu } from "@/components/layout/AccountMenu";
-import { ShieldAlert } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 
 export function Navbar() {
@@ -135,17 +134,6 @@ export function Navbar() {
               </Link>
             );
           })}
-
-          {/* Admin Entry Point - Desktop */}
-          {isAdmin && (
-            <Link
-              href="/admin/queue"
-              className="ml-2 flex items-center gap-1.5 px-3.5 py-2 bg-gray-900 text-white font-logo text-xs font-bold uppercase tracking-wider rounded-lg hover:bg-gray-800 transition-colors shadow-sm"
-            >
-              <ShieldAlert className="w-4 h-4 text-brand-red" />
-              Admin
-            </Link>
-          )}
         </div>
 
         {/* 3. Desktop Actions */}
@@ -179,6 +167,7 @@ export function Navbar() {
                lang={lang} 
                toggleLang={toggleLang} 
                onSignOut={handleSignOut}
+               isAdmin={isAdmin}
              />
           ) : (
             <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
@@ -236,18 +225,6 @@ export function Navbar() {
                   </Link>
                 );
               })}
-
-              {/* Admin Entry Point - Mobile */}
-              {isAdmin && (
-                <Link
-                  href="/admin/queue"
-                  onClick={() => setIsMobileMenuOpen(false)}
-                  className="flex items-center gap-2 mt-2 px-6 py-2.5 bg-gray-900 text-white font-logo text-sm font-bold uppercase tracking-wider rounded-xl shadow-sm"
-                >
-                  <ShieldAlert className="w-4 h-4 text-brand-red" />
-                  Admin Panel
-                </Link>
-              )}
               
               <div className="flex gap-4 mt-2">
                 
