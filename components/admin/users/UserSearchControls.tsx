@@ -14,13 +14,15 @@ export function UserSearchControls({ initialQuery, initialRole }: { initialQuery
   const [text, setText] = useState(initialQuery);
   const [debouncedQuery] = useDebounce(text, 300);
 
+  // Sync local text state if URL query param changes externally (e.g. browser back/forward)
   useEffect(() => {
     const currentQueryParam = searchParams.get("q") || "";
-    if (text !== currentQueryParam && debouncedQuery === currentQueryParam) {
+    if (text !== currentQueryParam) {
       setText(currentQueryParam);
     }
   }, [searchParams]);
 
+  // Trigger router replacement ONLY when debouncedQuery changes and differs from initialQuery
   useEffect(() => {
     if (debouncedQuery === initialQuery) return; 
 
@@ -72,6 +74,7 @@ export function UserSearchControls({ initialQuery, initialRole }: { initialQuery
           <Loader2 className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 animate-spin" />
         ) : text ? (
           <button 
+            type="button"
             onClick={() => setText("")}
             className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 text-[11px] font-mono font-bold"
           >
