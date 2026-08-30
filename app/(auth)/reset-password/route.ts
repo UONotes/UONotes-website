@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isStrongPassword, PASSWORD_REQUIREMENTS_TEXT } from "@/lib/passwordValidation";
+import { checkOtpLock, recordOtpFailure, resetOtpAttempts } from "@/lib/otpAttempts";
 
 export async function POST(request: Request) {
   const { email, code, newPassword } = await request.json();
@@ -13,10 +14,14 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: PASSWORD_REQUIREMENTS_TEXT }, { status: 400 });
   }
 
-  // A fresh, non-persisting client just to check the code is valid.
-  // The anon key is fine here — verifyOtp is a public operation.
-  // persistSession: false means whatever session this returns is never
-  // saved anywhere; it's discarded the moment this function returns.
+  const { locked } = await checkOtpLock(email, "recovery");
+  if (locked) {
+    return NextResponse.json(
+      { error: "Too many incorrect attempts. Please try again in 15 minutes." },
+      { status: 429 }
+    );
+  }
+
   const verifierClient = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -30,14 +35,15 @@ export async function POST(request: Request) {
   });
 
   if (verifyError || !data.user) {
+    await recordOtpFailure(email, "recovery");
     return NextResponse.json(
       { error: "That code is incorrect or has expired." },
       { status: 400 }
     );
   }
 
-  // Only now, using the admin client, do we actually set the new
-  // password — directly, without the browser ever holding a session.
+  await resetOtpAttempts(email, "recovery");
+
   const adminClient = createAdminClient();
   const { error: updateError } = await adminClient.auth.admin.updateUserById(
     data.user.id,

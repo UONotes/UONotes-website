@@ -100,21 +100,26 @@ function SignUpFormLogic() {
     setCodeError("");
     setIsSubmitting(true);
 
-    const supabase = createClient();
-    const { error } = await supabase.auth.verifyOtp({
-      email,
-      token: code,
-      type: "signup",
+    const response = await fetch("/verify-signup", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, code }),
     });
+    const result = await response.json();
 
     setIsSubmitting(false);
 
-    if (error) {
-      setCodeError("That code is incorrect or has expired. Request a new one below.");
+    if (!response.ok) {
+      setCodeError(result.error ?? "That code is incorrect or has expired. Request a new one below.");
       return;
     }
 
-    router.replace(returnPath);
+    // A full reload (not router.replace) is needed here: the session
+    // cookie was set server-side by /verify-signup, but this browser's
+    // already-running Supabase client has no way to notice that on its
+    // own. Reloading forces everything — middleware, the Supabase
+    // client, Navbar — to re-initialize against the real, current cookies.
+    window.location.href = returnPath;
   }
 
   if (step === "code") {
