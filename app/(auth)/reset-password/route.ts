@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { isStrongPassword, PASSWORD_REQUIREMENTS_TEXT } from "@/lib/passwordValidation";
 
 export async function POST(request: Request) {
   const { email, code, newPassword } = await request.json();
@@ -8,8 +9,8 @@ export async function POST(request: Request) {
   if (!email || !code || !newPassword) {
     return NextResponse.json({ error: "Missing required fields." }, { status: 400 });
   }
-  if (typeof newPassword !== "string" || newPassword.length < 6) {
-    return NextResponse.json({ error: "Password must be at least 6 characters." }, { status: 400 });
+  if (typeof newPassword !== "string" || !isStrongPassword(newPassword)) {
+    return NextResponse.json({ error: PASSWORD_REQUIREMENTS_TEXT }, { status: 400 });
   }
 
   // A fresh, non-persisting client just to check the code is valid.
