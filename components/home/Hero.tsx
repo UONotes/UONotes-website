@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { motion, Variants } from "framer-motion";
-import { ChevronDown, Search, UploadCloud, LayoutDashboard, ArrowRight } from "lucide-react";
+import { Search, UploadCloud, LayoutDashboard, ArrowRight } from "lucide-react";
 
 // 1. Premium Animation Variants
 const staggerContainer: Variants = {
@@ -85,10 +85,10 @@ export function Hero() {
               <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
             </Link>
 
-            {/* Secondary Action */}
+            {/* Secondary Action - Widened horizontally via padding */}
             <Link 
               href="/submit" 
-              className="group flex items-center justify-center gap-2 w-full sm:w-auto px-6 py-3.5 sm:py-4 bg-white text-gray-800 font-bold rounded-xl sm:rounded-2xl border-2 border-gray-100 shadow-xs hover:border-brand-red/30 hover:bg-gray-50 transition-all text-sm sm:text-base active:scale-[0.98]"
+              className="group flex items-center justify-center gap-2 w-full sm:w-auto px-10 sm:px-12 py-3.5 sm:py-4 bg-white text-gray-800 font-bold rounded-xl sm:rounded-2xl border-2 border-gray-100 shadow-xs hover:border-brand-red/30 hover:bg-gray-50 transition-all text-sm sm:text-base active:scale-[0.98]"
             >
               <UploadCloud className="w-4 h-4 sm:w-5 sm:h-5 text-brand-red" />
               Share Notes
@@ -119,16 +119,6 @@ export function Hero() {
         </motion.div>
       </motion.div>
 
-      {/* Floating Scroll Indicator */}
-      <motion.div 
-        initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1, duration: 1 }}
-        className="absolute bottom-6 left-1/2 -translate-x-1/2 flex flex-col items-center gap-1 text-gray-300 pointer-events-none"
-      >
-        <span className="text-[9px] font-bold tracking-[0.2em] uppercase">Scroll</span>
-        <motion.div animate={{ y: [0, 5, 0] }} transition={{ repeat: Infinity, duration: 2, ease: "easeInOut" }}>
-          <ChevronDown className="w-4 h-4" />
-        </motion.div>
-      </motion.div>
     </section>
   );
 }

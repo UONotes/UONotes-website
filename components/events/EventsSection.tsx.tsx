@@ -14,10 +14,34 @@ const notebookStyle = {
 
 export function EventsSection() {
   const [viewMode, setViewMode] = useState<"upcoming" | "past">("upcoming");
-  const [selectedEvent, setSelectedEvent] = useState<EventItem | null>(null);
+  
+  // Track the active image index for each event ID directly in state so they slide independently
+  const [slideIndices, setSlideIndices] = useState<Record<string, number>>({});
 
   const hasUpcoming = upcomingEvents.length > 0;
   const activeList = viewMode === "upcoming" ? upcomingEvents : pastEvents;
+
+  // Slideshow navigation helper (Next / Prev)
+  const handleNextImage = (eventId: string, totalImages: number, e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevents triggering any unwanted card clicks
+    setSlideIndices((prev) => {
+      const currentIndex = prev[eventId] || 0;
+      return { ...prev, [eventId]: (currentIndex + 1) % totalImages };
+    });
+  };
+
+  const handlePrevImage = (eventId: string, totalImages: number, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setSlideIndices((prev) => {
+      const currentIndex = prev[eventId] || 0;
+      return { ...prev, [eventId]: (currentIndex - 1 + totalImages) % totalImages };
+    });
+  };
+
+  const handleSelectDot = (eventId: string, index: number, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setSlideIndices((prev) => ({ ...prev, [eventId]: index }));
+  };
 
   return (
     <section className="w-full max-w-5xl md:max-w-6xl mx-auto px-4 sm:px-6 py-8 sm:py-12 flex flex-col">
@@ -60,7 +84,6 @@ export function EventsSection() {
           {/* Dynamic View Display */}
           <AnimatePresence mode="popLayout">
             {viewMode === "upcoming" && !hasUpcoming ? (
-              /* Professional Empty State Container */
               <motion.div 
                 key="empty-upcoming"
                 initial={{ opacity: 0, scale: 0.98 }}
@@ -83,105 +106,102 @@ export function EventsSection() {
                 </button>
               </motion.div>
             ) : (
-              /* Events Grid */
+              /* Events Grid with Inline Card Slideshows (No Popups) */
               <motion.div 
                 key={viewMode}
                 layout
                 className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"
               >
-                {activeList.map((event) => (
-                  <motion.div 
-                    key={event.id}
-                    layout
-                    initial={{ opacity: 0, y: 15 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -15 }}
-                    transition={{ duration: 0.3 }}
-                    onClick={() => setSelectedEvent(event)}
-                    className="bg-white/90 border border-gray-200 rounded-2xl overflow-hidden shadow-xs hover:border-brand-red/40 transition-all cursor-pointer group flex flex-col"
-                  >
-                    <div className="h-44 overflow-hidden relative bg-gray-100">
-                      <img 
-                        src={event.image} 
-                        alt={event.title} 
-                        onError={(e) => {
-                          (e.target as HTMLImageElement).src = "https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?auto=format&fit=crop&w=600&q=80";
-                        }}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                      />
-                      <span className="absolute top-3 right-3 bg-gray-900/80 backdrop-blur-xs text-white text-[10px] font-mono px-2.5 py-1 rounded-md uppercase tracking-wider">
-                        {event.date}
-                      </span>
-                    </div>
-                    <div className="p-5 flex flex-col flex-1">
-                      <span className="text-[10px] font-mono text-brand-red font-bold uppercase tracking-widest mb-1">{event.location} • {event.time}</span>
-                      <h3 className="font-bold text-gray-900 text-base group-hover:text-brand-red transition-colors mb-2">
-                        {event.title}
-                      </h3>
-                      <span className="mt-auto text-xs font-mono font-bold text-brand-red uppercase tracking-wider flex items-center pt-2 gap-1">
-                        View Details &rarr;
-                      </span>
-                    </div>
-                  </motion.div>
-                ))}
+                {activeList.map((event) => {
+                  const photos = event.images && event.images.length > 0 ? event.images : [event.image];
+                  const currentIndex = slideIndices[event.id] || 0;
+
+                  return (
+                    <motion.div 
+                      key={event.id}
+                      layout
+                      initial={{ opacity: 0, y: 15 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -15 }}
+                      transition={{ duration: 0.3 }}
+                      className="bg-white/90 border border-gray-200 rounded-2xl overflow-hidden shadow-xs hover:border-brand-red/40 transition-all flex flex-col group"
+                    >
+                      {/* Inline Slideshow Image Container */}
+                      <div className="h-48 overflow-hidden relative bg-gray-900">
+                        <img 
+                          src={photos[currentIndex]} 
+                          alt={`${event.title} - photo ${currentIndex + 1}`} 
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).src = "https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?auto=format&fit=crop&w=600&q=80";
+                          }}
+                          className="w-full h-full object-cover transition-opacity duration-300"
+                        />
+                        
+                        <span className="absolute top-3 right-3 bg-gray-900/80 backdrop-blur-xs text-white text-[10px] font-mono px-2.5 py-1 rounded-md uppercase tracking-wider z-10">
+                          {event.date}
+                        </span>
+
+                        {/* Inline Next / Prev Controls (Visible only if multiple images exist) */}
+                        {photos.length > 1 && (
+                          <>
+                            <button 
+                              onClick={(e) => handlePrevImage(event.id, photos.length, e)}
+                              className="absolute left-2 top-1/2 -translate-y-1/2 p-1.5 rounded-full bg-black/40 text-white hover:bg-brand-red transition-colors cursor-pointer backdrop-blur-xs opacity-0 group-hover:opacity-100 z-10"
+                              title="Previous Photo"
+                            >
+                              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" /></svg>
+                            </button>
+                            
+                            <button 
+                              onClick={(e) => handleNextImage(event.id, photos.length, e)}
+                              className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-full bg-black/40 text-white hover:bg-brand-red transition-colors cursor-pointer backdrop-blur-xs opacity-0 group-hover:opacity-100 z-10"
+                              title="Next Photo"
+                            >
+                              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" /></svg>
+                            </button>
+
+                            {/* Minimalist dot indicators */}
+                            <div className="absolute bottom-2.5 left-1/2 -translate-x-1/2 flex gap-1 bg-black/40 px-2 py-0.5 rounded-full backdrop-blur-xs z-10">
+                              {photos.map((_, idx) => (
+                                <button
+                                  key={idx}
+                                  onClick={(e) => handleSelectDot(event.id, idx, e)}
+                                  className={`w-1 h-1 rounded-full transition-all ${idx === currentIndex ? "bg-white w-2.5" : "bg-white/50"}`}
+                                />
+                              ))}
+                            </div>
+                          </>
+                        )}
+                      </div>
+
+                      {/* Card Content Footer */}
+                      <div className="p-5 flex flex-col flex-1">
+                        <span className="text-[10px] font-mono text-brand-red font-bold uppercase tracking-widest mb-1">{event.location} • {event.time}</span>
+                        <h3 className="font-bold text-gray-900 text-base mb-2">
+                          {event.title}
+                        </h3>
+
+                        {event.registrationUrl && (
+                          <div className="mt-auto pt-2">
+                            <a 
+                              href={event.registrationUrl} 
+                              target="_blank" 
+                              rel="noopener noreferrer" 
+                              className="inline-flex items-center gap-1 text-xs font-mono font-bold text-brand-red hover:text-brand-red-hover uppercase tracking-wider"
+                            >
+                              Register &rarr;
+                            </a>
+                          </div>
+                        )}
+                      </div>
+                    </motion.div>
+                  );
+                })}
               </motion.div>
             )}
           </AnimatePresence>
         </div>
       </motion.div>
-
-      {/* Event Detail Modal */}
-      <AnimatePresence>
-        {selectedEvent && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 overflow-y-auto">
-            <motion.div 
-              initial={{ opacity: 0, scale: 0.95, y: 10 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 10 }}
-              className="bg-white p-6 sm:p-8 rounded-3xl shadow-2xl max-w-xl w-full border border-gray-100 max-h-[90vh] overflow-y-auto"
-            >
-              <div className="flex justify-between items-start mb-4">
-                <div>
-                  <span className="text-[10px] font-mono text-brand-red font-bold uppercase tracking-widest">{selectedEvent.date} | {selectedEvent.time} • {selectedEvent.location}</span>
-                  <h2 className="text-xl sm:text-2xl font-black text-gray-900 mt-1">{selectedEvent.title}</h2>
-                </div>
-                <button 
-                  onClick={() => setSelectedEvent(null)}
-                  className="p-2 bg-gray-100 rounded-full text-gray-500 hover:text-brand-red transition-colors cursor-pointer"
-                >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" /></svg>
-                </button>
-              </div>
-
-              {/* Main Graphic / Image */}
-              <div className="mb-4">
-                <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-gray-400 mb-1.5 block">Featured Graphic</span>
-                <img 
-                  src={selectedEvent.image} 
-                  alt={selectedEvent.title} 
-                  onError={(e) => {
-                    (e.target as HTMLImageElement).src = "https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?auto=format&fit=crop&w=600&q=80";
-                  }}
-                  className="w-full h-56 object-cover rounded-xl shadow-sm border border-gray-100"
-                />
-              </div>
-
-              {selectedEvent.registrationUrl && (
-                <div className="mb-6">
-                  <a 
-                    href={selectedEvent.registrationUrl} 
-                    target="_blank" 
-                    rel="noopener noreferrer" 
-                    className="w-full py-3 bg-brand-red text-white text-xs font-mono font-bold uppercase tracking-widest rounded-xl hover:bg-brand-red-hover transition-colors shadow-sm flex items-center justify-center"
-                  >
-                    Register for Event →
-                  </a>
-                </div>
-              )}
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
     </section>
   );
 }

@@ -29,7 +29,7 @@ export function ContactSection() {
             Contact us
           </h1>
           <p className="text-gray-600 text-lg mb-10 max-w-md">
-            Have a question about submitting notes, earning volunteer hours, or joining the team? Reach out to us.
+            Have a question about submitting notes, earning volunteer hours, or joining the team? Reach out to us!.
           </p>
 
           <div className="flex flex-col gap-5 max-w-[380px]">

@@ -12,4 +12,5 @@ export interface Sponsor {
     { name: "Metcalfe", imageUrl: "/sponsors/Metcalfe-Logo.png" },
     { name: "Red Bull", imageUrl: "/sponsors/RedBull-Logo.png" },
     { name: "Haunted Walk", imageUrl: "/sponsors/Haunted-Walk-Logo.png" },
+    { name: "Guru", imageUrl: "/sponsors/guru_organic_energy_logo.png" },
   ];

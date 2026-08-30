@@ -38,6 +38,11 @@ export function SubmitFormView() {
   const [selectedLanguage, setSelectedLanguage] = useState<"EN" | "FR">("EN");
   const [fileName, setFileName] = useState<string | null>(null);
 
+  // Checklist Interactive States
+  const [isOriginalChecked, setIsOriginalChecked] = useState(false);
+  const [isQualityChecked, setIsQualityChecked] = useState(false);
+  const [isRulesChecked, setIsRulesChecked] = useState(false);
+
   const toggleNoteType = (type: string) => {
     setSelectedNoteTypes(prev => 
       prev.includes(type) ? prev.filter(t => t !== type) : [...prev, type]
@@ -48,8 +53,6 @@ export function SubmitFormView() {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
     const email = String(formData.get("email") ?? "").trim();
-    const isOriginal = formData.get("isOriginal");
-    const confirmRules = formData.get("confirmRules");
 
     const isValidUOttawaEmail = /^[^\s@]+@uottawa\.ca$/i.test(email);
 
@@ -58,7 +61,7 @@ export function SubmitFormView() {
       return;
     }
 
-    if (!isOriginal || !confirmRules) {
+    if (!isOriginalChecked || !isQualityChecked || !isRulesChecked) {
       setFormError("Please check all confirmation boxes before submitting.");
       return;
     }
@@ -106,7 +109,7 @@ export function SubmitFormView() {
                   </p>
                 </div>
 
-                {/* Collapsible Guidelines Box */}
+                {/* Collapsible Guidelines Box with Red Number Badges */}
                 <div className="mb-10 bg-white border border-brand-red/20 rounded-2xl shadow-xs overflow-hidden">
                   <button
                     type="button"
@@ -122,7 +125,7 @@ export function SubmitFormView() {
                           Submission Guidelines & Academic Integrity
                         </h2>
                         <p className="text-[11px] text-gray-500 font-sans">
-                          Review requirements before uploading notes
+                          Review formatting rules and quality standards before uploading
                         </p>
                       </div>
                     </div>
@@ -134,7 +137,7 @@ export function SubmitFormView() {
                       <div className="grid grid-cols-1 gap-3">
                         <div className="flex items-start gap-3 p-3 bg-gray-50 rounded-xl border border-gray-100">
                           <span className="flex items-center justify-center w-5 h-5 rounded-full bg-brand-red text-white text-[10px] font-mono font-bold shrink-0 mt-0.5">1</span>
-                          <p><strong className="text-gray-900">Original Work Only:</strong> All documents must be authored by you. Direct uncredited copying from AI tools is prohibited.</p>
+                          <p><strong className="text-gray-900">Original Work Only:</strong> All documents must be authored by you. Direct uncredited copying from AI tools is strictly prohibited.</p>
                         </div>
                         <div className="flex items-start gap-3 p-3 bg-gray-50 rounded-xl border border-gray-100">
                           <span className="flex items-center justify-center w-5 h-5 rounded-full bg-brand-red text-white text-[10px] font-mono font-bold shrink-0 mt-0.5">2</span>
@@ -143,6 +146,10 @@ export function SubmitFormView() {
                         <div className="flex items-start gap-3 p-3 bg-gray-50 rounded-xl border border-gray-100">
                           <span className="flex items-center justify-center w-5 h-5 rounded-full bg-brand-red text-white text-[10px] font-mono font-bold shrink-0 mt-0.5">3</span>
                           <p><strong className="text-gray-900">Zero Tolerance for Abuse:</strong> Placeholder or malicious submissions will result in immediate review and account suspension.</p>
+                        </div>
+                        <div className="flex items-start gap-3 p-3 bg-gray-50 rounded-xl border border-gray-100">
+                          <span className="flex items-center justify-center w-5 h-5 rounded-full bg-brand-red text-white text-[10px] font-mono font-bold shrink-0 mt-0.5">4</span>
+                          <p><strong className="text-gray-900">Scan Quality & Legibility:</strong> Files must be crisp, high-resolution, and right-side up. Blurry smartphone photos of screens, dark shadows, or unreadable handwriting will be instantly rejected by moderation.</p>
                         </div>
                       </div>
                     </div>
@@ -250,7 +257,6 @@ export function SubmitFormView() {
                         </div>
                       </div>
 
-                      {/* Hidden inputs to capture checkboxes for FormData */}
                       {selectedNoteTypes.map(t => <input key={t} type="hidden" name="noteTypes" value={t} />)}
 
                       {isOtherSelected && (
@@ -301,7 +307,7 @@ export function SubmitFormView() {
                         <span className="text-xs font-bold text-gray-800">
                           {fileName ? fileName : "Click to browse or drag & drop files here"}
                         </span>
-                        <span className="text-[10px] text-gray-400 font-mono">PDF, DOCX, or ZIP up to 50MB</span>
+                        <span className="text-[10px] text-gray-400 font-mono">PDF, DOCX, or ZIP up to 50MB (Must be sharp, clear, and unblurred)</span>
                         <input 
                           type="file" 
                           name="noteFile" 
@@ -323,28 +329,75 @@ export function SubmitFormView() {
                     </div>
                   </div>
 
-                  {/* SECTION 5: Confirmations & Submit */}
+                  {/* SECTION 5: Redesigned Modern Confirmation Checklists */}
                   <div className="space-y-4 pt-2">
-                    <div className="flex flex-col gap-3 p-4 bg-amber-50/50 border border-amber-200/60 rounded-2xl">
-                      <label className="flex items-start gap-3 text-xs text-gray-700 cursor-pointer">
-                        <input type="checkbox" name="isOriginal" className="mt-0.5 accent-brand-red shrink-0" required />
-                        <span>I confirm that this is my original work and understand that proof of creation may be requested.</span>
-                      </label>
-                      <label className="flex items-start gap-3 text-xs text-gray-700 cursor-pointer">
-                        <input type="checkbox" name="confirmRules" className="mt-0.5 accent-brand-red shrink-0" required />
-                        <span>I have read and agree to all submission guidelines stated above.</span>
-                      </label>
+                    <div className="flex flex-col gap-3">
+                      
+                      {/* Checkbox Card 1 */}
+                      <div 
+                        onClick={() => setIsOriginalChecked(!isOriginalChecked)}
+                        className={`flex items-start gap-3.5 p-4 rounded-2xl border transition-all cursor-pointer ${
+                          isOriginalChecked ? "bg-brand-red/5 border-brand-red shadow-2xs" : "bg-white border-gray-200 hover:border-gray-300"
+                        }`}
+                      >
+                        <div className={`w-5 h-5 rounded-md border flex items-center justify-center shrink-0 mt-0.5 transition-colors ${
+                          isOriginalChecked ? "bg-brand-red border-brand-red text-white" : "border-gray-300 bg-white"
+                        }`}>
+                          {isOriginalChecked && <Check className="w-3.5 h-3.5" />}
+                        </div>
+                        <input type="checkbox" name="isOriginal" checked={isOriginalChecked} onChange={() => {}} className="hidden" required />
+                        <span className="text-xs sm:text-sm font-medium text-gray-800 leading-snug">
+                          I confirm that this is my original work and understand that proof of creation may be requested.
+                        </span>
+                      </div>
+
+                      {/* Checkbox Card 2 */}
+                      <div 
+                        onClick={() => setIsQualityChecked(!isQualityChecked)}
+                        className={`flex items-start gap-3.5 p-4 rounded-2xl border transition-all cursor-pointer ${
+                          isQualityChecked ? "bg-brand-red/5 border-brand-red shadow-2xs" : "bg-white border-gray-200 hover:border-gray-300"
+                        }`}
+                      >
+                        <div className={`w-5 h-5 rounded-md border flex items-center justify-center shrink-0 mt-0.5 transition-colors ${
+                          isQualityChecked ? "bg-brand-red border-brand-red text-white" : "border-gray-300 bg-white"
+                        }`}>
+                          {isQualityChecked && <Check className="w-3.5 h-3.5" />}
+                        </div>
+                        <input type="checkbox" name="confirmQuality" checked={isQualityChecked} onChange={() => {}} className="hidden" required />
+                        <span className="text-xs sm:text-sm font-medium text-gray-800 leading-snug">
+                          I verify that my upload is sharp, fully legible, and free of blurriness, shadows, or cut-off pages.
+                        </span>
+                      </div>
+
+                      {/* Checkbox Card 3 */}
+                      <div 
+                        onClick={() => setIsRulesChecked(!isRulesChecked)}
+                        className={`flex items-start gap-3.5 p-4 rounded-2xl border transition-all cursor-pointer ${
+                          isRulesChecked ? "bg-brand-red/5 border-brand-red shadow-2xs" : "bg-white border-gray-200 hover:border-gray-300"
+                        }`}
+                      >
+                        <div className={`w-5 h-5 rounded-md border flex items-center justify-center shrink-0 mt-0.5 transition-colors ${
+                          isRulesChecked ? "bg-brand-red border-brand-red text-white" : "border-gray-300 bg-white"
+                        }`}>
+                          {isRulesChecked && <Check className="w-3.5 h-3.5" />}
+                        </div>
+                        <input type="checkbox" name="confirmRules" checked={isRulesChecked} onChange={() => {}} className="hidden" required />
+                        <span className="text-xs sm:text-sm font-medium text-gray-800 leading-snug">
+                          I have read and agree to all submission guidelines stated above.
+                        </span>
+                      </div>
+
                     </div>
 
                     {formError && (
-                      <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-xs font-mono font-bold text-brand-red text-center">
+                      <div className="p-3.5 bg-red-50 border border-red-200 rounded-xl text-xs font-mono font-bold text-brand-red text-center">
                         {formError}
                       </div>
                     )}
 
                     <button
                       type="submit"
-                      className="w-full py-4 bg-brand-red text-white text-xs font-mono font-bold uppercase tracking-widest rounded-xl hover:bg-brand-red-hover transition-all shadow-md active:scale-98 cursor-pointer flex items-center justify-center gap-2"
+                      className="w-full py-4 bg-brand-red text-white text-xs font-mono font-bold uppercase tracking-widest rounded-xl hover:bg-brand-red-hover transition-all shadow-md active:scale-98 cursor-pointer flex items-center justify-center gap-2 mt-4"
                     >
                       <UploadCloud className="w-4 h-4" />
                       Submit Notes for Review

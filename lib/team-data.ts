@@ -2,6 +2,8 @@ export type TeamMember = {
   name: string;
   role: string;
   imageUrl: string; 
+  program?: string; // Added optional field
+  bio?: string;     // Added optional field
 };
 
 export type TeamSection = {
@@ -11,11 +13,23 @@ export type TeamSection = {
 };
 
 export const TEAM_DATA: TeamSection[] = [
-  {
+ {
     teamName: "Presidential Team",
     members: [
-      { name: "Kiana G. Vazvani", role: "President", imageUrl: "/about/Kiana-Headshot.png"},
-      { name: "Talar Aghazarian", role: "Vice-President", imageUrl: "/about/Talar-Headshot.png"},
+      { 
+        name: "Kiana G. Vazvani", 
+        role: "Founder & President", 
+        program: "3rd year B.Sc. spécialisé sciences biomédicales",
+        imageUrl: "/about/Kiana-Headshot.png", 
+        bio: "The idea for UONotes came to me after reflecting on my own experience as a student. First year was overwhelming at times, and I remember wishing there were more accessible resources and a stronger sense of students helping one another through difficult courses.\n\nThat experience eventually sparked the idea for UONotes. Alongside our incredible team, we turned that idea into a platform built by students, for students.\n\nSeeing the website officially live is incredibly exciting, and I hope UONotes can make university a little easier for other students the way I once wished it could have been for me. I’m so proud of everything our team has built, and I’m even more excited to see where it goes from here."
+      },
+      { 
+        name: "Talar Aghazarian", 
+        role: "Co-Founder & Vice-President", 
+        program: "3rd year Honors B. Sc. in Biomedical Sciences",
+        imageUrl: "/about/Talar-Headshot.png",
+        bio: "Creating UONotes, alongside our President, has been an incredibly rewarding journey, driven by our vision of making high-quality academic resources more accessible to every student. What began as an idea has grown into a collaborative community built on student support, inclusivity, and shared academic success. I am proud of how far we have come and excited to see UONotes continue making a meaningful impact at the University of Ottawa through our website and growing online community."
+      },
     ],
   },
   {
@@ -28,7 +42,6 @@ export const TEAM_DATA: TeamSection[] = [
       { name: "Maraia Masud", role: "Director", imageUrl: "/about/Maraia-Headshot.png" },
       { name: "Abigail Jaeger", role: "Director", imageUrl: "/about/Abigail-Headshot.png" },
       { name: "Norhan Elzayat", role: "Director", imageUrl: "/about/Norhan-Headshot.png" },
-      { name: "Narmin Chowdhury", role: "Director", imageUrl: "/about/Narmin-Headshot.png" },
       { name: "Kateeba Eliyas", role: "Director", imageUrl: "/about/Placeholder.png" },
     ],
   },
@@ -40,6 +53,10 @@ export const TEAM_DATA: TeamSection[] = [
       { name: "Perla Abou-Tayeh", role: "Director", imageUrl: "/about/Perla-Headshot.png" },
       { name: "Rayan Awada", role: "VP Bilingualism", imageUrl: "/about/Placeholder.png" },
       { name: "Sophie Charles", role: "Director", imageUrl: "/about/Placeholder.png" },
+      { name: "Lara Issa", role: "Director", imageUrl: "/about/Placeholder.png" },
+      { name: "Heenna Jaffer", role: "Director", imageUrl: "/about/Placeholder.png" },
+
+
     ],
   },
   {
@@ -47,6 +64,7 @@ export const TEAM_DATA: TeamSection[] = [
     description: "Managing club budgeting, sponsorships, funding allocations, and financial logistics for student initiatives.",
     members: [
       { name: "Rojvan Adbullah", role: "VP Finance", imageUrl: "/about/Rojvan-Headshot.png" },
+      { name: "Mai Ha", role: "VP Finance", imageUrl: "/about/Placeholder.png" },
       { name: "Halann Tanflotien", role: "Director", imageUrl: "/about/Halann-Headshot.png" },
       { name: "Haris Sohail", role: "Director", imageUrl: "/about/Placeholder.png" },
       { name: "Adnan Nehme", role: "Director", imageUrl: "/about/Placeholder.png" },
@@ -62,6 +80,9 @@ export const TEAM_DATA: TeamSection[] = [
       { name: "Batoul Samhat", role: "Director", imageUrl: "/about/Batoul-Headshot.png" },
       { name: "Ruah Mari", role: "Director", imageUrl: "/about/Placeholder.png" },
       { name: "Nouran Tayeb", role: "Director", imageUrl: "/about/Placeholder.png" },
+      { name: "Rayan Abrahem", role: "Director", imageUrl: "/about/Placeholder.png" },
+      { name: "Marta Storbeck", role: "Director", imageUrl: "/about/Placeholder.png" },
+
     ],
   },
   {
@@ -76,7 +97,6 @@ export const TEAM_DATA: TeamSection[] = [
     teamName: "Outreach Team",
     description: "Building partnerships with university faculties, student associations, and external academic communities.",
     members: [
-      { name: "Nujen Jaffer", role: "VP Outreach", imageUrl: "/about/Nujen-Headshot.png" },
       { name: "Laura Jensen", role: "VP Outreach", imageUrl: "/about/Placeholder.png" },
     ],
   },

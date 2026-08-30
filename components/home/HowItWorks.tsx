@@ -45,16 +45,19 @@ export function HowItWorks() {
   return (
     <motion.section 
       initial="hidden" whileInView="visible" viewport={{ once: true, margin: "-100px" }} variants={staggerContainer}
-      className="py-16 md:py-24 relative z-10 text-center"
+      // Removed top padding entirely to pull it directly up against the section above
+      className="pb-16 md:pb-24 relative z-10 text-center"
     >
       <div className="max-w-6xl mx-auto px-6">
         <motion.div variants={fadeUp} className="mb-16 flex flex-col items-center">
-          <h2 className="text-3xl md:text-4xl font-bold font-logo text-brand-red tracking-tight mb-4">
-            How it works
+          
+          <h2 className="text-3xl md:text-5xl font-black font-sans text-gray-900 tracking-tighter mb-4">
+            How <span className="text-brand-red">UONotes</span> Works
           </h2>
-          <p className="text-gray-500 max-w-xl text-lg">
-            Three simple steps to start contributing to the community.
+          <p className="text-gray-500 max-w-xl text-base md:text-lg font-medium leading-relaxed">
+            Share your knowledge, get your materials verified, and start earning official volunteer hours in three simple steps.
           </p>
+
         </motion.div>
         
         <div className="grid grid-cols-1 md:grid-cols-3 gap-x-12 gap-y-12">
@@ -77,7 +80,7 @@ export function HowItWorks() {
                 </div>
 
                 <div className="w-full flex items-center justify-between mb-6 px-2">
-                  <span className={`text-3xl font-logo font-bold transition-colors duration-500 ${isActive ? "text-brand-red" : "text-gray-200"}`}>
+                  <span className={`text-3xl font-logo font-bold transition-colors duration-500 ${isActive ? "text-brand-red" : "text-gray-300"}`}>
                     0{idx + 1}.
                   </span>
                   <div className={`p-3 rounded-lg transition-colors duration-500 ${isActive ? "bg-brand-red text-white shadow-lg shadow-brand-red/20" : "bg-brand-red/5 text-brand-red"}`}>
@@ -85,10 +88,10 @@ export function HowItWorks() {
                   </div>
                 </div>
                 
-                <h3 className={`text-xl font-semibold mb-3 transition-colors duration-500 ${isActive ? "text-gray-900" : "text-gray-400"}`}>
+                <h3 className={`text-xl font-semibold mb-3 transition-colors duration-500 ${isActive ? "text-gray-900" : "text-gray-600"}`}>
                   {step.title}
                 </h3>
-                <p className={`text-sm leading-relaxed transition-colors duration-500 max-w-sm ${isActive ? "text-gray-600" : "text-gray-400"}`}>
+                <p className={`text-sm leading-relaxed transition-colors duration-500 max-w-sm ${isActive ? "text-gray-600" : "text-gray-500"}`}>
                   {step.desc}
                 </p>
               </motion.div>

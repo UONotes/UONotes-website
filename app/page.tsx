@@ -11,7 +11,6 @@ export default function HomePage() {
       <Hero />
       <HowItWorks />
       <FeaturedNotes />
-      <Events /> 
       <SponsorsSection />
       <Community />
     </div>
