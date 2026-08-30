@@ -1,7 +1,7 @@
 "use client";
 
 import type { FormEvent } from "react";
-import { useState, Suspense } from "react";
+import { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { FormField } from "@/components/ui/FormField";
@@ -9,6 +9,7 @@ import { createClient } from "@/lib/supabase/client";
 import { isStrongPassword, PASSWORD_REQUIREMENTS_TEXT } from "@/lib/passwordValidation";
 
 const AUTH_PATHS = ["/signin", "/signup", "/forgot-password", "/reset-password"];
+const RESEND_COOLDOWN_SECONDS = 60;
 
 function SignUpFormLogic() {
   const [step, setStep] = useState<"details" | "code">("details");
@@ -16,6 +17,8 @@ function SignUpFormLogic() {
   const [emailError, setEmailError] = useState("");
   const [formError, setFormError] = useState("");
   const [codeError, setCodeError] = useState("");
+  const [resendMessage, setResendMessage] = useState("");
+  const [resendCooldown, setResendCooldown] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -27,6 +30,12 @@ function SignUpFormLogic() {
     !fromParam.startsWith("//") &&
     !AUTH_PATHS.some((path) => fromParam.startsWith(path));
   const returnPath = isSafeReturnPath ? fromParam : "/";
+
+  useEffect(() => {
+    if (resendCooldown <= 0) return;
+    const timer = setInterval(() => setResendCooldown((s) => Math.max(0, s - 1)), 1000);
+    return () => clearInterval(timer);
+  }, [resendCooldown]);
 
   async function handleDetailsSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -85,6 +94,7 @@ function SignUpFormLogic() {
     }
 
     setEmail(enteredEmail);
+    setResendCooldown(RESEND_COOLDOWN_SECONDS);
     setStep("code");
   }
 
@@ -120,6 +130,23 @@ function SignUpFormLogic() {
     // own. Reloading forces everything — middleware, the Supabase
     // client, Navbar — to re-initialize against the real, current cookies.
     window.location.href = returnPath;
+  }
+
+  async function handleResendCode() {
+    if (resendCooldown > 0) return;
+    setResendMessage("");
+    setCodeError("");
+
+    const supabase = createClient();
+    const { error } = await supabase.auth.resend({ type: "signup", email });
+
+    if (error) {
+      setResendMessage(error.message || "Could not resend code. Please try again shortly.");
+      return;
+    }
+
+    setResendCooldown(RESEND_COOLDOWN_SECONDS);
+    setResendMessage("A new code has been sent.");
   }
 
   if (step === "code") {
@@ -158,10 +185,22 @@ function SignUpFormLogic() {
             {isSubmitting ? "Verifying..." : "Verify and continue"}
           </button>
 
+          <div className="flex flex-col items-center gap-2 mt-2">
+            <button
+              type="button"
+              disabled={resendCooldown > 0}
+              onClick={handleResendCode}
+              className="text-sm font-medium text-brand-red hover:underline underline-offset-2 disabled:text-gray-400 disabled:no-underline disabled:cursor-not-allowed transition-colors"
+            >
+              {resendCooldown > 0 ? `Resend code in ${resendCooldown}s` : "Resend code"}
+            </button>
+            {resendMessage && <p className="text-xs text-gray-600">{resendMessage}</p>}
+          </div>
+
           <button
             type="button"
             className="text-sm font-medium text-gray-600 hover:text-brand-red transition-colors"
-            onClick={() => { setStep("details"); setCodeError(""); }}
+            onClick={() => { setStep("details"); setCodeError(""); setResendMessage(""); }}
           >
             Use a different email
           </button>
