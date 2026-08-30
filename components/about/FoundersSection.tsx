@@ -4,9 +4,10 @@ import { motion, Variants } from "framer-motion";
 import { TEAM_DATA } from "@/lib/team-data";
 import { ProfileCard } from "@/components/about/ProfileCard";
 
-const presidentialTeamData = 
-  TEAM_DATA.TEAM_DATA?.find((team: any) => team.teamName === "Presidential Team") || 
-  TEAM_DATA.find((team: any) => team.teamName === "Presidential Team");
+// TEAM_DATA is an array, so we call .find() directly on it.
+const presidentialTeamData = TEAM_DATA.find(
+  (team: any) => team.teamName === "Presidential Team"
+);
 
 const sectionVariants: Variants = {
   hidden: { opacity: 0, y: 25 },
