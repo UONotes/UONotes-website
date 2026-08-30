@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { FormField } from "@/components/ui/FormField";
 import { createClient } from "@/lib/supabase/client";
+import { isStrongPassword, PASSWORD_REQUIREMENTS_TEXT } from "@/lib/passwordValidation";
 
 const AUTH_PATHS = ["/signin", "/signup", "/forgot-password", "/reset-password"];
 
@@ -47,6 +48,11 @@ function SignUpFormLogic() {
     const hasOnlyAllowedCharacters = /^[\p{L}\s.'-]+$/u.test(fullName);
     if (!hasOnlyAllowedCharacters) {
       setFormError("Name can only contain letters, spaces, and basic punctuation.");
+      return;
+    }
+
+    if (!isStrongPassword(password)) {
+      setFormError(PASSWORD_REQUIREMENTS_TEXT);
       return;
     }
 

@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { FormField } from "@/components/ui/FormField";
 import { createClient } from "@/lib/supabase/client";
+import { isStrongPassword, PASSWORD_REQUIREMENTS_TEXT } from "@/lib/passwordValidation";
 
 const AUTH_PATHS = ["/signin", "/signup", "/forgot-password", "/reset-password"];
 
@@ -58,8 +59,8 @@ function ForgotPasswordFormLogic() {
       setResetError("Enter the 8-digit code from your email.");
       return;
     }
-    if (newPassword.length < 6) {
-      setResetError("Password must be at least 6 characters.");
+    if (!isStrongPassword(newPassword)) {
+      setResetError(PASSWORD_REQUIREMENTS_TEXT);
       return;
     }
     if (newPassword !== confirmPassword) {
