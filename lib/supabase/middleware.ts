@@ -5,6 +5,8 @@ import { NextResponse, type NextRequest } from "next/server";
 const PROTECTED_PATHS = ["/notes", "/submit", "/dashboard", "/settings"];
 // Paths that require being logged in AND having is_admin = true.
 const ADMIN_PATHS = ["/admin"];
+// Paths that make no sense to show someone who's already logged in.
+const LOGGED_OUT_ONLY_PATHS = ["/signin", "/signup", "/forgot-password"];
 
 export async function updateSession(request: NextRequest) {
   let response = NextResponse.next({ request });
@@ -53,6 +55,11 @@ export async function updateSession(request: NextRequest) {
     if (!profile?.is_admin) {
       return NextResponse.redirect(new URL("/", request.url));
     }
+  }
+
+  const isLoggedOutOnlyPath = LOGGED_OUT_ONLY_PATHS.some((path) => pathname.startsWith(path));
+  if (isLoggedOutOnlyPath && user) {
+    return NextResponse.redirect(new URL("/", request.url));
   }
 
   return response;
