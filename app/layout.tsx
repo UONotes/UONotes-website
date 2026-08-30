@@ -19,11 +19,9 @@ export default function RootLayout({
         {/* Slow Moving Background Layer */}
         <div className="fixed inset-0 pointer-events-none z-0 animated-grid-bg" />
 
-        <AccessGate>
           <AppShell>
             {children}
           </AppShell>
-        </AccessGate>
       </body>
     </html>
   );

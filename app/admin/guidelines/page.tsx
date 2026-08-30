@@ -39,7 +39,7 @@ const INITIAL_GUIDELINES: GuidelineSection[] = [
     id: "g_1",
     title: "Course Code Accuracy & Matching",
     category: "APPROVAL",
-    summary: "Every document must strictly map to an active uOttawa or Carleton course code listed in the university registry.",
+    summary: "Every document must strictly map to an active uOttawa course code listed in the university registry.",
     rules: [
       "Verify the course code on the title page matches the submission metadata (e.g., MAT1348, CSI2110).",
       "Reject generic titles like 'Math Notes' unless the specific course code is clearly visible on page one.",

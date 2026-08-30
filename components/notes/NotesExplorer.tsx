@@ -34,7 +34,8 @@ export function NotesExplorer({ isLoggedIn = false }: NotesExplorerProps) {
       animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
       exit={{ opacity: 0, y: -10, filter: "blur(4px)" }}
       transition={{ duration: 0.4, ease: "easeInOut" }}
-      className="w-full min-h-[calc(100vh-60px)] py-4 sm:py-12 px-3 sm:px-6 lg:px-12 flex flex-col items-center overflow-hidden bg-gray-50/50"
+      // Added vertical padding (py-4 sm:py-8) back to push it away from the navbar without a colored background box
+      className="w-full min-h-[calc(100vh-60px)] py-4 sm:py-8 px-3 sm:px-6 lg:px-12 flex flex-col items-center overflow-hidden"
     >
       <div className="w-full max-w-[1600px] mx-auto">
         

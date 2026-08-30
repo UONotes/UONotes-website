@@ -7,6 +7,12 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { FormField } from "@/components/ui/FormField";
 import { createClient } from "@/lib/supabase/client";
 
+// Define your administrative bypass list here. 
+// Convert everything to lowercase to ensure strict matching.
+const WHITELISTED_EMAILS = [
+  "kwab822@gmail.com",
+];
+
 function SignInFormLogic() {
   const [loginError, setLoginError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -27,11 +33,15 @@ function SignInFormLogic() {
     setLoginError("");
 
     const formData = new FormData(event.currentTarget);
-    const email = String(formData.get("email") ?? "").trim();
+    const rawEmail = String(formData.get("email") ?? "").trim();
+    const email = rawEmail.toLowerCase();
     const password = String(formData.get("password") ?? "");
 
-    const isValidUOttawaEmail = /^[^\s@]+@uottawa\.ca$/i.test(email);
-    if (!isValidUOttawaEmail) {
+    // 1. Evaluate Authorization Criteria
+    const isUOttawaEmail = /^[^\s@]+@uottawa\.ca$/i.test(email);
+    const isWhitelisted = WHITELISTED_EMAILS.includes(email);
+
+    if (!isUOttawaEmail && !isWhitelisted) {
       setLoginError("Please use a valid @uottawa.ca email.");
       return;
     }

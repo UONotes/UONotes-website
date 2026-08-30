@@ -28,7 +28,7 @@ export function Footer() {
 
           <div className="flex flex-col gap-2">
             <p className="text-sm text-brand-body leading-relaxed">75 Laurier Ave E<br/>Ottawa, ON, K1N 6N5</p>
-            <a href="mailto:uonotes@gmail.com" className="text-sm text-brand-body hover:text-brand-red transition-colors">uonotes@gmail.com</a>
+            <a href="mailto:uonotes@gmail.com" className="text-sm text-brand-body hover:text-brand-red transition-colors">uofonotes@gmail.com</a>
             <div className="flex gap-2.5 mt-1.5">
               <a href="#" className="text-xs font-semibold text-brand-muted hover:text-brand-red">IG</a>
               <a href="#" className="text-xs font-semibold text-brand-muted hover:text-brand-red">TikTok</a>

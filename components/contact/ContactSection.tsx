@@ -29,7 +29,7 @@ export function ContactSection() {
             Contact us
           </h1>
           <p className="text-gray-600 text-lg mb-10 max-w-md">
-            Have a question about submitting notes, earning volunteer hours, or joining the team? Reach out to us below.
+            Have a question about submitting notes, earning volunteer hours, or joining the team? Reach out to us.
           </p>
 
           <div className="flex flex-col gap-5 max-w-[380px]">
@@ -56,8 +56,8 @@ export function ContactSection() {
               <p className="text-base font-bold text-gray-900 mb-2">Kiana Gholizadeh Vazvani</p>
               <div className="flex items-center gap-3">
                 <MailIcon className="text-brand-red w-5 h-5" />
-                <a href="mailto:kianazvani@gmail.com" className="text-base font-medium text-gray-800 hover:text-brand-red transition-colors">
-                  kianazvani@gmail.com
+                <a href="mailto:Kiavazvani@gmail.com" className="text-base font-medium text-gray-800 hover:text-brand-red transition-colors">
+                  Kiavazvani@gmail.com
                 </a>
               </div>
             </div>
