@@ -29,14 +29,21 @@ export default async function AdminOverviewPage() {
   if (user) {
     const { data: profile } = await supabase
       .from("profiles")
-      .select("email")
+      .select("email, full_name") // Explicitly fetch full_name
       .eq("id", user.id)
       .single();
     
     if (profile?.email) {
       adminEmail = profile.email;
-      // Extract a clean display name from the email prefix (e.g., "john.doe@..." -> "John Doe")
-      const prefix = profile.email.split("@")[0];
+    }
+
+    // Prioritize the actual full_name from DB, fallback to metadata, then fallback to email prefix
+    if (profile?.full_name) {
+      adminName = profile.full_name;
+    } else if (user.user_metadata?.full_name) {
+      adminName = user.user_metadata.full_name;
+    } else if (adminEmail) {
+      const prefix = adminEmail.split("@")[0];
       adminName = prefix
         .split(/[._-]/)
         .map((chunk: string) => chunk.charAt(0).toUpperCase() + chunk.slice(1))

@@ -5,6 +5,19 @@ import { AdminUser } from "@/lib/admin";
 import { banUserAction, unbanUserAction } from "@/app/admin/users/actions";
 import { Shield, Ban, CheckCircle2, X, Check, Unlock, AlertCircle } from "lucide-react";
 
+// 1. Define the exact roles the UI supports
+const VALID_ROLES = ["SUPER_ADMIN", "ADMIN", "STUDENT"] as const;
+type ValidRole = typeof VALID_ROLES[number];
+
+// 2. Production-grade Type Guard
+function isValidRole(role: any): role is ValidRole {
+  return VALID_ROLES.includes(role);
+}
+
+// 3. Loosen the incoming prop type so Next.js strict mode doesn't crash 
+// when the parent page passes a raw string from the database.
+type IncomingUser = Omit<AdminUser, "role"> & { role?: any };
+
 const BAN_REASONS = [
   "Academic Integrity Violation (Plagiarism)",
   "Spam or Malicious Bot Activity",
@@ -19,12 +32,12 @@ const UNBAN_REASONS = [
   "Admin Override",
 ];
 
-export function UserListTable({ users = [] }: { users?: AdminUser[] }) {
+export function UserListTable({ users = [] }: { users?: IncomingUser[] }) {
   const [isProcessing, setIsProcessing] = useState<string | null>(null);
   const [optimisticStatuses, setOptimisticStatuses] = useState<Record<string, string>>({});
   
   // Custom Modal State
-  const [activeModal, setActiveModal] = useState<{ user: AdminUser; type: "BAN" | "UNBAN" } | null>(null);
+  const [activeModal, setActiveModal] = useState<{ user: IncomingUser; type: "BAN" | "UNBAN" } | null>(null);
   const [selectedReasons, setSelectedReasons] = useState<string[]>([]);
   const [customReason, setCustomReason] = useState("");
   const [successToast, setSuccessToast] = useState<string | null>(null);
@@ -118,8 +131,11 @@ export function UserListTable({ users = [] }: { users?: AdminUser[] }) {
                 users.map((user) => {
                   const currentStatus = optimisticStatuses[user.id] || user.status;
                   const isBanned = currentStatus === "BANNED";
-                  const isSuperAdmin = user.role === "SUPER_ADMIN";
-                  const isAdmin = user.role === "ADMIN";
+                  
+                  // 4. Safely evaluate the role using the Type Guard
+                  const safeRole = isValidRole(user.role) ? user.role : "STUDENT";
+                  const isSuperAdmin = safeRole === "SUPER_ADMIN";
+                  const isAdmin = safeRole === "ADMIN";
 
                   return (
                     <tr key={user.id} className={`hover:bg-gray-50/50 transition-colors ${isBanned ? "bg-gray-50/30" : ""}`}>
