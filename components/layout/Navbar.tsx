@@ -7,6 +7,7 @@ import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { AccountMenu } from "@/components/layout/AccountMenu";
 import { createClient } from "@/lib/supabase/client";
+import { ShieldAlert } from "lucide-react";
 
 export function Navbar() {
   const [lang, setLang] = useState<"EN" | "FR">("EN");
@@ -210,6 +211,8 @@ export function Navbar() {
             className="sm:hidden overflow-hidden bg-[#fdfafb] border-t border-brand-border-light absolute w-full left-0 top-full shadow-xl"
           >
             <div className="flex flex-col items-center py-6 gap-6">
+              
+              {/* Public Links */}
               {navLinks.map((link) => {
                 const isActive = link.href === "/" ? pathname === "/" : pathname.startsWith(link.href);
                 return (
@@ -218,13 +221,55 @@ export function Navbar() {
                     href={link.href}
                     onClick={() => setIsMobileMenuOpen(false)}
                     className={`font-logo text-lg font-semibold transition-colors duration-200 ${
-                      isActive ? "text-brand-red" : "text-brand-body"
+                      isActive ? "text-brand-red" : "text-brand-body hover:text-brand-red"
                     }`}
                   >
                     {link.name}
                   </Link>
                 );
               })}
+
+              {/* UNROLLED ACCOUNT LINKS FOR MOBILE */}
+              {isLoggedIn && (
+                <>
+                  <div className="w-16 h-px bg-brand-red/15 my-1" />
+                  
+                  <Link 
+                    href="/dashboard" 
+                    onClick={() => setIsMobileMenuOpen(false)} 
+                    className="font-logo text-lg font-bold text-brand-red"
+                  >
+                    My Dashboard
+                  </Link>
+                  <Link 
+                    href="/submit" 
+                    onClick={() => setIsMobileMenuOpen(false)} 
+                    className="font-logo text-lg font-semibold text-brand-body hover:text-brand-red transition-colors"
+                  >
+                    Submit Notes
+                  </Link>
+                  <Link 
+                    href="/settings" 
+                    onClick={() => setIsMobileMenuOpen(false)} 
+                    className="font-logo text-lg font-semibold text-brand-body hover:text-brand-red transition-colors"
+                  >
+                    Settings
+                  </Link>
+                  
+                  {isAdmin && (
+                    <Link 
+                      href="/admin" 
+                      onClick={() => setIsMobileMenuOpen(false)} 
+                      className="flex items-center gap-2 px-5 py-2.5 mt-2 bg-gray-900 text-white rounded-xl font-logo text-sm font-bold uppercase tracking-wider shadow-sm"
+                    >
+                      <ShieldAlert className="w-4 h-4 text-brand-red" />
+                      Admin Console
+                    </Link>
+                  )}
+                  
+                  <div className="w-16 h-px bg-brand-red/15 my-1" />
+                </>
+              )}
               
               <div className="flex gap-4 mt-2">
                 
@@ -250,7 +295,7 @@ export function Navbar() {
                   ))}
                 </div>
                 
-                {/* MOBILE AUTHENTICATION LOGIC */}
+                {/* MOBILE AUTHENTICATION ACTIONS */}
                 {isLoggedIn ? (
                   <button
                     onClick={() => { setIsMobileMenuOpen(false); handleSignOut(); }}
@@ -273,5 +318,5 @@ export function Navbar() {
         )}
       </AnimatePresence>
     </motion.header>
-  );
+  ); 
 }
