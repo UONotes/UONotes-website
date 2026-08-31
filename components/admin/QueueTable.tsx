@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { FileText, AlertTriangle, Clock } from "lucide-react";
+import { FileText, AlertTriangle, Clock, Lock } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 type QueueItem = {
@@ -12,8 +12,8 @@ type QueueItem = {
   uploaderEmail: string;
   submittedAt: string;
   status: string;
+  claimedBy?: string | null;
   flagReason?: string | null;
-  reviewedBy?: { id: string; email: string } | null;
 };
 
 function TimeAgo({ dateString }: { dateString: string }) {
@@ -69,6 +69,7 @@ export function QueueTable({ initialNotes }: { initialNotes: QueueItem[] }) {
               <AnimatePresence mode="popLayout">
                 {initialNotes.map((note) => {
                   const isFlagged = note.status === "flagged";
+                  const isLocked = Boolean(note.claimedBy && note.claimedBy.trim() !== "");
                   const isSlaBreached = false;
 
                   return (
@@ -95,7 +96,7 @@ export function QueueTable({ initialNotes }: { initialNotes: QueueItem[] }) {
                         {note.uploaderEmail}
                       </td>
 
-                      <td className="p-4">
+                      <td className="p-4 space-y-1">
                         {isFlagged ? (
                           <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-purple-50 text-purple-700 text-[10px] font-mono font-bold uppercase tracking-wider border border-purple-100">
                             <AlertTriangle className="w-3 h-3 text-purple-600" /> Flagged Report
@@ -104,6 +105,15 @@ export function QueueTable({ initialNotes }: { initialNotes: QueueItem[] }) {
                           <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-blue-50 text-blue-700 text-[10px] font-mono font-bold uppercase tracking-wider border border-blue-100">
                             <Clock className="w-3 h-3 text-blue-600" /> Pending Review
                           </span>
+                        )}
+
+                        {isLocked && (
+                          <div className="flex items-center gap-1.5 pt-0.5">
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-amber-50 text-amber-800 text-[10px] font-mono border border-amber-200/60 shadow-2xs">
+                              <Lock className="w-2.5 h-2.5 text-amber-600" />
+                              Claimed by <strong className="font-semibold text-amber-900">{note.claimedBy}</strong>
+                            </span>
+                          </div>
                         )}
                       </td>
 
