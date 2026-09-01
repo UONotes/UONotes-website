@@ -14,32 +14,27 @@ const notebookStyle = {
   backgroundSize: "100% 100%, 100% 32px",
 };
 
-interface NoteItem {
+// Define exact shape of a Note row matching your Supabase schema
+export interface NoteItem {
   id: string;
   title: string;
-  courseCode: string;
-  pdfUrl: string;
+  course_code: string;
+  file_key: string;
+  created_at?: string;
 }
 
-const mockCourseNotes: Record<string, NoteItem[]> = {
-  "CSI2110": [
-    { id: "1", title: "Midterm Comprehensive Guide", courseCode: "CSI2110", pdfUrl: "/notes/csi2110-midterm.pdf" },
-    { id: "2", title: "Binary Trees & Graphs Summary", courseCode: "CSI2110", pdfUrl: "/notes/csi2110-trees.pdf" },
-    { id: "3", title: "Final Exam Cheat Sheet", courseCode: "CSI2110", pdfUrl: "/notes/csi2110-final.pdf" },
-    { id: "4", title: "Week 1-4 Lecture Notes", courseCode: "CSI2110", pdfUrl: "/notes/csi2110-w1-4.pdf" },
-  ]
-};
+interface CourseFolderViewProps {
+  courseCode: string;
+  notes: NoteItem[];
+}
 
-export function CourseFolderView({ courseCode }: { courseCode: string }) {
+export function CourseFolderView({ courseCode, notes }: CourseFolderViewProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [reportNote, setReportNote] = useState<NoteItem | null>(null);
 
-  const notes = mockCourseNotes[courseCode] || [
-    { id: "1", title: "Midterm Summary Notes", courseCode: courseCode, pdfUrl: "#" },
-    { id: "2", title: "Final Review Sheet", courseCode: courseCode, pdfUrl: "#" },
-  ];
-
-  const filteredNotes = notes.filter(n => n.title.toLowerCase().includes(searchQuery.toLowerCase()));
+  const filteredNotes = notes.filter((n) => 
+    n.title.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   return (
     <motion.div
@@ -64,7 +59,7 @@ export function CourseFolderView({ courseCode }: { courseCode: string }) {
           {/* Responsive Notebook Spine Shadow */}
           <div className="absolute top-0 left-0 bottom-0 w-4 sm:w-12 lg:w-16 bg-gradient-to-r from-black/[0.04] to-transparent pointer-events-none z-10" />
 
-          {/* Inner Layout Wrapper - Reclaims left padding on mobile */}
+          {/* Inner Layout Wrapper */}
           <div className="relative z-20 pl-6 sm:pl-10 lg:pl-16 w-full flex flex-col gap-5 sm:gap-8">
 
             {/* Back Button */}
@@ -96,7 +91,7 @@ export function CourseFolderView({ courseCode }: { courseCode: string }) {
                 </div>
               </div>
 
-              {/* Search Bar - Full width on mobile, constrained on desktop */}
+              {/* Search Bar */}
               <div className="relative w-full lg:w-72 shrink-0">
                 <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                 <input
@@ -137,10 +132,10 @@ export function CourseFolderView({ courseCode }: { courseCode: string }) {
                             {note.title}
                           </h3>
                         </Link>
-                        <p className="text-[10px] sm:text-xs font-mono text-brand-red font-semibold">{note.courseCode}</p>
+                        <p className="text-[10px] sm:text-xs font-mono text-brand-red font-semibold">{note.course_code}</p>
                       </div>
 
-                      {/* Actions - Thumb optimized */}
+                      {/* Actions */}
                       <div className="flex items-center justify-between gap-2 pt-3 border-t border-gray-100">
                         <Link
                           href={`/notes/view/${note.id}`}
@@ -177,7 +172,6 @@ export function CourseFolderView({ courseCode }: { courseCode: string }) {
 
           </div>
         </div>
-
       </div>
 
       {/* Report Modal Integration */}
