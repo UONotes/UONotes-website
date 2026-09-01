@@ -1,13 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { SearchBar } from "@/components/ui/SearchBar";
 import { NoteCard } from "@/components/ui/NoteCard";
 import { Folder, UploadCloud, Library, Compass, Lock, ChevronRight } from "lucide-react";
 
-// Optimized background: scaled down lines for mobile
 const notebookStyle = {
   backgroundImage: `
     linear-gradient(90deg, transparent 64px, rgba(168, 49, 66, 0.15) 64px, rgba(168, 49, 66, 0.15) 66px, transparent 66px),
@@ -16,17 +15,63 @@ const notebookStyle = {
   backgroundSize: "100% 100%, 100% 32px",
 };
 
-// Robust scrollbar hiding utility
 const hideScrollbar = "[&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]";
-
 const FACULTIES = ["All Faculties", "Engineering", "Science", "Arts", "Telfer", "Health Sciences"];
+
+// Define the shape of your real database record
+export interface DatabaseNote {
+  id: string;
+  title: string;
+  course_code: string;
+}
 
 interface NotesExplorerProps {
   isLoggedIn?: boolean;
+  notes: DatabaseNote[];
 }
 
-export function NotesExplorer({ isLoggedIn = false }: NotesExplorerProps) {
+export function NotesExplorer({ isLoggedIn = false, notes = [] }: NotesExplorerProps) {
   const [activeFaculty, setActiveFaculty] = useState("All Faculties");
+  const [searchQuery, setSearchQuery] = useState("");
+
+  // 1. Dynamically calculate the top 3 courses (folders) based on real note counts
+  const topFolders = useMemo(() => {
+    const counts = notes.reduce((acc, note) => {
+      acc[note.course_code] = (acc[note.course_code] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
+
+    return Object.entries(counts)
+      .sort((a, b) => b[1] - a[1]) // Sort by count descending
+      .slice(0, 3); // Take top 3
+  }, [notes]);
+
+  // 2. Filter notes based on active faculty and search query
+  // Note: Since your DB doesn't have a "faculty" column yet, we simulate it here by searching course prefixes.
+  const filteredNotes = useMemo(() => {
+    let filtered = notes;
+
+    if (searchQuery.trim() !== "") {
+      filtered = filtered.filter(n => 
+        n.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
+        n.course_code.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+    }
+
+    if (activeFaculty !== "All Faculties") {
+      // Example basic mapping (Expand this logic based on uOttawa prefixes)
+      const prefixes = 
+        activeFaculty === "Engineering" ? ["CSI", "SEG", "CEG", "ELG", "MCG"] :
+        activeFaculty === "Science" ? ["MAT", "CHM", "PHY", "BIO"] :
+        activeFaculty === "Arts" ? ["ENG", "HIS", "PHI"] :
+        activeFaculty === "Telfer" ? ["ADM"] :
+        activeFaculty === "Health Sciences" ? ["HSS", "BPS", "NSG"] : [];
+
+      filtered = filtered.filter(n => prefixes.some(p => n.course_code.startsWith(p)));
+    }
+
+    return filtered;
+  }, [notes, activeFaculty, searchQuery]);
 
   return (
     <motion.div 
@@ -34,35 +79,21 @@ export function NotesExplorer({ isLoggedIn = false }: NotesExplorerProps) {
       animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
       exit={{ opacity: 0, y: -10, filter: "blur(4px)" }}
       transition={{ duration: 0.4, ease: "easeInOut" }}
-      // Added vertical padding (py-4 sm:py-8) back to push it away from the navbar without a colored background box
       className="w-full min-h-[calc(100vh-60px)] py-4 sm:py-8 px-3 sm:px-6 lg:px-12 flex flex-col items-center overflow-hidden"
     >
       <div className="w-full max-w-[1600px] mx-auto">
-        
-        {/* ==========================================
-            MASTER NOTEBOOK CONTAINER
-        ========================================== */}
         <div 
           className="w-full bg-white p-3 sm:p-10 lg:p-12 rounded-2xl sm:rounded-[2rem] shadow-xl border border-brand-red/15 relative overflow-hidden"
           style={notebookStyle}
         >
-          {/* Responsive Red Margin Line - Tighter on mobile */}
           <div className="absolute top-0 bottom-0 left-6 sm:left-16 lg:left-20 w-[2px] bg-[#a83142]/25 pointer-events-none z-0" />
-          
-          {/* Responsive Notebook Spine Shadow */}
           <div className="absolute top-0 left-0 bottom-0 w-4 sm:w-12 lg:w-16 bg-gradient-to-r from-black/[0.04] to-transparent pointer-events-none z-10" />
 
-          {/* Inner Layout Wrapper - Reclaims left padding on mobile */}
           <div className="relative z-20 pl-6 sm:pl-10 lg:pl-16 flex flex-col lg:flex-row gap-6 lg:gap-10 w-full">
 
-            {/* ==========================================
-                MAIN AREA: HERO, MOBILE UI & FEED
-            ========================================== */}
             <main className="flex-1 min-w-0 flex flex-col gap-5 sm:gap-6 order-1 lg:order-2">
               
-              {/* Hero Header App Style */}
               <div className="bg-white/95 backdrop-blur-sm p-5 sm:p-10 rounded-[1.25rem] sm:rounded-3xl border border-brand-red/15 shadow-sm relative overflow-hidden flex flex-col justify-center">
-                {/* Background geometric accents - Scaled for mobile */}
                 <div className="absolute top-0 right-0 w-48 h-48 sm:w-96 sm:h-96 bg-brand-red/5 rounded-full blur-2xl sm:blur-3xl -mr-16 -mt-16 sm:-mr-32 sm:-mt-32 pointer-events-none" />
                 
                 <div className="relative z-10 w-full max-w-3xl">
@@ -81,41 +112,34 @@ export function NotesExplorer({ isLoggedIn = false }: NotesExplorerProps) {
                     Instantly access verified study guides, lecture notes, and cheat sheets for your classes.
                   </p>
 
-                  {/* Integrated App Search Bar */}
                   <div className="w-full shadow-lg shadow-gray-200/50 rounded-xl sm:rounded-2xl bg-white">
-                    <SearchBar placeholder="Search code (e.g. CSI2110)..." />
+                    <SearchBar 
+                      placeholder="Search code (e.g. CSI2110)..." 
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                    />
                   </div>
                 </div>
               </div>
 
-              {/* ==========================================
-                  MOBILE ONLY CONTROLS (< 1024px)
-              ========================================== */}
+              {/* Mobile UI block omitted for brevity, logic remains identical */}
               <div className="flex flex-col gap-5 lg:hidden">
-                
-                {/* Mobile Faculties Swipeable Row (Edge-to-Edge) */}
                 <div className={`flex items-center gap-2 overflow-x-auto snap-x snap-mandatory pb-2 -mx-2 px-2 sm:mx-0 sm:px-0 ${hideScrollbar}`}>
-                  {FACULTIES.map((faculty) => {
-                    const isActive = activeFaculty === faculty;
-                    return (
-                      <button
-                        key={faculty}
-                        onClick={() => setActiveFaculty(faculty)}
-                        className={`snap-start whitespace-nowrap px-4 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all shrink-0 border ${
-                          isActive 
-                            ? "bg-brand-red text-white border-brand-red shadow-sm" 
-                            : "bg-white text-gray-600 border-gray-200 hover:bg-gray-50"
-                        }`}
-                      >
-                        {faculty}
-                      </button>
-                    );
-                  })}
-                  {/* Invisible spacer for end of scroll padding */}
+                  {FACULTIES.map((faculty) => (
+                    <button
+                      key={faculty}
+                      onClick={() => setActiveFaculty(faculty)}
+                      className={`snap-start whitespace-nowrap px-4 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all shrink-0 border ${
+                        activeFaculty === faculty 
+                          ? "bg-brand-red text-white border-brand-red shadow-sm" 
+                          : "bg-white text-gray-600 border-gray-200 hover:bg-gray-50"
+                      }`}
+                    >
+                      {faculty}
+                    </button>
+                  ))}
                   <div className="w-2 shrink-0 sm:hidden" />
                 </div>
 
-                {/* Mobile Workspace / Auth Banner */}
                 {isLoggedIn ? (
                   <div className="flex flex-col gap-2.5">
                     <div className="flex items-center justify-between px-1">
@@ -127,7 +151,6 @@ export function NotesExplorer({ isLoggedIn = false }: NotesExplorerProps) {
                       </Link>
                     </div>
                     
-                    {/* Horizontal Swipeable Folders for Mobile (Edge-to-Edge) */}
                     <div className={`flex items-stretch gap-3 overflow-x-auto snap-x snap-mandatory pb-2 -mx-2 px-2 sm:mx-0 sm:px-0 ${hideScrollbar}`}>
                       <Link 
                         href="/submit" 
@@ -136,9 +159,9 @@ export function NotesExplorer({ isLoggedIn = false }: NotesExplorerProps) {
                         <UploadCloud className="w-5 h-5" />
                         <span className="text-[9px] font-mono font-bold uppercase text-center">Upload Note</span>
                       </Link>
-                      <MobileFolderCard courseCode="CSI2110" count={12} />
-                      <MobileFolderCard courseCode="ITI1120" count={4} />
-                      <MobileFolderCard courseCode="MAT1348" count={7} />
+                      {topFolders.map(([code, count]) => (
+                        <MobileFolderCard key={code} courseCode={code} count={count} />
+                      ))}
                       <div className="w-2 shrink-0 sm:hidden" />
                     </div>
                   </div>
@@ -155,7 +178,6 @@ export function NotesExplorer({ isLoggedIn = false }: NotesExplorerProps) {
                 )}
               </div>
 
-              {/* Results Grid Header */}
               <div className="flex items-center justify-between mt-1 px-1 sm:px-2 bg-white/60 backdrop-blur-sm py-1.5 rounded-lg">
                 <div className="flex items-center gap-2">
                   <span className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-brand-red animate-pulse" />
@@ -164,37 +186,38 @@ export function NotesExplorer({ isLoggedIn = false }: NotesExplorerProps) {
                   </h2>
                 </div>
                 <span className="text-[9px] sm:text-[10px] font-mono text-gray-500 bg-white border border-gray-200 px-2 sm:px-3 py-0.5 sm:py-1 rounded-full shadow-xs uppercase tracking-wider font-bold">
-                  24 results
+                  {filteredNotes.length} results
                 </span>
               </div>
 
-              {/* Responsive Grid Layout */}
+              {/* REAL DATA MAPPING */}
               <motion.div 
                 initial={{ opacity: 0 }} 
                 animate={{ opacity: 1 }} 
                 transition={{ duration: 0.4 }}
                 className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6 pb-8"
               >
-                {Array.from({ length: 9 }).map((_, i) => (
-                  <div key={i} className="bg-white rounded-xl shadow-sm border border-brand-red/15 relative">
-                    <NoteCard 
-                      id={String(i + 1)}
-                      title={`Study Guide Document ${i + 1}`}
-                      course={activeFaculty === "All Faculties" ? "CSI2110" : `${activeFaculty} 101`}
-                    />
+                {filteredNotes.length > 0 ? (
+                  filteredNotes.map((note) => (
+                    <div key={note.id} className="bg-white rounded-xl shadow-sm border border-brand-red/15 relative">
+                      <NoteCard 
+                        id={String(note.id)}
+                        title={note.title}
+                        course={note.course_code}
+                      />
+                    </div>
+                  ))
+                ) : (
+                  <div className="col-span-full py-12 text-center text-gray-500 text-sm font-medium">
+                    No resources found matching your criteria.
                   </div>
-                ))}
+                )}
               </motion.div>
 
             </main>
 
-            {/* ==========================================
-                DESKTOP SIDEBAR: NAVIGATION & WORKSPACE
-                (Hidden on mobile, block on lg+)
-            ========================================== */}
             <aside className="hidden lg:flex w-72 flex-shrink-0 flex-col gap-6 order-2 lg:order-1">
               
-              {/* Desktop Workspace Panel */}
               {isLoggedIn ? (
                 <div className="bg-white/95 backdrop-blur-sm p-5 rounded-3xl border border-brand-red/15 shadow-sm flex flex-col">
                   <div className="flex items-center gap-2 mb-4 px-1">
@@ -211,10 +234,13 @@ export function NotesExplorer({ isLoggedIn = false }: NotesExplorerProps) {
                   </Link>
 
                   <div className="space-y-1">
-                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2 px-1">Saved Folders</p>
-                    <DesktopFolderLink courseCode="CSI2110" count={12} />
-                    <DesktopFolderLink courseCode="ITI1120" count={4} />
-                    <DesktopFolderLink courseCode="MAT1348" count={7} />
+                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2 px-1">Top Folders</p>
+                    {topFolders.map(([code, count]) => (
+                      <DesktopFolderLink key={code} courseCode={code} count={count} />
+                    ))}
+                    {topFolders.length === 0 && (
+                      <p className="text-[10px] text-gray-400 px-1 py-2">No folders yet.</p>
+                    )}
                   </div>
                   
                   <Link href="/dashboard" className="mt-4 text-[11px] font-mono font-bold text-brand-red hover:underline text-center">
@@ -222,7 +248,6 @@ export function NotesExplorer({ isLoggedIn = false }: NotesExplorerProps) {
                   </Link>
                 </div>
               ) : (
-                /* Desktop Logged-out state */
                 <div className="bg-white/95 backdrop-blur-sm p-6 rounded-3xl border border-brand-red/15 border-dashed flex flex-col items-center text-center shadow-sm">
                   <div className="w-10 h-10 rounded-full bg-brand-red/10 text-brand-red flex items-center justify-center mb-3">
                     <Lock className="w-5 h-5" />
@@ -242,7 +267,6 @@ export function NotesExplorer({ isLoggedIn = false }: NotesExplorerProps) {
                 </div>
               )}
 
-              {/* Desktop Filters / Faculty Navigation */}
               <div className="bg-white/95 backdrop-blur-sm p-5 rounded-3xl border border-brand-red/15 shadow-sm flex flex-col">
                 <div className="flex items-center gap-2 mb-4 px-1">
                   <Compass className="w-4 h-4 text-brand-red" />
@@ -250,23 +274,20 @@ export function NotesExplorer({ isLoggedIn = false }: NotesExplorerProps) {
                 </div>
                 
                 <nav className="flex flex-col gap-1">
-                  {FACULTIES.map((faculty) => {
-                    const isActive = activeFaculty === faculty;
-                    return (
-                      <button
-                        key={faculty}
-                        onClick={() => setActiveFaculty(faculty)}
-                        className={`flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-semibold transition-all cursor-pointer ${
-                          isActive 
-                            ? "bg-brand-red/10 text-brand-red" 
-                            : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
-                        }`}
-                      >
-                        {faculty}
-                        {isActive && <ChevronRight className="w-4 h-4" />}
-                      </button>
-                    );
-                  })}
+                  {FACULTIES.map((faculty) => (
+                    <button
+                      key={faculty}
+                      onClick={() => setActiveFaculty(faculty)}
+                      className={`flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-semibold transition-all cursor-pointer ${
+                        activeFaculty === faculty 
+                          ? "bg-brand-red/10 text-brand-red" 
+                          : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                      }`}
+                    >
+                      {faculty}
+                      {activeFaculty === faculty && <ChevronRight className="w-4 h-4" />}
+                    </button>
+                  ))}
                 </nav>
               </div>
 
@@ -279,10 +300,7 @@ export function NotesExplorer({ isLoggedIn = false }: NotesExplorerProps) {
   );
 }
 
-// -------------------------------------------------------------
-// Sub-components for Sidebar and Mobile Variants
-// -------------------------------------------------------------
-
+// Sub-components remain unchanged
 function DesktopFolderLink({ courseCode, count }: { courseCode: string, count: number }) {
   return (
     <Link 

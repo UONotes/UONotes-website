@@ -11,15 +11,13 @@ const supabaseAdmin = createAdminClient(
 
 export async function reviewNoteAction(
   noteId: string,
-  status: "approved" | "rejected",
+  status: "approved" | "rejected" | "changes_requested",
   reason: string
 ) {
   const supabase = await createServerClient();
   const { data: { user: caller }, error: authError } = await supabase.auth.getUser();
   
-  if (authError || !caller) {
-    throw new Error("Unauthorized access attempt.");
-  }
+  if (authError || !caller) throw new Error("Unauthorized access attempt.");
 
   const { data: callerProfile } = await supabase
     .from("profiles")
@@ -27,17 +25,15 @@ export async function reviewNoteAction(
     .eq("id", caller.id)
     .single();
 
-  if (!callerProfile?.is_admin) {
-    throw new Error("Insufficient privileges to moderate submissions.");
-  }
+  if (!callerProfile?.is_admin) throw new Error("Insufficient privileges.");
 
-  // 1. Update Note Status & Clear Lock
   const { error: updateError } = await supabaseAdmin
     .from("notes")
     .update({
       status: status,
       reviewed_by: null,
       reviewed_at: new Date().toISOString(),
+      flag_reason: status === "approved" ? null : reason, 
     })
     .eq("id", noteId);
 
@@ -46,20 +42,17 @@ export async function reviewNoteAction(
     throw new Error(`Database update failed: ${updateError.message}`);
   }
 
-  // 2. Write Immutable Audit Log Entry
-  const { error: auditError } = await supabaseAdmin
-    .from("audit_logs")
-    .insert({
-      target_user_id: caller.id,
-      action_by_admin_id: caller.id,
-      action_type: status === "approved" ? "NOTE_APPROVED" : "NOTE_REJECTED",
-      reasons: [reason],
-      custom_note: `Moderated note ID ${noteId} with decision: ${status.toUpperCase()}. Feedback: ${reason}`,
-    });
+  const actionString = 
+    status === "approved" ? "NOTE_APPROVED" : 
+    status === "rejected" ? "NOTE_REJECTED" : "NOTE_CHANGES_REQUESTED";
 
-  if (auditError) {
-    console.error("Failed to write moderation audit log:", auditError);
-  }
+  await supabaseAdmin.from("audit_logs").insert({
+    target_user_id: caller.id, 
+    action_by_admin_id: caller.id,
+    action_type: actionString,
+    reasons: [reason || "No reason provided"],
+    custom_note: `Moderated note ID ${noteId} with decision: ${status.toUpperCase()}. Feedback: ${reason}`,
+  });
 
   revalidatePath("/admin/queue");
   return { success: true };
@@ -69,9 +62,8 @@ export async function releaseNoteLockAction(noteId: string) {
   const supabase = await createServerClient();
   const { data: { user: caller } } = await supabase.auth.getUser();
   
-  if (!caller) return;
+  if (!caller) throw new Error("Unauthorized");
 
-  // Use admin client to forcefully unlock regardless of RLS boundaries
   const { error: releaseError } = await supabaseAdmin
     .from("notes")
     .update({ reviewed_by: null })
@@ -79,7 +71,9 @@ export async function releaseNoteLockAction(noteId: string) {
 
   if (releaseError) {
     console.error("Failed to release note lock:", releaseError);
+    throw new Error("Failed to unlock document in database.");
   }
 
   revalidatePath("/admin/queue");
+  return { success: true };
 }

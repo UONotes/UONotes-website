@@ -1,129 +1,89 @@
 "use client";
 
 import { useState } from "react";
-import { Check, X, AlertTriangle } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { reviewNoteAction } from "@/app/admin/queue/actions";
-
-const REJECTION_REASONS = [
-  "Contains Plagiarism / Not original student work",
-  "Incorrect Course Code or Curriculum Mapping",
-  "Illegible Scan Quality / Missing Pages",
-  "Inappropriate Content / Policy Violation",
-  "Other (Specify Custom Feedback Below)",
-];
+import { Check, AlertCircle, Trash2, Loader2, MessageSquareText } from "lucide-react";
 
 export function ReviewActionPanel({ noteId }: { noteId: string }) {
-  const [isRejecting, setIsRejecting] = useState(false);
-  const [selectedReason, setSelectedReason] = useState("");
-  const [customText, setCustomText] = useState("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const router = useRouter();
+  const [feedback, setFeedback] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState<string | null>(null);
+  const [error, setError] = useState("");
 
-  const isOther = selectedReason.startsWith("Other");
-  const finalReason = isOther ? customText.trim() : selectedReason;
+  const handleDecision = async (status: "approved" | "rejected" | "changes_requested") => {
+    if ((status === "rejected" || status === "changes_requested") && feedback.trim().length < 10) {
+      setError("Provide at least a brief explanation (10+ characters) for this action.");
+      return;
+    }
 
-  const handleAction = async (status: "approved" | "rejected") => {
-    if (status === "rejected" && !finalReason) return;
-    
-    setIsSubmitting(true);
+    setError("");
+    setIsSubmitting(status);
+
     try {
-      await reviewNoteAction(
-        noteId, 
-        status, 
-        status === "approved" ? "Passed automated compliance and quality review." : finalReason
-      );
+      await reviewNoteAction(noteId, status, feedback.trim());
       router.push("/admin/queue");
-    } catch (err) {
-      console.error(err);
-      alert("Failed to submit moderation decision. Check console.");
-      setIsSubmitting(false);
+      router.refresh(); 
+    } catch (err: any) {
+      setError(err.message || "System error saving decision.");
+      setIsSubmitting(null);
     }
   };
 
-  if (isRejecting) {
-    return (
-      <div className="flex flex-col gap-4 p-6 bg-white border-t border-gray-100 animate-in fade-in slide-in-from-bottom-3 duration-200">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2 text-rose-600 font-bold text-xs uppercase tracking-wider font-mono">
-            <AlertTriangle className="w-4 h-4" /> Rejection & Student Feedback
-          </div>
-          <span className="text-[10px] font-mono text-gray-400">Audited Action</span>
+  return (
+    <div className="bg-white/60 backdrop-blur-xl border-t border-gray-200 p-6 md:p-8 flex flex-col gap-5 shrink-0 shadow-[0_-20px_40px_rgba(0,0,0,0.02)]">
+      
+      <div className="flex flex-col gap-2.5">
+        <label className="flex items-center gap-2 text-[10px] font-black text-gray-500 uppercase tracking-widest">
+          <MessageSquareText className="w-4 h-4 text-gray-400" />
+          Reviewer Audit Log & Feedback
+        </label>
+        <textarea
+          value={feedback}
+          onChange={(e) => setFeedback(e.target.value)}
+          placeholder="Required if rejecting or requesting changes. Sent directly to the submitter..."
+          className="w-full h-24 p-4 bg-white border border-gray-200/80 rounded-xl text-sm focus:outline-none focus:border-gray-900 focus:ring-1 focus:ring-gray-900 transition-all resize-none shadow-[inset_0_2px_4px_rgba(0,0,0,0.02)] placeholder:text-gray-400 font-medium"
+        />
+      </div>
+
+      {error && (
+        <div className="p-3 bg-red-50 text-red-600 text-[11px] font-mono font-bold uppercase tracking-wider rounded-lg border border-red-200 text-center shadow-sm">
+          {error}
         </div>
+      )}
 
-        <div className="space-y-2">
-          {REJECTION_REASONS.map((r) => {
-            const isSelected = selectedReason === r;
-            return (
-              <button
-                key={r}
-                type="button"
-                onClick={() => setSelectedReason(r)}
-                className={`w-full text-left px-4 py-3 rounded-xl text-xs font-medium transition-all flex items-center justify-between border ${
-                  isSelected 
-                    ? "bg-rose-50/60 border-rose-200 text-rose-900 shadow-2xs" 
-                    : "bg-gray-50/60 border-gray-100 text-gray-700 hover:bg-gray-100/60"
-                }`}
-              >
-                <span>{r}</span>
-                <div className={`w-4 h-4 rounded-full border flex items-center justify-center shrink-0 ${isSelected ? "border-rose-600 bg-rose-600 text-white" : "border-gray-300 bg-white"}`}>
-                  {isSelected && <Check className="w-2.5 h-2.5 stroke-[3]" />}
-                </div>
-              </button>
-            );
-          })}
-        </div>
+      <div className="flex flex-col gap-3">
+        {/* Primary Command */}
+        <button
+          onClick={() => handleDecision("approved")}
+          disabled={isSubmitting !== null}
+          className="w-full py-4 bg-gray-900 text-white text-xs font-black uppercase tracking-widest rounded-xl hover:bg-gray-800 transition-all shadow-lg shadow-gray-900/20 active:scale-[0.98] flex items-center justify-center gap-2 disabled:opacity-50"
+        >
+          {isSubmitting === "approved" ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-5 h-5" />}
+          Approve & Publish
+        </button>
 
-        {isOther && (
-          <div className="space-y-1.5 animate-in fade-in duration-200">
-            <label className="block text-[11px] font-mono font-bold text-gray-400 uppercase tracking-wider">
-              Custom Student Feedback <span className="text-rose-500">*</span>
-            </label>
-            <textarea
-              rows={3}
-              placeholder="Explain clearly why this document is being rejected so the student can correct it and resubmit..."
-              value={customText}
-              onChange={(e) => setCustomText(e.target.value)}
-              className="w-full p-3.5 bg-gray-50/80 border border-gray-200 rounded-2xl text-xs text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-rose-500 focus:bg-white transition-all resize-none shadow-2xs"
-            />
-          </div>
-        )}
-
-        <div className="flex items-center gap-3 pt-2">
-          <button 
-            onClick={() => { setIsRejecting(false); setSelectedReason(""); setCustomText(""); }} 
-            className="flex-1 py-3 bg-gray-100 hover:bg-gray-200/80 text-gray-700 text-xs font-bold uppercase tracking-wider rounded-2xl transition-colors"
+        {/* Secondary Commands */}
+        <div className="grid grid-cols-2 gap-3">
+          <button
+            onClick={() => handleDecision("changes_requested")}
+            disabled={isSubmitting !== null}
+            className="w-full py-3.5 bg-white border border-gray-200 text-amber-600 text-[11px] font-bold uppercase tracking-wider rounded-xl hover:bg-amber-50 hover:border-amber-200 transition-all shadow-sm active:scale-[0.98] flex items-center justify-center gap-2 disabled:opacity-50"
           >
-            Cancel
+            {isSubmitting === "changes_requested" ? <Loader2 className="w-4 h-4 animate-spin" /> : <AlertCircle className="w-4 h-4" />}
+            Request Fixes
           </button>
-          <button 
-            disabled={!selectedReason || (isOther && !customText.trim()) || isSubmitting} 
-            onClick={() => handleAction("rejected")} 
-            className="flex-1 py-3 bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold uppercase tracking-wider rounded-2xl disabled:opacity-40 transition-all shadow-md shadow-rose-600/20 flex items-center justify-center gap-2"
+
+          <button
+            onClick={() => handleDecision("rejected")}
+            disabled={isSubmitting !== null}
+            className="w-full py-3.5 bg-white border border-gray-200 text-red-600 text-[11px] font-bold uppercase tracking-wider rounded-xl hover:bg-red-50 hover:border-red-200 transition-all shadow-sm active:scale-[0.98] flex items-center justify-center gap-2 disabled:opacity-50"
           >
-            {isSubmitting ? "Logging..." : "Confirm Rejection"}
+            {isSubmitting === "rejected" ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+            Reject File
           </button>
         </div>
       </div>
-    );
-  }
-
-  return (
-    <div className="flex flex-col gap-3.5 p-6 bg-white border-t border-gray-100">
-      <button 
-        disabled={isSubmitting}
-        onClick={() => handleAction("approved")} 
-        className="w-full flex items-center justify-center gap-2 px-4 py-4 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold uppercase tracking-wider rounded-2xl shadow-md shadow-emerald-600/20 transition-all active:scale-[0.98] disabled:opacity-50 cursor-pointer"
-      >
-        <Check className="w-4 h-4 stroke-[3]" /> {isSubmitting ? "Processing..." : "Approve & Publish Submission"}
-      </button>
-      <button 
-        disabled={isSubmitting}
-        onClick={() => setIsRejecting(true)} 
-        className="w-full flex items-center justify-center gap-2 px-4 py-4 bg-white border border-rose-200/80 hover:bg-rose-50/50 text-rose-600 text-xs font-bold uppercase tracking-wider rounded-2xl transition-all active:scale-[0.98] disabled:opacity-50 cursor-pointer shadow-2xs"
-      >
-        <X className="w-4 h-4 stroke-[3]" /> Reject Document
-      </button>
     </div>
   );
 }

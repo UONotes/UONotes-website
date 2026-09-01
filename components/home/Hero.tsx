@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { motion, Variants } from "framer-motion";
 import { Search, UploadCloud, LayoutDashboard, ArrowRight } from "lucide-react";
 
@@ -104,12 +105,18 @@ export function Hero() {
             Go to dashboard <span className="group-hover:translate-x-1 transition-transform">&rarr;</span>
           </Link>
 
-          {/* Social Proof */}
+          {/* Social Proof with Real Student Headshots */}
           <div className="flex items-center gap-3 mt-10 sm:mt-12">
             <div className="flex -space-x-2">
-              <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-gray-200 border-2 border-white" />
-              <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-gray-300 border-2 border-white" />
-              <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-brand-red/20 border-2 border-white" />
+              <div className="relative w-6 h-6 sm:w-8 sm:h-8 rounded-full overflow-hidden border-2 border-white shadow-xs bg-gray-100">
+                <Image src="/about/Aanreen-Headshot.png" alt="Aanreen" fill className="object-cover" />
+              </div>
+              <div className="relative w-6 h-6 sm:w-8 sm:h-8 rounded-full overflow-hidden border-2 border-white shadow-xs bg-gray-100">
+                <Image src="/about/Abigail-Headshot.png" alt="Abigail" fill className="object-cover" />
+              </div>
+              <div className="relative w-6 h-6 sm:w-8 sm:h-8 rounded-full overflow-hidden border-2 border-white shadow-xs bg-gray-100">
+                <Image src="/about/Ahmed-Headshot.png" alt="Ahmed" fill className="object-cover" />
+              </div>
             </div>
             <p className="text-[10px] sm:text-xs text-gray-500 font-medium tracking-tight">
               Join <span className="font-bold text-gray-900">2,500+</span> uOttawa students

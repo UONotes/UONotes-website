@@ -5,6 +5,18 @@ import { motion, Variants } from "framer-motion";
 import { NoteCard } from "@/components/ui/NoteCard";
 import { ArrowRight } from "lucide-react";
 
+// 1. Define the strict interface for your real database payload
+export interface FeaturedNote {
+  id: string;
+  title: string;
+  courseCode: string;
+  // Add any other metadata NoteCard needs (e.g., author, upvotes)
+}
+
+interface FeaturedNotesProps {
+  notes: FeaturedNote[]; // 2. Accept real data as a prop
+}
+
 const fadeUp: Variants = {
   hidden: { opacity: 0, y: 30 },
   visible: { opacity: 1, y: 0, transition: { duration: 0.6, ease: "easeOut" } }
@@ -15,10 +27,18 @@ const staggerContainer: Variants = {
   visible: { opacity: 1, transition: { staggerChildren: 0.1 } }
 };
 
-export function FeaturedNotes() {
+export function FeaturedNotes({ notes }: FeaturedNotesProps) {
+  // Graceful fallback if the database returns empty or is still loading
+  if (!notes || notes.length === 0) {
+    return null; 
+  }
+
   return (
     <motion.section 
-      initial="hidden" whileInView="visible" viewport={{ once: true, margin: "-100px" }} variants={staggerContainer}
+      initial="hidden" 
+      whileInView="visible" 
+      viewport={{ once: true, margin: "-100px" }} 
+      variants={staggerContainer}
       className="py-16 md:py-24 max-w-7xl mx-auto px-6 sm:px-8 lg:px-12 relative z-10 text-center"
     >
       <motion.div variants={fadeUp} className="flex flex-col items-center justify-center mb-16">
@@ -30,22 +50,17 @@ export function FeaturedNotes() {
         </p>
       </motion.div>
 
+      {/* 3. Dynamically map over your real database records */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-12 text-left">
-        <motion.div variants={fadeUp} className="h-full">
-          <NoteCard title="Data Structures and Algorithms - Midterm Prep" course="CSI 2110" />
-        </motion.div>
-        
-        <motion.div variants={fadeUp} className="h-full">
-          <NoteCard title="Introduction to Microeconomics Cheat Sheet" course="ECO 1104" />
-        </motion.div>
-        
-        <motion.div variants={fadeUp} className="h-full">
-          <NoteCard title="Organic Chemistry I - Full Reaction Mechanisms" course="CHM 2120" />
-        </motion.div>
-        
-        <motion.div variants={fadeUp} className="h-full">
-          <NoteCard title="Calculus II - Integration Formulas" course="MAT 1322" />
-        </motion.div>
+        {notes.map((note) => (
+          <motion.div key={note.id} variants={fadeUp} className="h-full">
+            <NoteCard 
+              id={note.id}
+              title={note.title} 
+              course={note.courseCode} 
+            />
+          </motion.div>
+        ))}
       </div>
 
       <motion.div variants={fadeUp} className="flex justify-center">

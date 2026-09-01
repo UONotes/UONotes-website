@@ -3,7 +3,10 @@ import { notFound, redirect } from "next/navigation";
 import { PdfViewer } from "@/components/admin/PdfViewer";
 import { DocumentMetadata } from "@/components/admin/DocumentMetadata";
 import { ReviewActionPanel } from "@/components/admin/ReviewActionPanel";
-import { AlertTriangle, ArrowLeft } from "lucide-react";
+import { AlertTriangle } from "lucide-react";
+import { GetObjectCommand } from "@aws-sdk/client-s3";
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+import { createR2Client, R2_BUCKET_NAME } from "@/lib/r2";
 
 export default async function DocumentReviewPage({
   params,
@@ -16,7 +19,7 @@ export default async function DocumentReviewPage({
   const { data: { user: caller } } = await supabase.auth.getUser();
   if (!caller) redirect("/login");
 
-  // Fetch note with uploader, reporter, and reviewer relations
+  // ADDED: created_at, language, note_types
   const { data: note, error } = await supabase
     .from("notes")
     .select(`
@@ -25,27 +28,26 @@ export default async function DocumentReviewPage({
       course_code,
       status,
       file_key,
+      file_size,
       flag_reason,
       created_at,
-      uploader:uploader_id(email),
+      language,
+      note_types,
+      uploader:uploader_id(email), 
       reporter:flagged_by(email),
       reviewer:reviewed_by(id, email)
     `)
     .eq("id", id)
     .single();
 
-  if (error || !note) {
-    notFound();
-  }
+  if (error) console.error("Database Join Error on Review Page:", error.message);
+  if (error || !note) notFound();
 
-  // Safely extract relations handling array or object returns from Supabase
   const reviewerData = Array.isArray(note.reviewer) ? note.reviewer[0] : note.reviewer;
   const reviewerObj = reviewerData as { id: string; email: string } | null;
-
   const uploaderData = Array.isArray(note.uploader) ? note.uploader[0] : note.uploader;
   const reporterData = Array.isArray(note.reporter) ? note.reporter[0] : note.reporter;
 
-  // EPHEMERAL SESSION LOCKING GUARD
   if (reviewerObj && reviewerObj.id !== caller.id) {
     return (
       <div className="w-full h-[80vh] flex flex-col items-center justify-center p-6 text-center">
@@ -63,62 +65,42 @@ export default async function DocumentReviewPage({
     );
   }
 
-  // Lock to current admin session if unassigned
   if (!reviewerObj) {
-    await supabase
-      .from("notes")
-      .update({ reviewed_by: caller.id })
-      .eq("id", id);
+    await supabase.from("notes").update({ reviewed_by: caller.id }).eq("id", id);
   }
 
+  const r2 = createR2Client();
+  const command = new GetObjectCommand({
+    Bucket: R2_BUCKET_NAME,
+    Key: note.file_key,
+  });
+  
+  const fileUrl = await getSignedUrl(r2, command, { expiresIn: 3600 });
+
+  // ADDED: Passing the new data to the metadata component
   const formattedNote = {
     id: note.id,
     title: note.title,
     courseCode: note.course_code,
     uploaderEmail: (uploaderData as any)?.email || "Unknown User",
     reporterEmail: (reporterData as any)?.email || null,
-    pages: 4, 
+    fileSize: note.file_size || 0,
     flagReason: note.flag_reason || null,
     status: note.status,
+    createdAt: note.created_at,
+    language: note.language || "EN",
+    noteTypes: note.note_types || [],
   };
-
-  // Server action to release the lock manually if the admin wants to back out safely
-  async function releaseLockAndReturn() {
-    "use server";
-    const sb = await createClient();
-    await sb
-      .from("notes")
-      .update({ reviewed_by: null })
-      .eq("id", id);
-    redirect("/admin/queue");
-  }
 
   return (
     <div className="flex flex-col lg:flex-row h-[calc(100vh-4rem)] bg-gray-50 overflow-hidden relative">
+      <div className="flex-1 h-full bg-gray-950 overflow-hidden relative shadow-[inset_-10px_0_20px_rgba(0,0,0,0.2)] z-0">
+        <PdfViewer documentId={formattedNote.id} title={formattedNote.title} fileUrl={fileUrl} />
+      </div>
       
-      {/* SAFE EXIT / RELEASE LOCK BAR OVERLAY */}
-      <div className="absolute top-4 left-4 z-30">
-        <form action={releaseLockAndReturn}>
-          <button
-            type="submit"
-            className="px-3.5 py-2 rounded-xl bg-white/90 backdrop-blur-md border border-gray-200 text-gray-700 hover:text-gray-900 text-xs font-mono font-bold uppercase tracking-wider shadow-md hover:bg-white transition-all flex items-center gap-2 cursor-pointer"
-          >
-            <ArrowLeft className="w-3.5 h-3.5" /> Release & Return to Queue
-          </button>
-        </form>
-      </div>
-
-      {/* LEFT: IMMERSIVE PDF VIEWER */}
-      <div className="flex-1 h-full bg-gray-950 overflow-hidden relative">
-        <PdfViewer documentId={formattedNote.id} title={formattedNote.title} />
-      </div>
-
-      {/* RIGHT: METADATA & AUDIT ACTION PANEL */}
-      <div className="w-full lg:w-[420px] h-full bg-white border-l border-gray-100 flex flex-col justify-between overflow-y-auto shadow-xl z-10 pt-12 lg:pt-0">
-        <div>
-          <DocumentMetadata note={formattedNote} />
-        </div>
-
+      {/* Container expanded to 460px for better typography wrapping */}
+      <div className="w-full lg:w-[460px] h-full bg-[#FAFAFA] border-l border-gray-200 flex flex-col justify-between overflow-y-auto shadow-2xl z-10 pt-12 lg:pt-0">
+        <DocumentMetadata note={formattedNote} />
         <ReviewActionPanel noteId={formattedNote.id} />
       </div>
     </div>

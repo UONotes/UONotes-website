@@ -1,16 +1,22 @@
-import { createClient } from "@/lib/supabase/server";
 import { NotesExplorer } from "@/components/notes/NotesExplorer";
+import { createClient } from "@/lib/supabase/server";
+
+export const revalidate = 60; // Revalidate every minute
 
 export default async function NotesPage() {
   const supabase = await createClient();
-  
-  // Extract the user session on the server
   const { data: { user } } = await supabase.auth.getUser();
+  
+  // Fetch the entire approved library to pass down for client-side filtering
+  const { data: notes, error } = await supabase
+    .from("notes")
+    .select("id, title, course_code")
+    .eq("status", "approved")
+    .order("created_at", { ascending: false });
 
-  return (
-    <main>
-      {/* Pass the boolean state into the component! */}
-      <NotesExplorer isLoggedIn={!!user} />
-    </main>
-  );
+  if (error) {
+    console.error("Failed to fetch notes library:", error);
+  }
+
+  return <NotesExplorer isLoggedIn={!!user} notes={notes || []} />;
 }
