@@ -3,9 +3,8 @@
 import { useState, useMemo } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { SearchBar } from "@/components/ui/SearchBar";
 import { NoteCard } from "@/components/ui/NoteCard";
-import { Folder, UploadCloud, Library, Compass, Lock, ChevronRight } from "lucide-react";
+import { Folder, UploadCloud, Library, Compass, Lock, ChevronRight, Search } from "lucide-react";
 
 const notebookStyle = {
   backgroundImage: `
@@ -18,7 +17,6 @@ const notebookStyle = {
 const hideScrollbar = "[&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]";
 const FACULTIES = ["All Faculties", "Engineering", "Science", "Arts", "Telfer", "Health Sciences"];
 
-// Define the shape of your real database record
 export interface DatabaseNote {
   id: string;
   title: string;
@@ -34,7 +32,6 @@ export function NotesExplorer({ isLoggedIn = false, notes = [] }: NotesExplorerP
   const [activeFaculty, setActiveFaculty] = useState("All Faculties");
   const [searchQuery, setSearchQuery] = useState("");
 
-  // 1. Dynamically calculate the top 3 courses (folders) based on real note counts
   const topFolders = useMemo(() => {
     const counts = notes.reduce((acc, note) => {
       acc[note.course_code] = (acc[note.course_code] || 0) + 1;
@@ -42,12 +39,10 @@ export function NotesExplorer({ isLoggedIn = false, notes = [] }: NotesExplorerP
     }, {} as Record<string, number>);
 
     return Object.entries(counts)
-      .sort((a, b) => b[1] - a[1]) // Sort by count descending
-      .slice(0, 3); // Take top 3
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 3);
   }, [notes]);
 
-  // 2. Filter notes based on active faculty and search query
-  // Note: Since your DB doesn't have a "faculty" column yet, we simulate it here by searching course prefixes.
   const filteredNotes = useMemo(() => {
     let filtered = notes;
 
@@ -59,7 +54,6 @@ export function NotesExplorer({ isLoggedIn = false, notes = [] }: NotesExplorerP
     }
 
     if (activeFaculty !== "All Faculties") {
-      // Example basic mapping (Expand this logic based on uOttawa prefixes)
       const prefixes = 
         activeFaculty === "Engineering" ? ["CSI", "SEG", "CEG", "ELG", "MCG"] :
         activeFaculty === "Science" ? ["MAT", "CHM", "PHY", "BIO"] :
@@ -112,16 +106,20 @@ export function NotesExplorer({ isLoggedIn = false, notes = [] }: NotesExplorerP
                     Instantly access verified study guides, lecture notes, and cheat sheets for your classes.
                   </p>
 
-                  <div className="w-full shadow-lg shadow-gray-200/50 rounded-xl sm:rounded-2xl bg-white">
-                    <SearchBar 
-                      placeholder="Search code (e.g. CSI2110)..." 
+                  {/* Direct Native Controlled Search Bar */}
+                  <div className="relative w-full shadow-lg shadow-gray-200/50 rounded-xl sm:rounded-2xl bg-white">
+                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    <input
+                      type="text"
+                      placeholder="Search code (e.g. CSI2110)..."
+                      value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
+                      className="w-full pl-11 pr-4 py-3.5 bg-transparent border border-gray-200 rounded-xl sm:rounded-2xl text-xs sm:text-sm font-sans focus:outline-none focus:border-brand-red transition-colors"
                     />
                   </div>
                 </div>
               </div>
 
-              {/* Mobile UI block omitted for brevity, logic remains identical */}
               <div className="flex flex-col gap-5 lg:hidden">
                 <div className={`flex items-center gap-2 overflow-x-auto snap-x snap-mandatory pb-2 -mx-2 px-2 sm:mx-0 sm:px-0 ${hideScrollbar}`}>
                   {FACULTIES.map((faculty) => (
@@ -190,7 +188,6 @@ export function NotesExplorer({ isLoggedIn = false, notes = [] }: NotesExplorerP
                 </span>
               </div>
 
-              {/* REAL DATA MAPPING */}
               <motion.div 
                 initial={{ opacity: 0 }} 
                 animate={{ opacity: 1 }} 
@@ -300,7 +297,6 @@ export function NotesExplorer({ isLoggedIn = false, notes = [] }: NotesExplorerP
   );
 }
 
-// Sub-components remain unchanged
 function DesktopFolderLink({ courseCode, count }: { courseCode: string, count: number }) {
   return (
     <Link 
