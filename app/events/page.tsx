@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { EventsSection } from "@/components/events/EventsSection.tsx";
+import { EventsSection } from "@/components/events/EventsSection";
 
 export default function EventsPage() {
   return (
