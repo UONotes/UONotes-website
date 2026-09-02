@@ -9,6 +9,33 @@ const supabaseAdmin = createAdminClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
+export async function claimNoteAction(noteId: string) {
+  const supabase = await createServerClient();
+  const { data: { user: caller } } = await supabase.auth.getUser();
+
+  if (!caller) throw new Error("Unauthorized");
+
+  const { data: callerProfile } = await supabase
+    .from("profiles")
+    .select("is_admin")
+    .eq("id", caller.id)
+    .single();
+
+  if (!callerProfile?.is_admin) throw new Error("Insufficient privileges.");
+
+  const { error: claimError } = await supabaseAdmin
+    .from("notes")
+    .update({ reviewed_by: caller.id })
+    .eq("id", noteId)
+    .is("reviewed_by", null);
+
+  if (claimError) {
+    throw new Error("Failed to claim document for review.");
+  }
+
+  return { success: true };
+}
+
 export async function reviewNoteAction(
   noteId: string,
   status: "approved" | "rejected" | "changes_requested",
@@ -59,19 +86,36 @@ export async function reviewNoteAction(
 }
 
 export async function releaseNoteLockAction(noteId: string) {
+  console.log("[releaseNoteLockAction] called with noteId:", JSON.stringify(noteId));
+
   const supabase = await createServerClient();
   const { data: { user: caller } } = await supabase.auth.getUser();
-  
+
   if (!caller) throw new Error("Unauthorized");
 
-  const { error: releaseError } = await supabaseAdmin
+  const { data: callerProfile } = await supabase
+    .from("profiles")
+    .select("is_admin")
+    .eq("id", caller.id)
+    .single();
+
+  if (!callerProfile?.is_admin) throw new Error("Insufficient privileges.");
+
+  const { data: released, error: releaseError } = await supabaseAdmin
     .from("notes")
     .update({ reviewed_by: null })
-    .eq("id", noteId);
+    .eq("id", noteId)
+    .select("id, reviewed_by");
+
+  console.log("[releaseNoteLockAction] update result:", { released, releaseError });
 
   if (releaseError) {
     console.error("Failed to release note lock:", releaseError);
     throw new Error("Failed to unlock document in database.");
+  }
+
+  if (!released || released.length === 0) {
+    throw new Error(`Release matched zero rows for noteId ${noteId} — check the ID being passed in.`);
   }
 
   revalidatePath("/admin/queue");
