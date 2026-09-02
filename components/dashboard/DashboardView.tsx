@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { FileUp, Clock, CheckCircle2, XCircle, Search, MessageSquareText, X } from "lucide-react";
@@ -13,6 +13,14 @@ const notebookStyle = {
   backgroundSize: "100% 100%, 100% 32px",
 };
 
+interface DatabaseSubmission {
+  id: string;
+  title: string;
+  status: string;
+  hours_awarded: number | null;
+  flag_reason: string | null;
+}
+
 interface SubmissionItem {
   id: string;
   title: string;
@@ -21,19 +29,41 @@ interface SubmissionItem {
   feedback?: string;
 }
 
-const mockSubmissions: SubmissionItem[] = [
-  { id: "1", title: "CRM3702 Final", hours: 4, status: "Pending", feedback: "N/A" },
-  { id: "2", title: "ITI1101 review notes", hours: 7, status: "Accepted", feedback: "N/A" },
-  { id: "3", title: "Crim midterm summary", hours: 5, status: "Rejected", feedback: "Formatting needs revision: Please ensure headings match syllabus guidelines and re-export as a clean searchable PDF before resubmitting." },
-];
+function mapStatus(status: string): SubmissionItem["status"] {
+  if (status === "approved") return "Accepted";
+  if (status === "rejected") return "Rejected";
+  // pending, flagged, and changes_requested all read as "Pending" to the student
+  return "Pending";
+}
 
-export function DashboardView() {
+export function DashboardView({ submissions: rawSubmissions }: { submissions: DatabaseSubmission[] }) {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedSubmission, setSelectedSubmission] = useState<SubmissionItem | null>(null);
 
-  const filteredSubmissions = mockSubmissions.filter((item) =>
+  const submissions: SubmissionItem[] = useMemo(
+    () =>
+      rawSubmissions.map((note) => ({
+        id: note.id,
+        title: note.title,
+        hours: note.hours_awarded ?? 0,
+        status: mapStatus(note.status),
+        feedback: note.flag_reason || undefined,
+      })),
+    [rawSubmissions]
+  );
+
+  const filteredSubmissions = submissions.filter((item) =>
     item.title.toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  const stats = useMemo(() => {
+    const totalSubmissions = submissions.length;
+    const hoursEarned = submissions
+      .filter((s) => s.status === "Accepted")
+      .reduce((sum, s) => sum + s.hours, 0);
+    const pendingSubmissions = submissions.filter((s) => s.status === "Pending").length;
+    return { totalSubmissions, hoursEarned, pendingSubmissions };
+  }, [submissions]);
 
   return (
     <motion.div
@@ -78,16 +108,16 @@ export function DashboardView() {
               
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
                 <div className="bg-white/90 backdrop-blur-xs border border-brand-red/20 rounded-2xl p-6 text-center shadow-xs">
-                  <p className="text-4xl font-black text-gray-900 mb-1 font-sans">3</p>
+                  <p className="text-4xl font-black text-gray-900 mb-1 font-sans">{stats.totalSubmissions}</p>
                   <p className="text-xs font-mono uppercase tracking-wider text-gray-500 font-bold">Total Submissions</p>
                 </div>
                 <div className="bg-white/90 backdrop-blur-xs border border-brand-red/20 rounded-2xl p-6 text-center shadow-xs">
-                  <p className="text-4xl font-black text-gray-900 mb-1 font-sans">12</p>
+                  <p className="text-4xl font-black text-gray-900 mb-1 font-sans">{stats.hoursEarned}</p>
                   <p className="text-xs font-mono uppercase tracking-wider text-gray-500 font-bold">Hours Earned</p>
                 </div>
                 <div className="bg-white/90 backdrop-blur-xs border border-brand-red/20 rounded-2xl p-6 text-center shadow-xs">
-                  <p className="text-4xl font-black text-gray-900 mb-1 font-sans">4</p>
-                  <p className="text-xs font-mono uppercase tracking-wider text-gray-500 font-bold">Pending Hours</p>
+                  <p className="text-4xl font-black text-gray-900 mb-1 font-sans">{stats.pendingSubmissions}</p>
+                  <p className="text-xs font-mono uppercase tracking-wider text-gray-500 font-bold">Pending Submissions</p>
                 </div>
               </div>
 
@@ -155,7 +185,7 @@ export function DashboardView() {
                               </span>
                             </td>
                             <td className="py-4 px-6 text-right">
-                              {item.feedback && item.feedback !== "N/A" ? (
+                              {item.feedback ? (
                                 <button
                                   onClick={() => setSelectedSubmission(item)}
                                   className="inline-flex items-center gap-1.5 text-xs font-mono font-bold text-brand-red bg-brand-red/10 hover:bg-brand-red hover:text-white px-3 py-1.5 rounded-lg transition-colors cursor-pointer"
@@ -172,7 +202,9 @@ export function DashboardView() {
                       ) : (
                         <tr>
                           <td colSpan={4} className="py-12 text-center text-gray-500 font-light">
-                            No submissions found matching your search.
+                            {rawSubmissions.length === 0
+                              ? "You haven't submitted any notes yet."
+                              : "No submissions found matching your search."}
                           </td>
                         </tr>
                       )}
