@@ -54,7 +54,7 @@ export async function reviewNoteAction(
 
   if (!callerProfile?.is_admin) throw new Error("Insufficient privileges.");
 
-  const { error: updateError } = await supabaseAdmin
+  const { data: updatedNote, error: updateError } = await supabaseAdmin
     .from("notes")
     .update({
       status: status,
@@ -62,7 +62,9 @@ export async function reviewNoteAction(
       reviewed_at: new Date().toISOString(),
       flag_reason: status === "approved" ? null : reason, 
     })
-    .eq("id", noteId);
+    .eq("id", noteId)
+    .select("uploader_id")
+    .single();
 
   if (updateError) {
     console.error("Failed to update note status:", updateError);
@@ -74,7 +76,7 @@ export async function reviewNoteAction(
     status === "rejected" ? "NOTE_REJECTED" : "NOTE_CHANGES_REQUESTED";
 
   await supabaseAdmin.from("audit_logs").insert({
-    target_user_id: caller.id, 
+    target_user_id: updatedNote?.uploader_id ?? null,
     action_by_admin_id: caller.id,
     action_type: actionString,
     reasons: [reason || "No reason provided"],
