@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Loader2 } from "lucide-react";
-import { releaseNoteLockAction } from "@/app/admin/queue/actions";
+import { releaseNoteLockAction, claimNoteAction } from "@/app/admin/queue/actions";
 
 export function PdfViewer({ 
   documentId, 
@@ -17,22 +17,23 @@ export function PdfViewer({
   const [isReleasing, setIsReleasing] = useState(false);
   const router = useRouter();
 
+  useEffect(() => {
+    claimNoteAction(documentId).catch((err) => {
+      console.error("Failed to claim note:", err);
+    });
+  }, [documentId]);
+
   const handleRelease = async () => {
     if (isReleasing) return;
     setIsReleasing(true);
     
     try {
-      // 1. Wait for database update to fully complete
       await releaseNoteLockAction(documentId);
-      
-      // 2. Navigate via Next.js router
       router.push("/admin/queue");
-      
-      // 3. Force cache refresh so queue shows it unlocked
       router.refresh(); 
     } catch (err) {
       console.error("Failed to release lock:", err);
-      setIsReleasing(false); // Only reset if it fails, otherwise stay in loading state while navigating
+      setIsReleasing(false);
     }
   };
 

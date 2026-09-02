@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { AppShell } from "@/components/layout/AppShell";
-import { AccessGate } from "@/components/Auth/AccessGate";
 
 export const metadata: Metadata = {
   title: "UONotes",

@@ -189,8 +189,9 @@ export default function AdminQueuePage() {
                       </td>
 
                       <td className="px-6 py-4 text-right">
-                        <Link 
+                        <Link
                           href={`/admin/review/${note.id}`}
+                          prefetch={false}
                           className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-gray-900 text-white text-[11px] font-bold uppercase tracking-wider hover:bg-brand-red transition-colors shadow-sm active:scale-95"
                         >
                           Review <ArrowRight className="w-3.5 h-3.5" />

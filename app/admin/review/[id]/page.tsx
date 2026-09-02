@@ -17,9 +17,8 @@ export default async function DocumentReviewPage({
   const supabase = await createClient();
 
   const { data: { user: caller } } = await supabase.auth.getUser();
-  if (!caller) redirect("/login");
+  if (!caller) redirect("/signin");
 
-  // ADDED: created_at, language, note_types
   const { data: note, error } = await supabase
     .from("notes")
     .select(`
@@ -33,22 +32,22 @@ export default async function DocumentReviewPage({
       created_at,
       language,
       note_types,
-      uploader:uploader_id(email), 
-      reporter:flagged_by(email),
-      reviewer:reviewed_by(id, email)
+      author_email,
+      reviewed_by
     `)
     .eq("id", id)
     .single();
 
-  if (error) console.error("Database Join Error on Review Page:", error.message);
+  if (error) console.error("Database Error on Review Page:", error.message);
   if (error || !note) notFound();
 
-  const reviewerData = Array.isArray(note.reviewer) ? note.reviewer[0] : note.reviewer;
-  const reviewerObj = reviewerData as { id: string; email: string } | null;
-  const uploaderData = Array.isArray(note.uploader) ? note.uploader[0] : note.uploader;
-  const reporterData = Array.isArray(note.reporter) ? note.reporter[0] : note.reporter;
+  if (note.reviewed_by && note.reviewed_by !== caller.id) {
+    const { data: reviewerProfile } = await supabase
+      .from("profiles")
+      .select("email")
+      .eq("id", note.reviewed_by)
+      .single();
 
-  if (reviewerObj && reviewerObj.id !== caller.id) {
     return (
       <div className="w-full h-[80vh] flex flex-col items-center justify-center p-6 text-center">
         <div className="w-16 h-16 rounded-3xl bg-amber-50 border border-amber-100 flex items-center justify-center text-amber-600 mb-4 shadow-xs">
@@ -56,17 +55,13 @@ export default async function DocumentReviewPage({
         </div>
         <h2 className="text-xl font-black text-gray-900 tracking-tight">Document Currently Locked</h2>
         <p className="text-xs text-gray-500 max-w-sm mt-1 mb-6">
-          This submission is actively being reviewed by another administrator ({reviewerObj.email || "Unknown Admin"}). Please select a different item from the queue.
+          This submission is actively being reviewed by another administrator ({reviewerProfile?.email || "Unknown Admin"}). Please select a different item from the queue.
         </p>
         <a href="/admin/queue" className="px-5 py-2.5 bg-gray-900 text-white text-xs font-bold uppercase tracking-wider rounded-xl shadow-md hover:bg-gray-800 transition-colors">
           Return to Queue
         </a>
       </div>
     );
-  }
-
-  if (!reviewerObj) {
-    await supabase.from("notes").update({ reviewed_by: caller.id }).eq("id", id);
   }
 
   const r2 = createR2Client();
@@ -77,13 +72,12 @@ export default async function DocumentReviewPage({
   
   const fileUrl = await getSignedUrl(r2, command, { expiresIn: 3600 });
 
-  // ADDED: Passing the new data to the metadata component
   const formattedNote = {
     id: note.id,
     title: note.title,
     courseCode: note.course_code,
-    uploaderEmail: (uploaderData as any)?.email || "Unknown User",
-    reporterEmail: (reporterData as any)?.email || null,
+    uploaderEmail: note.author_email || "Unknown User",
+    reporterEmail: null,
     fileSize: note.file_size || 0,
     flagReason: note.flag_reason || null,
     status: note.status,
@@ -98,7 +92,6 @@ export default async function DocumentReviewPage({
         <PdfViewer documentId={formattedNote.id} title={formattedNote.title} fileUrl={fileUrl} />
       </div>
       
-      {/* Container expanded to 460px for better typography wrapping */}
       <div className="w-full lg:w-[460px] h-full bg-[#FAFAFA] border-l border-gray-200 flex flex-col justify-between overflow-y-auto shadow-2xl z-10 pt-12 lg:pt-0">
         <DocumentMetadata note={formattedNote} />
         <ReviewActionPanel noteId={formattedNote.id} />
