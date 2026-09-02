@@ -15,15 +15,14 @@ type QueueNote = {
   created_at: string;
   reviewed_by: string | null;
   author_email: string;
-  reviewer: any; // Captures joined admin profile data
 };
 
 export default function AdminQueuePage() {
   const [filter, setFilter] = useState<"all" | "pending" | "flagged" | "locked">("all");
   const [notes, setNotes] = useState<QueueNote[]>([]);
+  const [reviewerEmails, setReviewerEmails] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
 
-  // Fetch queue data on mount
   useEffect(() => {
     async function fetchQueue() {
       setLoading(true);
@@ -38,25 +37,46 @@ export default function AdminQueuePage() {
           status,
           created_at,
           reviewed_by,
-          author_email,
-          reviewer:reviewed_by(email)
+          author_email
         `)
         .in("status", ["pending", "flagged", "changes_requested"])
         .order("created_at", { ascending: true });
 
       if (error) {
         console.error("Failed to fetch queue data:", error.message);
-      } else {
-        setNotes(data || []);
+        setLoading(false);
+        return;
       }
-      
+
+      setNotes(data || []);
+
+      const reviewerIds = Array.from(
+        new Set((data || []).map((note) => note.reviewed_by).filter((id): id is string => Boolean(id)))
+      );
+
+      if (reviewerIds.length > 0) {
+        const { data: reviewerProfiles, error: reviewerError } = await supabase
+          .from("profiles")
+          .select("id, email")
+          .in("id", reviewerIds);
+
+        if (reviewerError) {
+          console.error("Failed to fetch reviewer emails:", reviewerError.message);
+        } else {
+          const emailMap: Record<string, string> = {};
+          (reviewerProfiles || []).forEach((profile) => {
+            emailMap[profile.id] = profile.email;
+          });
+          setReviewerEmails(emailMap);
+        }
+      }
+
       setLoading(false);
     }
 
     fetchQueue();
   }, []);
 
-  // Dynamically calculate the stats based on real data
   const counts = useMemo(() => {
     let pending = 0;
     let flagged = 0;
@@ -71,7 +91,6 @@ export default function AdminQueuePage() {
     return { total: notes.length, pending, flagged, locked };
   }, [notes]);
 
-  // Apply the active filter to the table view
   const filteredNotes = useMemo(() => {
     return notes.filter((note) => {
       if (filter === "all") return true;
@@ -130,9 +149,8 @@ export default function AdminQueuePage() {
                 filteredNotes.map((note) => {
                   const isLocked = Boolean(note.reviewed_by);
                   const isFlagged = note.status === "flagged";
-                  
-                  // Safely extract the admin's email and grab just the first part for the UI
-                  const adminEmail = (Array.isArray(note.reviewer) ? note.reviewer[0]?.email : note.reviewer?.email) || "Admin";
+
+                  const adminEmail = (note.reviewed_by && reviewerEmails[note.reviewed_by]) || "Admin";
                   const adminName = adminEmail.split('@')[0];
                   
                   return (
