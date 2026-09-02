@@ -4,7 +4,7 @@ export type AdminNote = {
     courseCode: string;
     uploaderEmail: string;
     submittedAt: string;
-    status: "PENDING" | "UNDER_REVIEW";
+    status: "pending" | "approved" | "rejected" | "flagged" | "changes_requested";
     claimedBy?: string;
   };
 
