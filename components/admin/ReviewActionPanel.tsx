@@ -3,11 +3,12 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { reviewNoteAction } from "@/app/admin/queue/actions";
-import { Check, AlertCircle, Trash2, Loader2, MessageSquareText } from "lucide-react";
+import { Check, AlertCircle, Trash2, Loader2, MessageSquareText, Clock } from "lucide-react";
 
 export function ReviewActionPanel({ noteId }: { noteId: string }) {
   const router = useRouter();
   const [feedback, setFeedback] = useState("");
+  const [hoursInput, setHoursInput] = useState("1");
   const [isSubmitting, setIsSubmitting] = useState<string | null>(null);
   const [error, setError] = useState("");
 
@@ -17,11 +18,18 @@ export function ReviewActionPanel({ noteId }: { noteId: string }) {
       return;
     }
 
+    const hours = parseInt(hoursInput, 10) || 0;
+
+    if (status === "approved" && hours < 1) {
+      setError("Enter how many volunteer hours to award (1 or more).");
+      return;
+    }
+
     setError("");
     setIsSubmitting(status);
 
     try {
-      await reviewNoteAction(noteId, status, feedback.trim());
+      await reviewNoteAction(noteId, status, feedback.trim(), status === "approved" ? hours : undefined);
       router.push("/admin/queue");
       router.refresh(); 
     } catch (err: any) {
@@ -33,6 +41,23 @@ export function ReviewActionPanel({ noteId }: { noteId: string }) {
   return (
     <div className="bg-white/60 backdrop-blur-xl border-t border-gray-200 p-6 md:p-8 flex flex-col gap-5 shrink-0 shadow-[0_-20px_40px_rgba(0,0,0,0.02)]">
       
+      <div className="flex flex-col gap-2.5">
+        <label className="flex items-center gap-2 text-[10px] font-black text-gray-500 uppercase tracking-widest">
+          <Clock className="w-4 h-4 text-gray-400" />
+          Volunteer Hours to Award (if approving)
+        </label>
+        <input
+          type="number"
+          min={1}
+          value={hoursInput}
+          onChange={(e) => setHoursInput(e.target.value)}
+          onBlur={() => {
+            if (hoursInput.trim() === "") setHoursInput("0");
+          }}
+          className="w-full sm:w-32 p-3 bg-white border border-gray-200/80 rounded-xl text-sm focus:outline-none focus:border-gray-900 focus:ring-1 focus:ring-gray-900 transition-all shadow-[inset_0_2px_4px_rgba(0,0,0,0.02)] font-semibold"
+        />
+      </div>
+
       <div className="flex flex-col gap-2.5">
         <label className="flex items-center gap-2 text-[10px] font-black text-gray-500 uppercase tracking-widest">
           <MessageSquareText className="w-4 h-4 text-gray-400" />
@@ -53,7 +78,6 @@ export function ReviewActionPanel({ noteId }: { noteId: string }) {
       )}
 
       <div className="flex flex-col gap-3">
-        {/* Primary Command */}
         <button
           onClick={() => handleDecision("approved")}
           disabled={isSubmitting !== null}
@@ -63,7 +87,6 @@ export function ReviewActionPanel({ noteId }: { noteId: string }) {
           Approve & Publish
         </button>
 
-        {/* Secondary Commands */}
         <div className="grid grid-cols-2 gap-3">
           <button
             onClick={() => handleDecision("changes_requested")}

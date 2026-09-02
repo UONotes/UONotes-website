@@ -39,7 +39,8 @@ export async function claimNoteAction(noteId: string) {
 export async function reviewNoteAction(
   noteId: string,
   status: "approved" | "rejected" | "changes_requested",
-  reason: string
+  reason: string,
+  hoursAwarded?: number
 ) {
   const supabase = await createServerClient();
   const { data: { user: caller }, error: authError } = await supabase.auth.getUser();
@@ -60,7 +61,8 @@ export async function reviewNoteAction(
       status: status,
       reviewed_by: null,
       reviewed_at: new Date().toISOString(),
-      flag_reason: status === "approved" ? null : reason, 
+      flag_reason: status === "approved" ? null : reason,
+      hours_awarded: status === "approved" ? (hoursAwarded ?? 1) : null,
     })
     .eq("id", noteId)
     .select("uploader_id")
