@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
-import { upcomingEvents, pastEvents, type EventItem } from "@/lib/events-data";
+import { upcomingEvents, pastEvents } from "@/lib/events-data";
 
 const notebookStyle = {
   backgroundImage: `
@@ -15,15 +16,13 @@ const notebookStyle = {
 export function EventsSection() {
   const [viewMode, setViewMode] = useState<"upcoming" | "past">("upcoming");
   
-  // Track the active image index for each event ID directly in state so they slide independently
   const [slideIndices, setSlideIndices] = useState<Record<string, number>>({});
 
   const hasUpcoming = upcomingEvents.length > 0;
   const activeList = viewMode === "upcoming" ? upcomingEvents : pastEvents;
 
-  // Slideshow navigation helper (Next / Prev)
   const handleNextImage = (eventId: string, totalImages: number, e: React.MouseEvent) => {
-    e.stopPropagation(); // Prevents triggering any unwanted card clicks
+    e.stopPropagation();
     setSlideIndices((prev) => {
       const currentIndex = prev[eventId] || 0;
       return { ...prev, [eventId]: (currentIndex + 1) % totalImages };
@@ -46,22 +45,17 @@ export function EventsSection() {
   return (
     <section className="w-full max-w-5xl md:max-w-6xl mx-auto px-4 sm:px-6 py-8 sm:py-12 flex flex-col">
       
-      {/* Notebook Container Wrapper */}
       <motion.div 
         layout
         className="w-full bg-white p-5 sm:p-10 md:p-14 rounded-3xl shadow-2xl border border-brand-red/15 relative overflow-hidden"
         style={notebookStyle}
       >
-        {/* Red Margin Line */}
         <div className="absolute top-0 bottom-0 left-12 sm:left-16 w-[2px] bg-[#a83142]/25 pointer-events-none z-0" />
         
-        {/* Notebook Spine Shadow */}
         <div className="absolute top-0 left-0 bottom-0 w-6 sm:w-14 bg-gradient-to-r from-black/[0.03] to-transparent pointer-events-none z-10" />
 
-        {/* Content Area with Notebook Padding */}
         <div className="relative z-20 pl-7 sm:pl-12 pr-1 sm:pr-2">
           
-          {/* Header Row */}
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8 border-b border-gray-200/80 pb-4">
             <div>
               <span className="text-[10px] font-mono uppercase tracking-[0.3em] text-brand-red font-bold">
@@ -72,7 +66,6 @@ export function EventsSection() {
               </h2>
             </div>
 
-            {/* Switch Action Button */}
             <button
               onClick={() => setViewMode(viewMode === "upcoming" ? "past" : "upcoming")}
               className="px-4 py-2 bg-white border border-brand-red/20 text-brand-red hover:bg-brand-red hover:text-white text-xs font-mono font-bold uppercase tracking-wider rounded-xl shadow-xs transition-all cursor-pointer"
@@ -81,7 +74,6 @@ export function EventsSection() {
             </button>
           </div>
 
-          {/* Dynamic View Display */}
           <AnimatePresence mode="popLayout">
             {viewMode === "upcoming" && !hasUpcoming ? (
               <motion.div 
@@ -106,14 +98,13 @@ export function EventsSection() {
                 </button>
               </motion.div>
             ) : (
-              /* Events Grid with Inline Card Slideshows (No Popups) */
               <motion.div 
                 key={viewMode}
                 layout
                 className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"
               >
                 {activeList.map((event) => {
-                  const photos = event.images && event.images.length > 0 ? event.images : [event.image];
+                  const photos = event.images && event.images.length > 0 ? event.images : (event.image ? [event.image] : []);
                   const currentIndex = slideIndices[event.id] || 0;
 
                   return (
@@ -126,22 +117,25 @@ export function EventsSection() {
                       transition={{ duration: 0.3 }}
                       className="bg-white/90 border border-gray-200 rounded-2xl overflow-hidden shadow-xs hover:border-brand-red/40 transition-all flex flex-col group"
                     >
-                      {/* Inline Slideshow Image Container */}
                       <div className="h-48 overflow-hidden relative bg-gray-900">
-                        <img 
-                          src={photos[currentIndex]} 
-                          alt={`${event.title} - photo ${currentIndex + 1}`} 
-                          onError={(e) => {
-                            (e.target as HTMLImageElement).src = "https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?auto=format&fit=crop&w=600&q=80";
-                          }}
-                          className="w-full h-full object-cover transition-opacity duration-300"
-                        />
+                        {photos.length > 0 ? (
+                          <Image 
+                            src={photos[currentIndex]} 
+                            alt={`${event.title} - photo ${currentIndex + 1}`}
+                            fill
+                            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                            className="object-cover transition-opacity duration-300"
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-gray-500 text-sm font-mono">
+                            No image available
+                          </div>
+                        )}
                         
                         <span className="absolute top-3 right-3 bg-gray-900/80 backdrop-blur-xs text-white text-[10px] font-mono px-2.5 py-1 rounded-md uppercase tracking-wider z-10">
                           {event.date}
                         </span>
 
-                        {/* Inline Next / Prev Controls (Visible only if multiple images exist) */}
                         {photos.length > 1 && (
                           <>
                             <button 
@@ -160,7 +154,6 @@ export function EventsSection() {
                               <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" /></svg>
                             </button>
 
-                            {/* Minimalist dot indicators */}
                             <div className="absolute bottom-2.5 left-1/2 -translate-x-1/2 flex gap-1 bg-black/40 px-2 py-0.5 rounded-full backdrop-blur-xs z-10">
                               {photos.map((_, idx) => (
                                 <button
@@ -174,7 +167,6 @@ export function EventsSection() {
                         )}
                       </div>
 
-                      {/* Card Content Footer */}
                       <div className="p-5 flex flex-col flex-1">
                         <span className="text-[10px] font-mono text-brand-red font-bold uppercase tracking-widest mb-1">{event.location} • {event.time}</span>
                         <h3 className="font-bold text-gray-900 text-base mb-2">
