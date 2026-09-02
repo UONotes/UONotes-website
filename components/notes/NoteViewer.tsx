@@ -153,6 +153,7 @@ export function NoteViewer({ note, fileUrl }: { note: any; fileUrl: string }) {
         isOpen={isReportOpen}
         onClose={() => setIsReportOpen(false)}
         documentTitle={note.title}
+        noteId={note.id}
       />
     </motion.div>
   );

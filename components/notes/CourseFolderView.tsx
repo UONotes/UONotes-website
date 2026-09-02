@@ -180,6 +180,7 @@ export function CourseFolderView({ courseCode, notes }: CourseFolderViewProps) {
           isOpen={!!reportNote}
           onClose={() => setReportNote(null)}
           documentTitle={reportNote.title}
+          noteId={reportNote.id}
         />
       )}
     </motion.div>

@@ -33,7 +33,8 @@ export default async function DocumentReviewPage({
       language,
       note_types,
       author_email,
-      reviewed_by
+      reviewed_by,
+      hours_awarded
     `)
     .eq("id", id)
     .single();
@@ -94,7 +95,7 @@ export default async function DocumentReviewPage({
       
       <div className="w-full lg:w-[460px] h-full bg-[#FAFAFA] border-l border-gray-200 flex flex-col justify-between overflow-y-auto shadow-2xl z-10 pt-12 lg:pt-0">
         <DocumentMetadata note={formattedNote} />
-        <ReviewActionPanel noteId={formattedNote.id} />
+        <ReviewActionPanel noteId={formattedNote.id} currentHoursAwarded={note.hours_awarded} />
       </div>
     </div>
   );

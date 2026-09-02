@@ -3,12 +3,14 @@
 import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Flag, CheckCircle2 } from "lucide-react";
+import { X, Flag, CheckCircle2, Loader2 } from "lucide-react";
+import { reportNoteAction } from "@/app/notes/actions";
 
 interface ReportModalProps {
   isOpen: boolean;
   onClose: () => void;
   documentTitle: string;
+  noteId: string;
 }
 
 const reportReasons = [
@@ -20,11 +22,13 @@ const reportReasons = [
   "Website issues (Document is missing, not loading, etc.).",
 ];
 
-export function ReportModal({ isOpen, onClose, documentTitle }: ReportModalProps) {
+export function ReportModal({ isOpen, onClose, documentTitle, noteId }: ReportModalProps) {
   const [mounted, setMounted] = useState(false);
   const [selectedReason, setSelectedReason] = useState<string>("");
   const [comment, setComment] = useState("");
   const [isSent, setIsSent] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState("");
 
   useEffect(() => {
     setMounted(true);
@@ -32,19 +36,32 @@ export function ReportModal({ isOpen, onClose, documentTitle }: ReportModalProps
 
   if (!mounted) return null;
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!selectedReason) return;
-    
-    // You can process the selectedReason and comment here
-    console.log("Report submitted:", { reason: selectedReason, comment });
-    setIsSent(true);
+
+    setError("");
+    setIsSubmitting(true);
+
+    const fullReason = comment.trim()
+      ? `${selectedReason}\n\nAdditional comments: ${comment.trim()}`
+      : selectedReason;
+
+    try {
+      await reportNoteAction(noteId, fullReason);
+      setIsSent(true);
+    } catch (err: any) {
+      setError(err.message || "Could not submit your report. Please try again.");
+    } finally {
+      setIsSubmitting(false);
+    }
   }
 
   function handleReset() {
     setIsSent(false);
     setSelectedReason("");
     setComment("");
+    setError("");
     onClose();
   }
 
@@ -53,7 +70,6 @@ export function ReportModal({ isOpen, onClose, documentTitle }: ReportModalProps
       {isOpen && (
         <div className="fixed inset-0 z-[99999] isolate flex items-center justify-center p-4">
           
-          {/* Backdrop with clean blur covering the entire viewport */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -62,7 +78,6 @@ export function ReportModal({ isOpen, onClose, documentTitle }: ReportModalProps
             className="absolute inset-0 bg-black/50 backdrop-blur-md"
           />
 
-          {/* Modal Card */}
           <motion.div
             initial={{ opacity: 0, scale: 0.95, y: 10 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -106,7 +121,6 @@ export function ReportModal({ isOpen, onClose, documentTitle }: ReportModalProps
                     ))}
                   </div>
 
-                  {/* Additional Comments Textarea */}
                   <div className="flex flex-col gap-1.5 pt-2">
                     <label className="text-xs font-mono font-bold uppercase tracking-wider text-gray-500">
                       Additional Comments <span className="font-normal text-gray-400">(Optional)</span>
@@ -120,18 +134,28 @@ export function ReportModal({ isOpen, onClose, documentTitle }: ReportModalProps
                     />
                   </div>
 
+                  {error && (
+                    <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-xs font-mono font-bold text-brand-red text-center">
+                      {error}
+                    </div>
+                  )}
+
                   <div className="flex items-center justify-end gap-3 mt-2 pt-4 border-t border-gray-100 shrink-0">
                     <button type="button" onClick={onClose} className="px-5 py-2.5 bg-gray-100 text-gray-700 text-xs font-mono font-bold uppercase rounded-xl hover:bg-gray-200 transition-colors cursor-pointer">
                       Cancel
                     </button>
-                    <button type="submit" disabled={!selectedReason} className="px-6 py-2.5 bg-brand-red text-white text-xs font-mono font-bold uppercase rounded-xl hover:bg-brand-red-hover transition-all shadow-sm disabled:opacity-50 cursor-pointer">
-                      Submit Report
+                    <button
+                      type="submit"
+                      disabled={!selectedReason || isSubmitting}
+                      className="px-6 py-2.5 bg-brand-red text-white text-xs font-mono font-bold uppercase rounded-xl hover:bg-brand-red-hover transition-all shadow-sm disabled:opacity-50 cursor-pointer flex items-center gap-2"
+                    >
+                      {isSubmitting && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                      {isSubmitting ? "Submitting..." : "Submit Report"}
                     </button>
                   </div>
                 </form>
               </>
             ) : (
-              /* Report Confirmation View */
               <div className="py-8 flex flex-col items-center text-center">
                 <div className="w-16 h-16 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mb-6">
                   <CheckCircle2 className="w-8 h-8" />

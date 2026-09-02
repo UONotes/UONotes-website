@@ -5,10 +5,12 @@ import { useRouter } from "next/navigation";
 import { reviewNoteAction } from "@/app/admin/queue/actions";
 import { Check, AlertCircle, Trash2, Loader2, MessageSquareText, Clock } from "lucide-react";
 
-export function ReviewActionPanel({ noteId }: { noteId: string }) {
+export function ReviewActionPanel({ noteId, currentHoursAwarded }: { noteId: string; currentHoursAwarded?: number | null }) {
   const router = useRouter();
   const [feedback, setFeedback] = useState("");
-  const [hoursInput, setHoursInput] = useState("1");
+  const [hoursInput, setHoursInput] = useState(
+    currentHoursAwarded != null ? String(currentHoursAwarded) : "1"
+  );
   const [isSubmitting, setIsSubmitting] = useState<string | null>(null);
   const [error, setError] = useState("");
 

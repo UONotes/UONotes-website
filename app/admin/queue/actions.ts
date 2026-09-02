@@ -62,6 +62,7 @@ export async function reviewNoteAction(
       reviewed_by: null,
       reviewed_at: new Date().toISOString(),
       flag_reason: status === "approved" ? null : reason,
+      flagged_by: status === "approved" ? null : undefined,
       hours_awarded: status === "approved" ? (hoursAwarded ?? 1) : null,
     })
     .eq("id", noteId)
