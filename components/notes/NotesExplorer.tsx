@@ -15,7 +15,18 @@ const notebookStyle = {
 };
 
 const hideScrollbar = "[&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]";
-const FACULTIES = ["All Faculties", "Engineering", "Science", "Arts", "Telfer", "Health Sciences"];
+const FACULTIES = [
+  "All Faculties",
+  "Arts",
+  "Education",
+  "Engineering",
+  "Health Sciences",
+  "Law",
+  "Medicine",
+  "Science",
+  "Social Sciences",
+  "Telfer",
+];
 
 export interface DatabaseNote {
   id: string;
@@ -54,12 +65,16 @@ export function NotesExplorer({ isLoggedIn = false, notes = [] }: NotesExplorerP
     }
 
     if (activeFaculty !== "All Faculties") {
-      const prefixes = 
-        activeFaculty === "Engineering" ? ["CSI", "SEG", "CEG", "ELG", "MCG"] :
-        activeFaculty === "Science" ? ["MAT", "CHM", "PHY", "BIO"] :
-        activeFaculty === "Arts" ? ["ENG", "HIS", "PHI"] :
-        activeFaculty === "Telfer" ? ["ADM"] :
-        activeFaculty === "Health Sciences" ? ["HSS", "BPS", "NSG"] : [];
+      const prefixes =
+        activeFaculty === "Arts" ? ["ENG", "HIS", "PHI", "FRA", "ART", "MUS", "THE", "LIN", "CLA", "TRA", "ESP", "ITA", "CHN", "JPN", "RUS", "LCM", "FLS", "SRS"] :
+        activeFaculty === "Education" ? ["EDU"] :
+        activeFaculty === "Engineering" ? ["CSI", "SEG", "CEG", "ELG", "MCG", "CVG", "CHG", "GNG"] :
+        activeFaculty === "Health Sciences" ? ["HSS", "BPS", "NSG", "NUT", "APA", "REA", "ORA", "EPI"] :
+        activeFaculty === "Law" ? ["DRC", "CML"] :
+        activeFaculty === "Medicine" ? ["MED", "ANP", "MDV", "BMG", "TMM"] :
+        activeFaculty === "Science" ? ["MAT", "STA", "CHM", "PHY", "BIO", "BCH", "ENV", "GEG", "NSC"] :
+        activeFaculty === "Social Sciences" ? ["PSY", "SOC", "ECO", "POL", "CRM", "ANT", "GEO", "CMN", "FEM", "API", "PAP", "ISP"] :
+        activeFaculty === "Telfer" ? ["ADM", "MBA", "MGT"] : [];
 
       filtered = filtered.filter(n => prefixes.some(p => n.course_code.startsWith(p)));
     }
