@@ -115,7 +115,7 @@ export function NoteViewer({ note, fileUrl }: { note: any; fileUrl: string }) {
               <div className="bg-white sm:bg-transparent p-2 sm:p-0 rounded-lg sm:rounded-none border sm:border-0 border-gray-100 lg:border-r border-gray-200 lg:pl-4">
                 <span className="text-gray-400 block uppercase mb-0.5 font-bold tracking-wider">Uploaded</span>
                 <span className="font-semibold text-gray-800">
-                  {new Date(note.created_at).toLocaleDateString()}
+                  {new Date(note.created_at).toLocaleDateString('en-US')}
                 </span>
               </div>
               <div className="bg-white sm:bg-transparent p-2 sm:p-0 rounded-lg sm:rounded-none border sm:border-0 border-gray-100 lg:border-r border-gray-200 lg:pl-4">
