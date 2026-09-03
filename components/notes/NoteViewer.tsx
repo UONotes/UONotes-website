@@ -119,7 +119,7 @@ export function NoteViewer({ note, fileUrl }: { note: any; fileUrl: string }) {
                 </span>
               </div>
               <div className="bg-white sm:bg-transparent p-2 sm:p-0 rounded-lg sm:rounded-none border sm:border-0 border-gray-100 lg:border-r border-gray-200 lg:pl-4">
-                <span className="text-gray-400 block uppercase mb-0.5 font-bold tracking-wider">Payload Size</span>
+                <span className="text-gray-400 block uppercase mb-0.5 font-bold tracking-wider">File Size</span>
                 <span className="font-semibold text-gray-800">{formatBytes(note.file_size)}</span>
               </div>
               <div className="bg-white sm:bg-transparent p-2 sm:p-0 rounded-lg sm:rounded-none border sm:border-0 border-gray-100 lg:pl-4">
