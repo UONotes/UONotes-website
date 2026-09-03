@@ -3,7 +3,7 @@
 import { useState, useMemo } from "react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
-import { FileUp, Clock, CheckCircle2, XCircle, Search, MessageSquareText, X } from "lucide-react";
+import { FileUp, Clock, CheckCircle2, XCircle, Search, MessageSquareText, X, Flag } from "lucide-react";
 
 const notebookStyle = {
   backgroundImage: `
@@ -25,14 +25,14 @@ interface SubmissionItem {
   id: string;
   title: string;
   hours: number;
-  status: "Pending" | "Accepted" | "Rejected";
+  status: "Pending" | "Accepted" | "Rejected" | "Flagged";
   feedback?: string;
 }
 
 function mapStatus(status: string): SubmissionItem["status"] {
   if (status === "approved") return "Accepted";
   if (status === "rejected") return "Rejected";
-  // pending, flagged, and changes_requested all read as "Pending" to the student
+  if (status === "flagged") return "Flagged";
   return "Pending";
 }
 
@@ -75,21 +75,15 @@ export function DashboardView({ submissions: rawSubmissions }: { submissions: Da
     >
       <div className="w-full max-w-7xl mx-auto flex flex-col gap-10">
         
-        {/* Notebook Container - Larger and Spaced for Desktops */}
         <div 
           className="w-full bg-white p-8 sm:p-14 lg:p-16 rounded-3xl shadow-xl border border-brand-red/15 relative overflow-hidden"
           style={notebookStyle}
         >
-          {/* Red Margin Line */}
           <div className="absolute top-0 bottom-0 left-16 sm:left-20 w-[2px] bg-[#a83142]/25 pointer-events-none z-0" />
-          
-          {/* Notebook Spine Shadow */}
           <div className="absolute top-0 left-0 bottom-0 w-10 sm:w-16 bg-gradient-to-r from-black/[0.04] to-transparent pointer-events-none z-10" />
 
-          {/* Content Wrapper */}
           <div className="relative z-20 pl-8 sm:pl-12">
 
-            {/* Header */}
             <div className="mb-10 border-b border-gray-200/80 pb-6">
               <span className="text-xs font-mono uppercase tracking-[0.3em] text-brand-red font-bold">
                 uOttawa // Student Portal
@@ -99,7 +93,6 @@ export function DashboardView({ submissions: rawSubmissions }: { submissions: Da
               </h1>
             </div>
 
-            {/* Statistics Cards */}
             <div className="mb-12">
               <div className="flex items-center gap-2 mb-5">
                 <span className="w-2.5 h-2.5 rounded-full bg-brand-red animate-pulse" />
@@ -121,7 +114,6 @@ export function DashboardView({ submissions: rawSubmissions }: { submissions: Da
                 </div>
               </div>
 
-              {/* Submit Notes Action Button */}
               <div className="mt-8 flex justify-center">
                 <Link
                   href="/submit"
@@ -133,7 +125,6 @@ export function DashboardView({ submissions: rawSubmissions }: { submissions: Da
               </div>
             </div>
 
-            {/* My Submissions Section */}
             <div>
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
                 <div className="flex items-center gap-2">
@@ -141,7 +132,6 @@ export function DashboardView({ submissions: rawSubmissions }: { submissions: Da
                   <h2 className="text-xl font-bold font-logo text-brand-red tracking-wide">My Submissions</h2>
                 </div>
 
-                {/* Search Bar */}
                 <div className="relative w-full sm:w-72">
                   <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                   <input
@@ -154,7 +144,6 @@ export function DashboardView({ submissions: rawSubmissions }: { submissions: Da
                 </div>
               </div>
 
-              {/* Submissions Table */}
               <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-xs">
                 <div className="overflow-x-auto">
                   <table className="w-full text-left border-collapse">
@@ -176,10 +165,12 @@ export function DashboardView({ submissions: rawSubmissions }: { submissions: Da
                               <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-mono font-bold uppercase tracking-wider ${
                                 item.status === "Accepted" ? "bg-emerald-50 text-emerald-700 border border-emerald-200" :
                                 item.status === "Pending" ? "bg-amber-50 text-amber-700 border border-amber-200" :
+                                item.status === "Flagged" ? "bg-purple-50 text-purple-700 border border-purple-200" :
                                 "bg-rose-50 text-rose-700 border border-rose-200"
                               }`}>
                                 {item.status === "Accepted" && <CheckCircle2 className="w-3.5 h-3.5" />}
                                 {item.status === "Pending" && <Clock className="w-3.5 h-3.5" />}
+                                {item.status === "Flagged" && <Flag className="w-3.5 h-3.5" />}
                                 {item.status === "Rejected" && <XCircle className="w-3.5 h-3.5" />}
                                 {item.status}
                               </span>
@@ -220,7 +211,6 @@ export function DashboardView({ submissions: rawSubmissions }: { submissions: Da
 
       </div>
 
-      {/* Upgraded Reviewer Feedback Modal */}
       <AnimatePresence>
         {selectedSubmission && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4">

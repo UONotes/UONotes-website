@@ -19,7 +19,8 @@ export default async function CoursePage({
   const { data: notes, error } = await supabase
     .from("notes")
     .select("*")
-    .eq("course_code", courseCode.toUpperCase());
+    .eq("course_code", courseCode.toUpperCase())
+    .eq("status", "approved");
 
   if (error) {
     console.error("Failed to fetch notes for course:", courseCode, error.message);
