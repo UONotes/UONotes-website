@@ -105,7 +105,7 @@ export function DocumentMetadata({ note }: { note: NoteMeta }) {
 
           <div className="p-4 rounded-2xl bg-white border border-gray-200 shadow-sm space-y-1">
             <div className="flex items-center gap-1.5 text-gray-400 text-[10px] font-black uppercase tracking-wider">
-              <FileDigit className="w-3.5 h-3.5" /> Payload Size
+              <FileDigit className="w-3.5 h-3.5" /> File Size
             </div>
             <p className="text-xs font-mono font-semibold text-gray-900">
               {formatBytes(note.fileSize)}
