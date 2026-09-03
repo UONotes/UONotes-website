@@ -23,18 +23,15 @@ export function NoteCard({
   thumb,
   id = "1"
 }: NoteCardProps) {
-  // Extract a clean course code slug (e.g., "CSI2110") from the course string for routing
-  const courseCodeMatch = course.match(/[A-Z]{3,4}\s?[0-9]{4}/i);
-  const courseCode = courseCodeMatch ? courseCodeMatch[0].replace(/\s+/g, "").toUpperCase() : "CSI2110";
-
+  
   return (
     <motion.div 
       variants={fadeUp}
       whileHover={{ y: -4 }}
       className="bg-white rounded-xl shadow-sm border border-brand-red/10 overflow-hidden flex flex-col group"
     >
-      {/* Top Preview Area wrapped in Link to Course Folder */}
-      <Link href={`/notes/${courseCode}`} className="relative h-40 bg-[#fdfafb] border-b border-brand-red/5 w-full flex flex-col items-center justify-center overflow-hidden cursor-pointer">
+      {/* Top Preview Area — links to the actual note, not the course folder */}
+      <Link href={`/notes/view/${id}`} className="relative h-40 bg-[#fdfafb] border-b border-brand-red/5 w-full flex flex-col items-center justify-center overflow-hidden cursor-pointer">
         {thumb ? (
           <Image 
             src={thumb} 
@@ -55,7 +52,7 @@ export function NoteCard({
 
       {/* Content Area */}
       <div className="p-4 flex-1 flex flex-col">
-        <Link href={`/notes/${courseCode}`}>
+        <Link href={`/notes/view/${id}`}>
           <h3 className="text-base font-bold text-gray-900 leading-tight line-clamp-2 mb-1 group-hover:text-brand-red transition-colors cursor-pointer">
             {title}
           </h3>
