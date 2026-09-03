@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { 
@@ -10,13 +10,13 @@ import {
   ShieldAlert, 
   ChevronDown, 
   BookOpen, 
-  User, 
   FileText, 
   UploadCloud,
   Check,
   Loader2
 } from "lucide-react";
 import { FormField } from "@/components/ui/FormField";
+import { createClient } from "@/lib/supabase/client";
 
 const notebookStyle = {
   backgroundImage: `
@@ -33,7 +33,22 @@ export function SubmitFormView() {
   const [isUploading, setIsUploading] = useState(false);
   const [formError, setFormError] = useState("");
   const [showGuidelines, setShowGuidelines] = useState(true);
-  
+
+  // The submitter's identity, pulled from their already-logged-in
+  // account — no need to ask them to type it in again.
+  const [authorName, setAuthorName] = useState("");
+  const [authorEmail, setAuthorEmail] = useState("");
+
+  useEffect(() => {
+    const supabase = createClient();
+    supabase.auth.getUser().then(({ data }) => {
+      if (data.user) {
+        setAuthorEmail(data.user.email ?? "");
+        setAuthorName((data.user.user_metadata?.full_name as string) ?? "");
+      }
+    });
+  }, []);
+
   // Interactive States
   const [selectedNoteTypes, setSelectedNoteTypes] = useState<string[]>([]);
   const [isOtherSelected, setIsOtherSelected] = useState(false);
@@ -46,7 +61,7 @@ export function SubmitFormView() {
   const [isRulesChecked, setIsRulesChecked] = useState(false);
 
   const toggleNoteType = (type: string) => {
-    setSelectedNoteTypes(prev => 
+    setSelectedNoteTypes(prev =>
       prev.includes(type) ? prev.filter(t => t !== type) : [...prev, type]
     );
   };
@@ -56,24 +71,20 @@ export function SubmitFormView() {
     setFormError("");
 
     const formData = new FormData(e.currentTarget);
-    const email = String(formData.get("email") ?? "").trim();
-    const fullName = String(formData.get("fullName") ?? "").trim();
+    const title = String(formData.get("title") ?? "").trim();
     const courseCode = String(formData.get("courseCode") ?? "").trim().toUpperCase().replace(/\s+/g, "");
     const courseName = String(formData.get("courseName") ?? "").trim();
-    const section = String(formData.get("section") ?? "").trim();
     const professor = String(formData.get("professor") ?? "").trim();
     const comments = String(formData.get("comments") ?? "").trim();
     const otherType = String(formData.get("otherNoteType") ?? "").trim();
 
-    const isValidUOttawaEmail = /^[^\s@]+@uottawa\.ca$/i.test(email);
-
-    if (!isValidUOttawaEmail) {
-      setFormError("Please enter a valid @uottawa.ca student email address.");
+    if (!isOriginalChecked || !isQualityChecked || !isRulesChecked) {
+      setFormError("Please check all confirmation boxes before submitting.");
       return;
     }
 
-    if (!isOriginalChecked || !isQualityChecked || !isRulesChecked) {
-      setFormError("Please check all confirmation boxes before submitting.");
+    if (!title) {
+      setFormError("Please give your submission a descriptive title.");
       return;
     }
 
@@ -93,7 +104,7 @@ export function SubmitFormView() {
     try {
       setIsUploading(true);
 
-      // STEP 1: Request presigned upload URL from API endpoint
+      // Step 1: request a presigned upload URL.
       const presignRes = await fetch("/api/notes/upload-url", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -116,7 +127,7 @@ export function SubmitFormView() {
 
       const { uploadUrl, fileKey } = presignData;
 
-      // STEP 2: Stream binary file directly to storage endpoint
+      // Step 2: upload the actual file directly to storage.
       const r2UploadRes = await fetch(uploadUrl, {
         method: "PUT",
         headers: {
@@ -129,23 +140,21 @@ export function SubmitFormView() {
         throw new Error("Direct file upload to storage failed. Please check your connection.");
       }
 
-      // STEP 3: Register document record and file_key into database
-   // Inside SubmitFormView.tsx -> handleSubmit
+      // Step 3: save the document's metadata to the database.
       const dbRes = await fetch("/api/notes", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          title: `${courseCode} - ${compiledTypes.join(", ")}`,
+          title,
           courseCode,
           courseName,
-          section,
           professor,
-          authorName: fullName,
-          authorEmail: email,
+          authorName,
+          authorEmail,
           language: selectedLanguage,
           noteTypes: compiledTypes,
           fileKey,
-          fileSize: selectedFile.size, // <--- IF THIS IS MISSING, IT WILL ALWAYS BE 0 BYTES
+          fileSize: selectedFile.size,
           fileType: selectedFile.type || "application/pdf",
           comments,
         }),
@@ -178,15 +187,15 @@ export function SubmitFormView() {
       className="w-full min-h-[calc(100vh-80px)] py-12 px-4 sm:px-6 lg:px-12 flex flex-col items-center"
     >
       <div className="w-full max-w-4xl mx-auto flex flex-col gap-8">
-        
+
         {/* Notebook Container */}
-        <div 
+        <div
           className="w-full bg-white p-6 sm:p-12 lg:p-16 rounded-[2rem] shadow-xl border border-brand-red/15 relative overflow-hidden"
           style={notebookStyle}
         >
           {/* Red Margin Line */}
           <div className="absolute top-0 bottom-0 left-12 sm:left-20 w-[2px] bg-[#a83142]/25 pointer-events-none z-0" />
-          
+
           {/* Notebook Spine Shadow */}
           <div className="absolute top-0 left-0 bottom-0 w-8 sm:w-16 bg-gradient-to-r from-black/[0.04] to-transparent pointer-events-none z-10" />
 
@@ -257,41 +266,12 @@ export function SubmitFormView() {
 
                 {/* Form Section */}
                 <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-8">
-                  
-                  {/* SECTION 1: Author Details */}
-                  <div className="space-y-4 bg-gray-50/60 p-5 sm:p-6 rounded-2xl border border-gray-100">
-                    <div className="flex items-center gap-2 pb-2 border-b border-gray-200/60">
-                      <User className="w-4 h-4 text-brand-red" />
-                      <h3 className="text-xs font-mono font-bold uppercase tracking-wider text-gray-700">1. Author Information</h3>
-                    </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <FormField
-                        id="submit-full-name"
-                        label="Full Name"
-                        name="fullName"
-                        type="text"
-                        placeholder="John Doe"
-                        autoComplete="name"
-                        required
-                      />
-                      <FormField
-                        id="submit-email"
-                        label="uOttawa Student Email"
-                        name="email"
-                        type="email"
-                        placeholder="example@uottawa.ca"
-                        autoComplete="email"
-                        required
-                      />
-                    </div>
-                  </div>
-
-                  {/* SECTION 2: Document Categorization */}
+                  {/* SECTION 1: Document Categorization */}
                   <div className="space-y-4 bg-gray-50/60 p-5 sm:p-6 rounded-2xl border border-gray-100">
                     <div className="flex items-center gap-2 pb-2 border-b border-gray-200/60">
                       <FileText className="w-4 h-4 text-brand-red" />
-                      <h3 className="text-xs font-mono font-bold uppercase tracking-wider text-gray-700">2. Document Classification</h3>
+                      <h3 className="text-xs font-mono font-bold uppercase tracking-wider text-gray-700">1. Document Classification</h3>
                     </div>
 
                     <div className="flex flex-col gap-2">
@@ -303,8 +283,8 @@ export function SubmitFormView() {
                             type="button"
                             onClick={() => setSelectedLanguage(lang)}
                             className={`px-5 py-2 rounded-lg text-xs font-mono font-bold transition-all cursor-pointer ${
-                              selectedLanguage === lang 
-                                ? "bg-brand-red text-white shadow-xs" 
+                              selectedLanguage === lang
+                                ? "bg-brand-red text-white shadow-xs"
                                 : "text-gray-600 hover:text-gray-900"
                             }`}
                           >
@@ -324,8 +304,8 @@ export function SubmitFormView() {
                               key={type}
                               onClick={() => toggleNoteType(type)}
                               className={`flex items-center justify-between p-3 rounded-xl border text-xs font-semibold cursor-pointer transition-all ${
-                                isChecked 
-                                  ? "border-brand-red bg-brand-red/5 text-brand-red shadow-2xs" 
+                                isChecked
+                                  ? "border-brand-red bg-brand-red/5 text-brand-red shadow-2xs"
                                   : "border-gray-200 bg-white text-gray-700 hover:border-gray-300"
                               }`}
                             >
@@ -336,12 +316,12 @@ export function SubmitFormView() {
                             </div>
                           );
                         })}
-                        
+
                         <div
                           onClick={() => setIsOtherSelected(!isOtherSelected)}
                           className={`flex items-center justify-between p-3 rounded-xl border text-xs font-semibold cursor-pointer transition-all ${
-                            isOtherSelected 
-                              ? "border-brand-red bg-brand-red/5 text-brand-red shadow-2xs" 
+                            isOtherSelected
+                              ? "border-brand-red bg-brand-red/5 text-brand-red shadow-2xs"
                               : "border-gray-200 bg-white text-gray-700 hover:border-gray-300"
                           }`}
                         >
@@ -366,29 +346,28 @@ export function SubmitFormView() {
                     </div>
                   </div>
 
-                  {/* SECTION 3: Course Context */}
+                  {/* SECTION 2: Course Context */}
                   <div className="space-y-4 bg-gray-50/60 p-5 sm:p-6 rounded-2xl border border-gray-100">
                     <div className="flex items-center gap-2 pb-2 border-b border-gray-200/60">
                       <BookOpen className="w-4 h-4 text-brand-red" />
-                      <h3 className="text-xs font-mono font-bold uppercase tracking-wider text-gray-700">3. Course & Faculty Context</h3>
+                      <h3 className="text-xs font-mono font-bold uppercase tracking-wider text-gray-700">2. Course & Faculty Context</h3>
                     </div>
+
+                    <FormField id="submit-title" label="Submission Title" name="title" type="text" placeholder="e.g. Midterm 1 Review: Binary Trees & Heaps" required />
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <FormField id="submit-course-code" label="Course Code" name="courseCode" type="text" placeholder="e.g. CSI2110" required />
                       <FormField id="submit-course-name" label="Full Course Name" name="courseName" type="text" placeholder="e.g. Data Structures" required />
                     </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <FormField id="submit-section" label="Section" name="section" type="text" placeholder="e.g. A, B, C or D" required />
-                      <FormField id="submit-professor" label="Professor Name" name="professor" type="text" placeholder="e.g. Dr. Amy Murtha" required />
-                    </div>
+                    <FormField id="submit-professor" label="Professor Name (Optional)" name="professor" type="text" placeholder="e.g. Dr. Amy Murtha" />
                   </div>
 
-                  {/* SECTION 4: File Upload & Comments */}
+                  {/* SECTION 3: File Upload & Comments */}
                   <div className="space-y-4 bg-gray-50/60 p-5 sm:p-6 rounded-2xl border border-gray-100">
                     <div className="flex items-center gap-2 pb-2 border-b border-gray-200/60">
                       <UploadCloud className="w-4 h-4 text-brand-red" />
-                      <h3 className="text-xs font-mono font-bold uppercase tracking-wider text-gray-700">4. Document Upload</h3>
+                      <h3 className="text-xs font-mono font-bold uppercase tracking-wider text-gray-700">3. Document Upload</h3>
                     </div>
 
                     <div className="flex flex-col gap-2">
@@ -401,12 +380,12 @@ export function SubmitFormView() {
                           {selectedFile ? selectedFile.name : "Click to browse or drag & drop files here"}
                         </span>
                         <span className="text-[10px] text-gray-400 font-mono">PDF documents up to 25MB</span>
-                        <input 
-                          type="file" 
+                        <input
+                          type="file"
                           accept="application/pdf"
                           onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
-                          className="hidden" 
-                          required 
+                          className="hidden"
+                          required
                         />
                       </label>
                     </div>
@@ -422,11 +401,11 @@ export function SubmitFormView() {
                     </div>
                   </div>
 
-                  {/* SECTION 5: Confirmation Checklists */}
+                  {/* SECTION 4: Confirmation Checklists */}
                   <div className="space-y-4 pt-2">
                     <div className="flex flex-col gap-3">
-                      
-                      <div 
+
+                      <div
                         onClick={() => setIsOriginalChecked(!isOriginalChecked)}
                         className={`flex items-start gap-3.5 p-4 rounded-2xl border transition-all cursor-pointer ${
                           isOriginalChecked ? "bg-brand-red/5 border-brand-red shadow-2xs" : "bg-white border-gray-200 hover:border-gray-300"
@@ -442,7 +421,7 @@ export function SubmitFormView() {
                         </span>
                       </div>
 
-                      <div 
+                      <div
                         onClick={() => setIsQualityChecked(!isQualityChecked)}
                         className={`flex items-start gap-3.5 p-4 rounded-2xl border transition-all cursor-pointer ${
                           isQualityChecked ? "bg-brand-red/5 border-brand-red shadow-2xs" : "bg-white border-gray-200 hover:border-gray-300"
@@ -458,7 +437,7 @@ export function SubmitFormView() {
                         </span>
                       </div>
 
-                      <div 
+                      <div
                         onClick={() => setIsRulesChecked(!isRulesChecked)}
                         className={`flex items-start gap-3.5 p-4 rounded-2xl border transition-all cursor-pointer ${
                           isRulesChecked ? "bg-brand-red/5 border-brand-red shadow-2xs" : "bg-white border-gray-200 hover:border-gray-300"
@@ -508,15 +487,15 @@ export function SubmitFormView() {
                 <div className="w-16 h-16 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mb-6 shadow-inner animate-in zoom-in-50 duration-300">
                   <CheckCircle2 className="w-8 h-8" />
                 </div>
-                
+
                 <span className="text-xs font-mono uppercase tracking-[0.3em] text-emerald-600 font-bold mb-2">
                   Transmission Successful
                 </span>
-                
+
                 <h2 className="text-3xl font-black tracking-tight font-sans text-gray-900 mb-3">
                   Your notes have been received
                 </h2>
-                
+
                 <p className="text-sm text-gray-600 max-w-md mb-8 leading-relaxed">
                   Our moderation queue is processing your file. You will receive an email notification once your notes are approved and published.
                 </p>
