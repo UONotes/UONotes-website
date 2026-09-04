@@ -64,10 +64,16 @@ export async function saveSettingsAction(payload: SettingsPayload) {
     throw new Error("Failed to save settings.");
   }
 
-  await supabaseAdmin.from("system_audit_logs").insert({
+  await supabaseAdmin.from("admin_audit_log").insert({
     admin_id: caller.id,
-    action: "UPDATE_PLATFORM_SETTINGS",
-    details: `Maintenance=${payload.maintenanceMode}, MaxSize=${payload.maxFileSize}MB, PublicRegistration=${payload.allowPublicRegistrations}`,
+    target_type: "platform_settings",
+    target_id: null,
+    action_type: "UPDATE_PLATFORM_SETTINGS",
+    details: {
+      maintenance_mode: payload.maintenanceMode,
+      max_file_size_mb: payload.maxFileSize,
+      allow_public_registrations: payload.allowPublicRegistrations,
+    },
   });
 
   return { success: true };
