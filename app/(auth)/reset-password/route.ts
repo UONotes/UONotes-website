@@ -14,10 +14,10 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: PASSWORD_REQUIREMENTS_TEXT }, { status: 400 });
   }
 
-  const { locked } = await checkOtpLock(email, "recovery");
+  const { locked, minutesRemaining } = await checkOtpLock(email, "recovery");
   if (locked) {
     return NextResponse.json(
-      { error: "Too many incorrect attempts. Please try again in 15 minutes." },
+      { error: `Too many incorrect attempts. Please try again in ${minutesRemaining} minute${minutesRemaining === 1 ? "" : "s"}.` },
       { status: 429 }
     );
   }

@@ -9,10 +9,10 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Missing required fields." }, { status: 400 });
   }
 
-  const { locked } = await checkOtpLock(email, "signup");
+  const { locked, minutesRemaining } = await checkOtpLock(email, "signup");
   if (locked) {
     return NextResponse.json(
-      { error: "Too many incorrect attempts. Please try again in 15 minutes." },
+      { error: `Too many incorrect attempts. Please try again in ${minutesRemaining} minute${minutesRemaining === 1 ? "" : "s"}.` },
       { status: 429 }
     );
   }
