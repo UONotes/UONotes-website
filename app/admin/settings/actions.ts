@@ -40,13 +40,20 @@ export async function saveSettingsAction(payload: SettingsPayload) {
     .eq("id", 1)
     .single();
 
+  const { data: currentRegSettings } = await supabaseAdmin
+    .from("platform_settings")
+    .select("allow_public_registrations")
+    .eq("id", 1)
+    .single();
+
   const isChangingMaintenanceMode =
     currentSettings && currentSettings.maintenance_mode !== payload.maintenanceMode;
+  const isChangingRegistration =
+    currentRegSettings && currentRegSettings.allow_public_registrations !== payload.allowPublicRegistrations;
 
-  if (isChangingMaintenanceMode && !callerProfile.is_super_admin) {
-    throw new Error("Only Super Admins can change Maintenance Mode.");
+  if ((isChangingMaintenanceMode || isChangingRegistration) && !callerProfile.is_super_admin) {
+    throw new Error("Only Super Admins can change Maintenance Mode or Public Registration.");
   }
-
   const { error: updateError } = await supabaseAdmin
     .from("platform_settings")
     .update({

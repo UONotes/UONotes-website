@@ -150,6 +150,29 @@ export function SettingsForm({
                 </div>
 
                 <div className="h-px bg-gray-50" />
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <p className="text-sm font-bold text-gray-900 flex items-center gap-2">
+                      Public Registration
+                      <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-rose-50 text-rose-600 border border-rose-100">SUPER ADMIN ONLY</span>
+                    </p>
+                    <p className="text-xs text-gray-500 max-w-md mt-0.5">
+                      Allow new students to create accounts. Turn off to temporarily pause signups.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    disabled={!isSuperAdmin}
+                    onClick={() => setAllowPublicRegistrations(!allowPublicRegistrations)}
+                    className={`w-12 h-6 rounded-full transition-colors relative p-1 shrink-0 ${
+                      !isSuperAdmin ? "opacity-50 cursor-not-allowed" : "cursor-pointer"
+                    } ${allowPublicRegistrations ? "bg-rose-600" : "bg-gray-200"}`}
+                  >
+                    <div className={`w-4 h-4 rounded-full bg-white transition-transform ${allowPublicRegistrations ? "translate-x-6" : "translate-x-0"}`} />
+                  </button>
+                </div>
+
+                <div className="h-px bg-gray-50" />
 
                 <div className="flex items-start justify-between gap-4">
                   <div>
