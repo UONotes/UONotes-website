@@ -29,12 +29,12 @@ export default async function DocumentReviewPage({
       file_key,
       file_size,
       flag_reason,
+      flagged_by,
       created_at,
       language,
       note_types,
       author_email,
-      reviewed_by,
-      hours_awarded
+      reviewed_by
     `)
     .eq("id", id)
     .single();
@@ -73,12 +73,22 @@ export default async function DocumentReviewPage({
   
   const fileUrl = await getSignedUrl(r2, command, { expiresIn: 3600 });
 
+  let reporterEmail: string | null = null;
+  if (note.flagged_by) {
+    const { data: reporterProfile } = await supabase
+      .from("profiles")
+      .select("email")
+      .eq("id", note.flagged_by)
+      .single();
+    reporterEmail = reporterProfile?.email ?? null;
+  }
+
   const formattedNote = {
     id: note.id,
     title: note.title,
     courseCode: note.course_code,
     uploaderEmail: note.author_email || "Unknown User",
-    reporterEmail: null,
+    reporterEmail,
     fileSize: note.file_size || 0,
     flagReason: note.flag_reason || null,
     status: note.status,
