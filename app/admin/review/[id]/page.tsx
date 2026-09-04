@@ -34,7 +34,8 @@ export default async function DocumentReviewPage({
       language,
       note_types,
       author_email,
-      reviewed_by
+      reviewed_by,
+      hours_awarded
     `)
     .eq("id", id)
     .single();
