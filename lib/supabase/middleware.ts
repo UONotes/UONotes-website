@@ -1,9 +1,9 @@
 import { createServerClient, type CookieOptionsWithName } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
-// Paths that require being logged in, regardless of admin status.
-const PROTECTED_PATHS = ["/submit", "/dashboard", "/settings"];
-// Paths that require being logged in AND having is_admin = true.
+// Paths that require being logged in regardless of admin status
+const PROTECTED_PATHS = ["/submit", "/dashboard", "/settings", "/notes"];
+// Paths that require being logged in AND having is_admin = true
 const ADMIN_PATHS = ["/admin"];
 // Paths that make no sense to show someone who's already logged in.
 const LOGGED_OUT_ONLY_PATHS = ["/signin", "/signup", "/forgot-password"];

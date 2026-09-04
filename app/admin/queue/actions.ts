@@ -78,12 +78,16 @@ export async function reviewNoteAction(
     status === "approved" ? "NOTE_APPROVED" : 
     status === "rejected" ? "NOTE_REJECTED" : "NOTE_CHANGES_REQUESTED";
 
-  await supabaseAdmin.from("audit_logs").insert({
-    target_user_id: updatedNote?.uploader_id ?? null,
-    action_by_admin_id: caller.id,
+  await supabaseAdmin.from("admin_audit_log").insert({
+    admin_id: caller.id,
+    target_type: "note",
+    target_id: noteId,
     action_type: actionString,
-    reasons: [reason || "No reason provided"],
-    custom_note: `Moderated note ID ${noteId} with decision: ${status.toUpperCase()}. Feedback: ${reason}`,
+    details: {
+      note_owner_id: updatedNote?.uploader_id ?? null,
+      decision: status,
+      reason: reason || null,
+    },
   });
 
   revalidatePath("/admin/queue");

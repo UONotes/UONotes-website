@@ -58,13 +58,13 @@ export async function banUserAction(
       .eq("id", targetUserId),
       
     supabaseAdmin
-      .from("audit_logs")
+      .from("admin_audit_log")
       .insert({
-        target_user_id: targetUserId,
-        action_by_admin_id: caller.id,
+        admin_id: caller.id,
+        target_type: "user",
+        target_id: targetUserId,
         action_type: "BAN",
-        reasons: reasons,
-        custom_note: customNote,
+        details: { reasons, custom_note: customNote },
       })
   ]);
 
@@ -126,13 +126,13 @@ export async function unbanUserAction(
       .eq("id", targetUserId),
       
     supabaseAdmin
-      .from("audit_logs")
+      .from("admin_audit_log")
       .insert({
-        target_user_id: targetUserId,
-        action_by_admin_id: caller.id,
+        admin_id: caller.id,
+        target_type: "user",
+        target_id: targetUserId,
         action_type: "UNBAN",
-        reasons: reasons,
-        custom_note: customNote,
+        details: { reasons, custom_note: customNote },
       })
   ]);
 
