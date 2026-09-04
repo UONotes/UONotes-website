@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 export async function POST(request: Request) {
   try {
@@ -8,6 +9,19 @@ export async function POST(request: Request) {
 
     if (authError || !user) {
       return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+    }
+
+    const admin = createAdminClient();
+    const [{ data: profile }, { data: settings }] = await Promise.all([
+      supabase.from("profiles").select("is_admin").eq("id", user.id).single(),
+      admin.from("platform_settings").select("maintenance_mode").eq("id", 1).single(),
+    ]);
+
+    if (settings?.maintenance_mode && !profile?.is_admin) {
+      return NextResponse.json(
+        { error: "Submissions are temporarily paused for maintenance. Please try again later." },
+        { status: 503 }
+      );
     }
 
     const body = await request.json();

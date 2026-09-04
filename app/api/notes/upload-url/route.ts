@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { PutObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { createR2Client, R2_BUCKET_NAME } from "@/lib/r2";
 import { isAllowedFileType, isAllowedFileSize } from "@/lib/fileValidation";
 import { randomUUID } from "crypto";
@@ -11,7 +12,20 @@ export async function POST(request: Request) {
   const { data: { user }, error: authError } = await supabase.auth.getUser();
 
   if (authError || !user) {
-    return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+    return NextResponse.json({ error: "Not signed in." }, { status: 401 });
+  }
+
+  const admin = createAdminClient();
+  const [{ data: profile }, { data: settings }] = await Promise.all([
+    supabase.from("profiles").select("is_admin").eq("id", user.id).single(),
+    admin.from("platform_settings").select("maintenance_mode").eq("id", 1).single(),
+  ]);
+
+  if (settings?.maintenance_mode && !profile?.is_admin) {
+    return NextResponse.json(
+      { error: "Submissions are temporarily paused for maintenance. Please try again later." },
+      { status: 503 }
+    );
   }
 
   const { fileName, fileType, fileSize } = await request.json();
