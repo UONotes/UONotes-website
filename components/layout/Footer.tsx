@@ -7,14 +7,10 @@ import { usePathname } from "next/navigation";
 export function Footer() {
   const pathname = usePathname();
 
-  // Automatically hide the global footer on admin and standalone pages
-  const isAdminOrStandalone = 
-    pathname.startsWith("/admin") || 
-    pathname === "/contact" || 
-    pathname === "/signin" || 
-    pathname === "/signup";
+  // Automatically hide the global footer on admin pages
+  const isAdminRoute = pathname.startsWith("/admin");
 
-  if (isAdminOrStandalone) {
+  if (isAdminRoute) {
     return null;
   }
 
@@ -38,17 +34,29 @@ export function Footer() {
           <div className="flex flex-col gap-2">
             <Link href="/about" className="text-sm text-brand-body hover:text-brand-red transition-colors">About</Link>
             <Link href="/events" className="text-sm text-brand-body hover:text-brand-red transition-colors">Events</Link>
-            <Link href="/sponsors" className="text-sm text-brand-body hover:text-brand-red transition-colors">Sponsors</Link>
             <Link href="/contact" className="text-sm text-brand-body hover:text-brand-red transition-colors">Contact us</Link>
           </div>
 
           <div className="flex flex-col gap-2">
             <p className="text-sm text-brand-body leading-relaxed">75 Laurier Ave E<br/>Ottawa, ON, K1N 6N5</p>
             <a href="mailto:uofonotes@gmail.com" className="text-sm text-brand-body hover:text-brand-red transition-colors">uofonotes@gmail.com</a>
-            <div className="flex gap-2.5 mt-1.5">
-              <a href="#" className="text-xs font-semibold text-brand-muted hover:text-brand-red">IG</a>
-              <a href="#" className="text-xs font-semibold text-brand-muted hover:text-brand-red">TikTok</a>
-              <a href="#" className="text-xs font-semibold text-brand-muted hover:text-brand-red">IN</a>
+            <div className="flex gap-3 mt-1.5">
+              <a 
+                href="https://www.instagram.com/uonotes/?hl=en" 
+                target="_blank" 
+                rel="noopener noreferrer" 
+                className="text-xs font-semibold text-brand-muted hover:text-brand-red transition-colors"
+              >
+                Instagram
+              </a>
+              <a 
+                href="https://www.tiktok.com/@uo_notes" 
+                target="_blank" 
+                rel="noopener noreferrer" 
+                className="text-xs font-semibold text-brand-muted hover:text-brand-red transition-colors"
+              >
+                TikTok
+              </a>
             </div>
           </div>
         </div>
