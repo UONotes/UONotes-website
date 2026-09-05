@@ -10,7 +10,7 @@ export interface FeaturedNote {
   id: string;
   title: string;
   courseCode: string;
-  // Add any other metadata NoteCard needs (e.g., author, upvotes)
+  fileUrl?: string;
 }
 
 interface FeaturedNotesProps {
@@ -58,6 +58,7 @@ export function FeaturedNotes({ notes }: FeaturedNotesProps) {
               id={note.id}
               title={note.title} 
               course={note.courseCode} 
+              fileUrl={note.fileUrl}
             />
           </motion.div>
         ))}
