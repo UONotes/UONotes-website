@@ -5,6 +5,7 @@ import Link from "next/link";
 import { motion } from "framer-motion";
 import { Folder, FileText, Bookmark, ArrowLeft, Search, Flag } from "lucide-react";
 import { SaveNoteButton } from "@/components/notes/SaveNoteButton";
+import { PdfThumbnail } from "@/components/notes/PdfThumbnail";
 import { ReportModal } from "@/components/notes/ReportModal";
 
 const notebookStyle = {
@@ -22,6 +23,7 @@ export interface NoteItem {
   course_code: string;
   file_key: string;
   created_at?: string;
+  fileUrl?: string;
 }
 
 interface CourseFolderViewProps {
@@ -43,8 +45,7 @@ export function CourseFolderView({ courseCode, notes }: CourseFolderViewProps) {
       animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
       exit={{ opacity: 0, y: -10, filter: "blur(4px)" }}
       transition={{ duration: 0.4, ease: "easeInOut" }}
-      className="w-full min-h-[calc(100vh-60px)] py-4 sm:py-12 px-3 sm:px-6 lg:px-12 flex flex-col items-center bg-gray-50/50 overflow-hidden"
-    >
+      className="w-full min-h-[calc(100vh-60px)] py-4 sm:py-12 px-3 sm:px-6 lg:px-12 flex flex-col items-center overflow-hidden"    >
       <div className="w-full max-w-[1600px] mx-auto">
         
         {/* ==========================================
@@ -120,11 +121,28 @@ export function CourseFolderView({ courseCode, notes }: CourseFolderViewProps) {
                     <div key={note.id} className="bg-white border border-brand-red/20 rounded-xl sm:rounded-2xl p-4 sm:p-5 shadow-xs hover:shadow-md transition-shadow flex flex-col justify-between gap-5 sm:gap-6 group">
                       
                       {/* Thumbnail Placeholder */}
-                      <Link href={`/notes/view/${note.id}`} className="h-32 sm:h-36 bg-gray-50 rounded-lg sm:rounded-xl border border-gray-100 flex flex-col items-center justify-center text-gray-400 relative overflow-hidden group-hover:bg-brand-red/[0.02] transition-colors cursor-pointer">
-                        <FileText className="w-8 h-8 sm:w-10 sm:h-10 text-brand-red/40 mb-2 group-hover:scale-110 group-hover:text-brand-red transition-all" />
-                        <span className="text-[9px] sm:text-[10px] font-mono uppercase tracking-wider text-gray-400 group-hover:text-brand-red/80 transition-colors">
-                          PDF Preview
-                        </span>
+                                           <Link href={`/notes/view/${note.id}`} className="h-32 sm:h-36 bg-gray-50 rounded-lg sm:rounded-xl border border-gray-100 flex flex-col items-center justify-center text-gray-400 relative overflow-hidden group-hover:bg-brand-red/[0.02] transition-colors cursor-pointer">
+                        {note.fileUrl ? (
+                          <PdfThumbnail
+                            fileUrl={note.fileUrl}
+                            className="w-full h-full"
+                            fallback={
+                              <div className="w-full h-full flex flex-col items-center justify-center">
+                                <FileText className="w-8 h-8 sm:w-10 sm:h-10 text-brand-red/40 mb-2 group-hover:scale-110 group-hover:text-brand-red transition-all" />
+                                <span className="text-[9px] sm:text-[10px] font-mono uppercase tracking-wider text-gray-400 group-hover:text-brand-red/80 transition-colors">
+                                  PDF Preview
+                                </span>
+                              </div>
+                            }
+                          />
+                        ) : (
+                          <>
+                            <FileText className="w-8 h-8 sm:w-10 sm:h-10 text-brand-red/40 mb-2 group-hover:scale-110 group-hover:text-brand-red transition-all" />
+                            <span className="text-[9px] sm:text-[10px] font-mono uppercase tracking-wider text-gray-400 group-hover:text-brand-red/80 transition-colors">
+                              PDF Preview
+                            </span>
+                          </>
+                        )}
                       </Link>
 
                       <div>

@@ -1,7 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
-import Link from "next/link";
+import { useState, useMemo, useEffect } from "react";import Link from "next/link";
 import { motion } from "framer-motion";
 import { NoteCard } from "@/components/ui/NoteCard";
 import { Folder, UploadCloud, Library, Compass, Lock, ChevronRight, Search } from "lucide-react";
@@ -32,6 +31,7 @@ export interface DatabaseNote {
   id: string;
   title: string;
   course_code: string;
+  fileUrl?: string;
 }
 
 interface NotesExplorerProps {
@@ -42,7 +42,7 @@ interface NotesExplorerProps {
 export function NotesExplorer({ isLoggedIn = false, notes = [] }: NotesExplorerProps) {
   const [activeFaculty, setActiveFaculty] = useState("All Faculties");
   const [searchQuery, setSearchQuery] = useState("");
-
+  const [visibleCount, setVisibleCount] = useState(15);
   const topFolders = useMemo(() => {
     const counts = notes.reduce((acc, note) => {
       acc[note.course_code] = (acc[note.course_code] || 0) + 1;
@@ -79,9 +79,17 @@ export function NotesExplorer({ isLoggedIn = false, notes = [] }: NotesExplorerP
       filtered = filtered.filter(n => prefixes.some(p => n.course_code.startsWith(p)));
     }
 
-    return filtered;
+       return filtered;
   }, [notes, activeFaculty, searchQuery]);
 
+  // Reset back to the first page whenever the actual result set changes,
+  // so switching filters doesn't leave you stuck deep in a stale list.
+  useEffect(() => {
+    setVisibleCount(15);
+  }, [activeFaculty, searchQuery]);
+
+  const visibleNotes = filteredNotes.slice(0, visibleCount);
+  const hasMore = visibleCount < filteredNotes.length;
   return (
     <motion.div 
       initial={{ opacity: 0, y: 10, filter: "blur(4px)" }}
@@ -200,14 +208,15 @@ export function NotesExplorer({ isLoggedIn = false, notes = [] }: NotesExplorerP
                 animate={{ opacity: 1 }} 
                 transition={{ duration: 0.4 }}
                 className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6 pb-8"
-              >
-                {filteredNotes.length > 0 ? (
-                  filteredNotes.map((note) => (
+                           >
+                                {visibleNotes.length > 0 ? (
+                  visibleNotes.map((note) => (
                     <div key={note.id} className="bg-white rounded-xl shadow-sm border border-brand-red/15 relative">
                       <NoteCard 
                         id={String(note.id)}
                         title={note.title}
                         course={note.course_code}
+                        fileUrl={note.fileUrl}
                       />
                     </div>
                   ))
@@ -218,10 +227,20 @@ export function NotesExplorer({ isLoggedIn = false, notes = [] }: NotesExplorerP
                 )}
               </motion.div>
 
+              {hasMore && (
+                <div className="flex justify-center pb-8">
+                  <button
+                    onClick={() => setVisibleCount((c) => c + 15)}
+                    className="px-6 py-3 bg-white border border-gray-200 text-gray-700 text-xs font-mono font-bold uppercase tracking-wider rounded-xl hover:border-brand-red/40 hover:text-brand-red transition-colors shadow-xs cursor-pointer"
+                  >
+                    Show More ({filteredNotes.length - visibleCount} remaining)
+                  </button>
+                </div>
+              )}
+
             </main>
 
-            <aside className="hidden lg:flex w-72 flex-shrink-0 flex-col gap-6 order-2 lg:order-1">
-              
+            <aside className="hidden lg:flex w-72 flex-shrink-0 flex-col gap-6 order-2 lg:order-1 lg:sticky lg:top-24 lg:self-start">              
               {isLoggedIn ? (
                 <div className="bg-white/95 backdrop-blur-sm p-5 rounded-3xl border border-brand-red/15 shadow-sm flex flex-col">
                   <div className="flex items-center gap-2 mb-4 px-1">

@@ -194,8 +194,7 @@ export function Navbar() {
             animate={{ opacity: 1, height: "auto" }}
             exit={{ opacity: 0, height: 0 }}
             transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
-            className="sm:hidden overflow-hidden bg-[#fdfafb]/90 backdrop-blur-xl border-t border-brand-red/15 absolute w-full left-0 top-full shadow-2xl"
-          >
+            className="sm:hidden overflow-hidden bg-[#fdfafb] border-t border-brand-red/15 absolute w-full left-0 top-full shadow-2xl"          >
             <div className="flex flex-col py-6 px-6 gap-3">
               
               <span className="text-[10px] font-mono uppercase tracking-[0.2em] text-gray-400 px-2 pb-1">

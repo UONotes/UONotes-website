@@ -36,6 +36,28 @@ export default async function ViewNoteRoute({ params }: PageProps) {
     notFound();
   }
 
+  // 1b. Look up the translation pair, if one exists — an English note
+  // checks if any French note points back at it; a French note just
+  // follows its own translation_of column directly.
+  let translationPair: { id: string; title: string; language: string } | null = null;
+
+  if (note.language === "FR" && note.translation_of) {
+    const { data: original } = await supabase
+      .from("notes")
+      .select("id, title, language")
+      .eq("id", note.translation_of)
+      .single();
+    translationPair = original ?? null;
+  } else {
+    const { data: translation } = await supabase
+      .from("notes")
+      .select("id, title, language")
+      .eq("translation_of", note.id)
+      .eq("status", "approved")
+      .maybeSingle();
+    translationPair = translation ?? null;
+  }
+
   // 2. Generate secure presigned URL for Cloudflare R2
   const r2 = createR2Client();
   const command = new GetObjectCommand({
@@ -48,5 +70,5 @@ export default async function ViewNoteRoute({ params }: PageProps) {
   const fileUrl = await getSignedUrl(r2, command, { expiresIn: 3600 });
 
   // 3. Pass down to client component
-  return <NoteViewer note={note} fileUrl={fileUrl} />;
+  return <NoteViewer note={note} fileUrl={fileUrl} translationPair={translationPair} />;
 }
