@@ -13,9 +13,7 @@ export function Navbar() {
   const pathname = usePathname();
   
   const isAdminOrStandalone = 
-    pathname.startsWith("/admin") || 
-    pathname === "/signin" || 
-    pathname === "/signup";
+    pathname.startsWith("/admin")
 
   const [lang, setLang] = useState<"EN" | "FR">("EN");
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
