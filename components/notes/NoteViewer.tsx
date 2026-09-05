@@ -27,6 +27,31 @@ function formatBytes(bytes: number) {
 export function NoteViewer({ note, fileUrl }: { note: any; fileUrl: string }) {
   const [isReportOpen, setIsReportOpen] = useState(false);
   const [iframeLoaded, setIframeLoaded] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
+
+  async function handleDownload() {
+    if (isDownloading) return;
+    setIsDownloading(true);
+
+    try {
+      const response = await fetch(fileUrl);
+      const blob = await response.blob();
+      const objectUrl = URL.createObjectURL(blob);
+
+      const link = document.createElement("a");
+      link.href = objectUrl;
+      link.download = `${note.course_code}_${note.title}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      URL.revokeObjectURL(objectUrl);
+    } catch (err) {
+      console.error("Download failed:", err);
+    } finally {
+      setIsDownloading(false);
+    }
+  }
 
   // The guard that caught the error - it will safely pass now!
   if (!note || !fileUrl) {
@@ -45,8 +70,7 @@ export function NoteViewer({ note, fileUrl }: { note: any; fileUrl: string }) {
       animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
       exit={{ opacity: 0, y: -10, filter: "blur(4px)" }}
       transition={{ duration: 0.4, ease: "easeInOut" }}
-      className="w-full min-h-[calc(100vh-60px)] py-4 sm:py-12 px-3 sm:px-6 lg:px-12 flex flex-col items-center bg-gray-50/50 overflow-hidden"
-    >
+      className="w-full min-h-[calc(100vh-60px)] py-4 sm:py-12 px-3 sm:px-6 lg:px-12 flex flex-col items-center overflow-hidden"    >
       <div className="w-full max-w-5xl mx-auto flex flex-col gap-8">
         <div 
           className="w-full bg-white p-3 sm:p-10 lg:p-12 rounded-2xl sm:rounded-[2rem] shadow-xl border border-brand-red/15 relative overflow-hidden"
@@ -107,13 +131,14 @@ export function NoteViewer({ note, fileUrl }: { note: any; fileUrl: string }) {
                     </button>
                   )}
                 />
-                <a
-                  href={fileUrl}
-                  download={`${note.course_code}_${note.title}.pdf`}
-                  className="w-full sm:w-auto inline-flex justify-center items-center gap-2 px-5 py-3 sm:py-2.5 bg-brand-red text-white text-[10px] sm:text-xs font-mono font-bold uppercase rounded-xl hover:bg-red-800 transition-all shadow-sm cursor-pointer mt-1 sm:mt-0"
+                  <button
+                  onClick={handleDownload}
+                  disabled={isDownloading}
+                  className="w-full sm:w-auto inline-flex justify-center items-center gap-2 px-5 py-3 sm:py-2.5 bg-brand-red text-white text-[10px] sm:text-xs font-mono font-bold uppercase rounded-xl hover:bg-red-800 transition-all shadow-sm cursor-pointer mt-1 sm:mt-0 disabled:opacity-60 disabled:cursor-not-allowed"
                 >
-                  <Download className="w-4 h-4" /> Download PDF
-                </a>
+                  {isDownloading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+                  {isDownloading ? "Preparing..." : "Download PDF"}
+                </button>
               </div>
             </div>
 

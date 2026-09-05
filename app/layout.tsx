@@ -6,6 +6,21 @@ import { Footer } from "@/components/layout/Footer";
 export const metadata: Metadata = {
   title: "UONotes",
   description: "Bilingual student notes and academic organization for uOttawa.",
+  icons: {
+    icon: "/logo.png",
+    apple: "/logo.png",
+  },
+  openGraph: {
+    title: "UONotes",
+    description: "Bilingual student notes and academic organization for uOttawa.",
+    images: ["/logo.png"],
+  },
+  twitter: {
+    card: "summary",
+    title: "UONotes",
+    description: "Bilingual student notes and academic organization for uOttawa.",
+    images: ["/logo.png"],
+  },
 };
 
 export default function RootLayout({
