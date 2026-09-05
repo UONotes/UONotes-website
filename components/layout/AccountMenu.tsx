@@ -17,7 +17,7 @@ interface AccountMenuProps {
 
 export function AccountMenu({ lang, toggleLang, onSignOut, isAdmin }: AccountMenuProps) {
   const [open, setOpen] = useState(false);
-  const [firstName, setFirstName] = useState<string>("Account");
+  const [firstName, setFirstName] = useState<string>("");
   const menuRef = useRef<HTMLDivElement>(null);
   const pathname = usePathname();
 
@@ -64,7 +64,7 @@ export function AccountMenu({ lang, toggleLang, onSignOut, isAdmin }: AccountMen
           <UserIcon className="w-3.5 h-3.5" />
         </span>
         <span className="font-logo text-xs font-bold uppercase tracking-wider text-brand-body hidden md:inline-block max-w-[100px] truncate">
-          {firstName}
+          {firstName || <span className="inline-block w-12 h-3 bg-gray-200 rounded animate-pulse" />}
         </span>
         <ChevronDownIcon className={`w-3.5 h-3.5 text-brand-red transition-transform duration-300 ${open ? "rotate-180" : ""}`} />
       </button>
