@@ -7,7 +7,7 @@ import { upcomingEvents, pastEvents } from "@/lib/events-data";
 
 const notebookStyle = {
   backgroundImage: `
-    linear-gradient(90deg, transparent 56px, rgba(168, 49, 66, 0.2) 56px, rgba(168, 49, 66, 0.2) 58px, transparent 58px),
+    linear-gradient(90deg, transparent 40px, rgba(168, 49, 66, 0.2) 40px, rgba(168, 49, 66, 0.2) 42px, transparent 42px),
     linear-gradient(transparent 26px, #e5e7eb 27px)
   `,
   backgroundSize: "100% 100%, 100% 27px",
@@ -15,7 +15,6 @@ const notebookStyle = {
 
 export function EventsSection() {
   const [viewMode, setViewMode] = useState<"upcoming" | "past">("upcoming");
-  
   const [slideIndices, setSlideIndices] = useState<Record<string, number>>({});
 
   const hasUpcoming = upcomingEvents.length > 0;
@@ -50,11 +49,14 @@ export function EventsSection() {
         className="w-full bg-white p-5 sm:p-10 md:p-14 rounded-3xl shadow-2xl border border-brand-red/15 relative overflow-hidden"
         style={notebookStyle}
       >
-        <div className="absolute top-0 bottom-0 left-12 sm:left-16 w-[2px] bg-[#a83142]/25 pointer-events-none z-0" />
+        {/* Notebook red margin line */}
+        <div className="absolute top-0 bottom-0 left-[40px] sm:left-16 w-[2px] bg-[#a83142]/25 pointer-events-none z-0" />
         
+        {/* Left gutter shadow gradient */}
         <div className="absolute top-0 left-0 bottom-0 w-6 sm:w-14 bg-gradient-to-r from-black/[0.03] to-transparent pointer-events-none z-10" />
 
-        <div className="relative z-20 pl-7 sm:pl-12 pr-1 sm:pr-2">
+        {/* Content wrapper: increased mobile left padding (pl-8) so words aren't too close to the line, preserving pl-12 for desktop */}
+        <div className="relative z-20 pl-8 sm:pl-12 pr-1 sm:pr-2">
           
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8 border-b border-gray-200/80 pb-4">
             <div>
@@ -68,7 +70,7 @@ export function EventsSection() {
 
             <button
               onClick={() => setViewMode(viewMode === "upcoming" ? "past" : "upcoming")}
-              className="px-4 py-2 bg-white border border-brand-red/20 text-brand-red hover:bg-brand-red hover:text-white text-xs font-mono font-bold uppercase tracking-wider rounded-xl shadow-xs transition-all cursor-pointer"
+              className="w-full sm:w-auto px-4 py-2 bg-white border border-brand-red/20 text-brand-red hover:bg-brand-red hover:text-white text-xs font-mono font-bold uppercase tracking-wider rounded-xl shadow-xs transition-all cursor-pointer text-center"
             >
               {viewMode === "upcoming" ? `View Past Archive (${pastEvents.length})` : "← Back to Upcoming"}
             </button>
@@ -87,7 +89,7 @@ export function EventsSection() {
                   <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
                 </div>
                 <h3 className="text-lg font-bold text-gray-900 mb-2 font-sans">No Upcoming Events Scheduled</h3>
-                <p className="text-xs sm:text-sm text-gray-600 max-w-md font-light mb-6 leading-relaxed">
+                <p className="text-xs sm:text-sm text-gray-600 max-w-md font-light mb-6 leading-relaxed px-2">
                   We are currently curating our upcoming schedule of academic workshops and technical sessions. In the meantime, we invite you to review our past archive from previous semesters.
                 </p>
                 <button
@@ -140,7 +142,7 @@ export function EventsSection() {
                           <>
                             <button 
                               onClick={(e) => handlePrevImage(event.id, photos.length, e)}
-                              className="absolute left-2 top-1/2 -translate-y-1/2 p-1.5 rounded-full bg-black/40 text-white hover:bg-brand-red transition-colors cursor-pointer backdrop-blur-xs opacity-0 group-hover:opacity-100 z-10"
+                              className="absolute left-2 top-1/2 -translate-y-1/2 p-2 sm:p-1.5 rounded-full bg-black/50 sm:bg-black/40 text-white hover:bg-brand-red transition-colors cursor-pointer backdrop-blur-xs sm:opacity-0 sm:group-hover:opacity-100 z-10"
                               title="Previous Photo"
                             >
                               <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" /></svg>
@@ -148,7 +150,7 @@ export function EventsSection() {
                             
                             <button 
                               onClick={(e) => handleNextImage(event.id, photos.length, e)}
-                              className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-full bg-black/40 text-white hover:bg-brand-red transition-colors cursor-pointer backdrop-blur-xs opacity-0 group-hover:opacity-100 z-10"
+                              className="absolute right-2 top-1/2 -translate-y-1/2 p-2 sm:p-1.5 rounded-full bg-black/50 sm:bg-black/40 text-white hover:bg-brand-red transition-colors cursor-pointer backdrop-blur-xs sm:opacity-0 sm:group-hover:opacity-100 z-10"
                               title="Next Photo"
                             >
                               <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" /></svg>

@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Flag, CheckCircle2, Loader2 } from "lucide-react";
-import { reportNoteAction } from "@/app/notes/actions";
+import { reportNoteAction } from "@/app/(main)/notes/actions";
 
 interface ReportModalProps {
   isOpen: boolean;

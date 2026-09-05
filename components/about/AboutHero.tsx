@@ -24,12 +24,13 @@ export function AboutHero() {
       {/* Side-by-Side Grid Layout with restored, comfortable proportions */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
         
-        {/* Immersive Executive Group Photo Banner (Full, healthy height with object-top) */}
+        {/* Immersive Executive Group Photo Banner */}
         <motion.div 
           initial={{ opacity: 0, scale: 0.98 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.7, delay: 0.2, ease: "easeOut" }}
-          className="lg:col-span-7 w-full relative min-h-[340px] sm:min-h-[380px] rounded-3xl overflow-hidden bg-gray-900 border border-gray-200/80 shadow-2xl shadow-brand-red/5 group flex flex-col justify-end"
+          // aspect-[16/9] or aspect-[3/2] on mobile fits typical group shots fully; sm:min-h-[380px] preserves desktop view
+          className="lg:col-span-7 w-full relative aspect-[16/9] sm:aspect-auto sm:min-h-[380px] rounded-3xl overflow-hidden bg-gray-900 border border-gray-200/80 shadow-2xl shadow-brand-red/5 group flex flex-col justify-end"
         >
           <Image 
             src="/about/group-photo.png" 
@@ -37,7 +38,7 @@ export function AboutHero() {
             fill
             quality={95}
             sizes="(max-width: 1200px) 100vw, 800px"
-            className="object-cover object-top group-hover:scale-102 transition-transform duration-700 ease-out"
+            className="object-cover object-center sm:object-top sm:group-hover:scale-102 transition-transform duration-700 ease-out"
             priority
           />
           
@@ -45,9 +46,9 @@ export function AboutHero() {
           <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent pointer-events-none" />
 
           {/* Editorial Caption with UONotes Brand Identity & /logo.png Badge */}
-          <div className="relative z-10 p-5 sm:p-6 flex items-center justify-between text-white">
+          <div className="relative z-10 p-4 sm:p-6 flex items-center justify-between text-white">
             <div className="flex items-center gap-3">
-              <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-2xl bg-white shadow-lg flex items-center justify-center shrink-0 border border-white/20 p-2 overflow-hidden">
+              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-2xl bg-white shadow-lg flex items-center justify-center shrink-0 border border-white/20 p-2 overflow-hidden">
                 <Image 
                   src="/logo.png" 
                   alt="UONotes Logo" 
@@ -57,8 +58,8 @@ export function AboutHero() {
                 />
               </div>
               <div>
-                <p className="text-xs sm:text-sm font-black tracking-tight font-logo">UONOTES // EXECUTIVE TEAM</p>
-                <p className="text-[10px] text-gray-300 font-mono">uOttawa • 2026 Cohort</p>
+                <p className="text-[11px] sm:text-sm font-black tracking-tight font-logo">UONOTES // EXECUTIVE TEAM</p>
+                <p className="text-[9px] sm:text-[10px] text-gray-300 font-mono">uOttawa • 2026 Cohort</p>
               </div>
             </div>
             <span className="hidden sm:inline-block px-3 py-1 rounded-xl bg-white/15 backdrop-blur-md border border-white/20 text-[10px] font-mono uppercase tracking-widest text-gray-200 shadow-sm">

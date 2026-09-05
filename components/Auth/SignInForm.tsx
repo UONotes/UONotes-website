@@ -1,25 +1,26 @@
 "use client";
 
 import type { FormEvent } from "react";
-import { useState, Suspense } from "react";
+import { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { FormField } from "@/components/ui/FormField";
+import { motion, AnimatePresence } from "framer-motion";
+import { LogIn, ArrowRight } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { Field, IconChip, FooterTag, AuthSuccessState, AuthCard } from "./_authComponents";
+import { STEP_TRANSITION, REDIRECT_DELAY_MS } from "./authTransitions";
 
-// Define your administrative bypass list here. 
-// Convert everything to lowercase to ensure strict matching.
-const WHITELISTED_EMAILS = [
-  "kwab822@gmail.com",
-];
+const AUTH_PATHS = ["/signin", "/signup", "/forgot-password", "/reset-password"];
+const WHITELISTED_EMAILS = ["kwab822@gmail.com"];
 
 function SignInFormLogic() {
   const [loginError, setLoginError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [succeeded, setSucceeded] = useState(false);
+  const [firstName, setFirstName] = useState("");
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  const AUTH_PATHS = ["/signin", "/signup", "/forgot-password", "/reset-password"];
   const fromParam = searchParams.get("from");
   const isSafeReturnPath =
     fromParam &&
@@ -28,16 +29,23 @@ function SignInFormLogic() {
     !AUTH_PATHS.some((path) => fromParam.startsWith(path));
   const returnPath = isSafeReturnPath ? fromParam : "/";
 
+  useEffect(() => {
+    if (!succeeded) return;
+    const timer = setTimeout(() => {
+      router.refresh();
+      router.replace(returnPath);
+    }, REDIRECT_DELAY_MS);
+    return () => clearTimeout(timer);
+  }, [succeeded, returnPath, router]);
+
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setLoginError("");
 
     const formData = new FormData(event.currentTarget);
-    const rawEmail = String(formData.get("email") ?? "").trim();
-    const email = rawEmail.toLowerCase();
+    const email = String(formData.get("email") ?? "").trim().toLowerCase();
     const password = String(formData.get("password") ?? "");
 
-    // 1. Evaluate Authorization Criteria
     const isUOttawaEmail = /^[^\s@]+@uottawa\.ca$/i.test(email);
     const isWhitelisted = WHITELISTED_EMAILS.includes(email);
 
@@ -48,82 +56,130 @@ function SignInFormLogic() {
 
     setIsSubmitting(true);
     const supabase = createClient();
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    setIsSubmitting(false);
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
 
     if (error) {
-      // Supabase returns the same generic message whether the email
-      // doesn't exist or the password is wrong — that's intentional,
-      // so we don't leak which emails are registered.
+      setIsSubmitting(false);
       setLoginError("Invalid email or password.");
       return;
     }
 
-    router.replace(returnPath);
+    // Extract the first name from user metadata if available
+    const fullName = data.user?.user_metadata?.full_name;
+    if (fullName) {
+      const first = String(fullName).trim().split(" ")[0];
+      setFirstName(first);
+    }
+
+    setIsSubmitting(false); 
+    setSucceeded(true);
   }
 
   return (
-    <div className="w-full flex flex-col">
-      <h1 className="text-center font-logo text-3xl font-bold leading-tight text-brand-red mb-2">
-        Welcome back
-      </h1>
-      <p className="text-center text-sm text-gray-600 mb-8">
-        Log in to access and share uOttawa student notes.
-      </p>
+    <AuthCard>
+      <AnimatePresence mode="wait" initial={false}>
+        {succeeded ? (
+          <motion.div
+            key="success"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={STEP_TRANSITION}
+          >
+            <AuthSuccessState
+              icon={<LogIn className="w-6 h-6" />}
+              eyebrow="// ACCESS GRANTED"
+              title={firstName ? `Welcome back, ${firstName}.` : "Welcome back."}
+              subtitle="Taking you to your dashboard..."
+            />
+          </motion.div>
+        ) : (
+          <motion.div
+            key="form"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={STEP_TRANSITION}
+          >
+            <div className="flex flex-col items-center text-center mb-6">
+              <div className="mb-3">
+                <IconChip icon={<LogIn className="w-6 h-6" />} />
+              </div>
+              <span className="text-[10px] font-mono uppercase tracking-[0.25em] text-brand-red font-bold mb-1">
+                // MEMBER SIGN IN
+              </span>
+              <h2 className="text-2xl sm:text-3xl font-black tracking-tight text-gray-900 font-sans uppercase">
+                Welcome back.
+              </h2>
+              <p className="text-xs sm:text-sm text-gray-600 font-light mt-1 max-w-xs">
+                Log in to access and share uOttawa student notes.
+              </p>
+            </div>
 
-      <form onSubmit={handleSubmit} noValidate aria-label="Log in to UONotes" className="flex flex-col gap-5">
-        <div>
-          <FormField
-            id="signin-email"
-            label="Student Email"
-            name="email"
-            type="email"
-            placeholder="example@uottawa.ca"
-            autoComplete="email"
-            aria-invalid={loginError ? true : undefined}
-            onChange={() => loginError && setLoginError("")}
-            required
-          />
-        </div>
+            <form onSubmit={handleSubmit} noValidate aria-label="Log in to UONotes" className="flex flex-col gap-3.5">
+              <Field
+                id="signin-email"
+                label="Student email"
+                name="email"
+                type="email"
+                placeholder="example@uottawa.ca"
+                autoComplete="email"
+                onChange={() => loginError && setLoginError("")}
+                disabled={isSubmitting}
+                required
+              />
 
-        <FormField
-          id="signin-password"
-          label="Password"
-          name="password"
-          type="password"
-          placeholder="••••••••"
-          autoComplete="current-password"
-          required
-        />
+              <Field
+                id="signin-password"
+                label="Password"
+                name="password"
+                type="password"
+                placeholder="••••••••"
+                autoComplete="current-password"
+                error={loginError}
+                disabled={isSubmitting}
+                required
+              />
 
-        {loginError && (
-          <p className="text-xs font-medium text-brand-red text-center">{loginError}</p>
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="w-full mt-1.5 py-3 bg-gray-900 text-white text-xs font-mono uppercase tracking-widest rounded-xl hover:bg-brand-red transition-colors cursor-pointer shadow-md active:scale-95 disabled:opacity-70 flex items-center justify-center gap-2 group"
+              >
+                <span>{isSubmitting ? "Signing in..." : "Sign in"}</span>
+                <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+              </button>
+
+              <div className="flex items-center justify-center gap-3 text-[11px] font-mono uppercase tracking-wide text-gray-500 pt-1">
+                <Link
+                  href={`/forgot-password?from=${encodeURIComponent(returnPath)}`}
+                  prefetch={false}
+                  className="hover:text-brand-red transition-colors"
+                >
+                  Forgot password
+                </Link>
+                <span className="text-gray-300">/</span>
+                <Link
+                  href={`/signup?from=${encodeURIComponent(returnPath)}`}
+                  prefetch={false}
+                  className="hover:text-brand-red transition-colors"
+                >
+                  Create account
+                </Link>
+              </div>
+            </form>
+
+            <FooterTag label="UONOTES // STUDENT ACCESS" />
+          </motion.div>
         )}
-
-        <button
-          type="submit"
-          disabled={isSubmitting}
-          className="w-full mt-4 bg-brand-red text-white text-base font-semibold px-8 py-3.5 rounded-md transition-transform hover:bg-brand-red/90 active:scale-[0.98] shadow-md cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
-        >
-          {isSubmitting ? "Signing in..." : "Sign in"}
-        </button>
-
-        <div className="mt-6 flex flex-col sm:flex-row items-center justify-between text-sm gap-4">
-          <Link href={`/forgot-password?from=${encodeURIComponent(returnPath)}`} className="text-gray-600 font-medium hover:text-brand-red transition-colors">
-            Forgot password?
-          </Link>
-          <Link href={`/signup?from=${encodeURIComponent(returnPath)}`} className="text-gray-600 font-medium hover:text-brand-red transition-colors">
-            Create an account
-          </Link>
-        </div>
-      </form>
-    </div>
+      </AnimatePresence>
+    </AuthCard>
   );
 }
 
 export function SignInForm() {
   return (
-    <Suspense fallback={<div className="w-full h-[450px] animate-pulse" />}>
+    <Suspense fallback={<div className="w-full h-[480px] rounded-3xl bg-white/50 animate-pulse" />}>
       <SignInFormLogic />
     </Suspense>
   );

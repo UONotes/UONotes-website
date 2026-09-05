@@ -7,20 +7,18 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
   const pathname = usePathname();
 
   return (
-    <div className="w-full min-h-[calc(100vh-80px)] flex flex-col items-center justify-center py-12 px-4">
+    <div className="w-full min-h-[calc(100vh-80px)] flex flex-col items-center justify-center py-12 px-4 isolate">
       <motion.div
-        layout
-        layoutId="auth-morph-box"
         key={pathname}
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: -8 }}
         transition={{
-          layout: { duration: 0.3, ease: [0.25, 1, 0.5, 1] },
           opacity: { duration: 0.25, ease: "easeOut" },
           y: { duration: 0.25, ease: "easeOut" }
         }}
-        className="w-full max-w-md sm:max-w-lg bg-white border border-brand-red/15 p-6 sm:p-10 rounded-3xl shadow-2xl overflow-hidden"
+        // Added 'isolate' to the parent and 'shadow-none ring-0' here to completely kill any inherited shadows
+        className="w-full max-w-md sm:max-w-lg md:max-w-xl lg:max-w-2xl p-6 sm:p-10 overflow-hidden shadow-none ring-0 bg-transparent"
       >
         <motion.div
           initial={{ opacity: 0, y: 4 }}

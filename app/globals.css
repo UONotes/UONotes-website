@@ -6,7 +6,28 @@
   body {
     @apply text-brand-body antialiased min-h-screen overflow-x-hidden;
     background-color: #FFF0F0;
+    background-image: 
+      linear-gradient(rgba(168, 49, 66, 0.05) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(168, 49, 66, 0.05) 1px, transparent 1px);
+    background-size: 32px 32px;
+    animation: slowDrift 25s linear infinite;
   }
+}
+
+/* 1. Prevent layout shift globally between pages with/without scrollbars */
+html {
+  scrollbar-gutter: stable;
+  scrollbar-width: none; /* Firefox scrollbar hide */
+}
+
+html::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, Edge scrollbar hide */
+}
+
+/* Standalone route scroll lock */
+body.lock-scroll {
+  height: 100vh;
+  overflow: hidden;
 }
 
 @layer components {

@@ -7,6 +7,18 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+    /*
+     * Match only protected routes and auth endpoints, 
+     * bypassing public marketing pages completely.
+     */
+    "/submit/:path*",
+    "/dashboard/:path*",
+    "/settings/:path*",
+    "/admin/:path*",
+    "/notes/:path*", // Keep if notes require login; remove if public
+    "/signin",
+    "/signup",
+    "/forgot-password",
+    "/reset-password"
   ],
 };

@@ -1,9 +1,25 @@
+"use client";
+
 import Link from "next/link";
 import Image from "next/image";
+import { usePathname } from "next/navigation";
 
 export function Footer() {
+  const pathname = usePathname();
+
+  // Automatically hide the global footer on admin and standalone pages
+  const isAdminOrStandalone = 
+    pathname.startsWith("/admin") || 
+    pathname === "/contact" || 
+    pathname === "/signin" || 
+    pathname === "/signup";
+
+  if (isAdminOrStandalone) {
+    return null;
+  }
+
   return (
-    <footer className="px-6 py-10">
+    <footer className="px-6 py-10 shrink-0">
       <div className="max-w-site mx-auto py-10 border-t-2 border-brand-red grid grid-cols-1 md:grid-cols-[160px_1fr] gap-12 items-start">
         
         <Link href="/" className="flex items-center gap-2">
