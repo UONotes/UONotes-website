@@ -43,12 +43,12 @@ export function ContactSection() {
                 // OFFICIAL CHANNELS
               </span>
               <div className="flex flex-col gap-3">
-                <a href="mailto:uofonotes@gmail.com" className="flex items-center gap-3 text-sm font-bold font-logo uppercase tracking-wider text-gray-800 hover:text-brand-red transition-colors p-1.5 rounded-xl hover:bg-brand-red/5 -mx-1.5">
+                <div className="flex items-center gap-3 text-sm font-bold font-logo uppercase tracking-wider text-gray-800 p-1.5 -mx-1.5">
                   <span className="w-8 h-8 rounded-lg bg-brand-red/10 flex items-center justify-center text-brand-red shrink-0">
                     <MailIcon className="w-4 h-4" />
                   </span>
                   <span>uofonotes@gmail.com</span>
-                </a>
+                </div>
                 <a href="https://instagram.com/uonotes" target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 text-sm font-bold font-logo uppercase tracking-wider text-gray-800 hover:text-brand-red transition-colors p-1.5 rounded-xl hover:bg-brand-red/5 -mx-1.5">
                   <span className="w-8 h-8 rounded-lg bg-brand-red/10 flex items-center justify-center text-brand-red shrink-0">
                     <Globe className="w-4 h-4" />
@@ -64,12 +64,12 @@ export function ContactSection() {
               </span>
               <p className="text-[11px] font-mono text-brand-red font-bold uppercase tracking-wider mb-1">President</p>
               <p className="text-base font-black text-gray-900 mb-3 font-sans">Kiana Gholizadeh Vazvani</p>
-              <a href="mailto:Kiavazvani@gmail.com" className="flex items-center gap-3 text-sm font-bold font-logo uppercase tracking-wider text-gray-800 hover:text-brand-red transition-colors p-1.5 rounded-xl hover:bg-brand-red/5 -mx-1.5">
+              <div className="flex items-center gap-3 text-sm font-bold font-logo uppercase tracking-wider text-gray-800 p-1.5 -mx-1.5">
                 <span className="w-8 h-8 rounded-lg bg-brand-red/10 flex items-center justify-center text-brand-red shrink-0">
                   <MailIcon className="w-4 h-4" />
                 </span>
                 <span>Kiavazvani@gmail.com</span>
-              </a>
+              </div>
             </div>
 
           </div>

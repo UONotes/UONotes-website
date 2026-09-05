@@ -40,7 +40,7 @@ export function Footer() {
 
           <div className="flex flex-col gap-2">
             <p className="text-sm text-brand-body leading-relaxed">75 Laurier Ave E<br/>Ottawa, ON, K1N 6N5</p>
-            <a href="mailto:uofonotes@gmail.com" className="text-sm text-brand-body hover:text-brand-red transition-colors">uofonotes@gmail.com</a>
+            <span className="text-sm text-brand-body">uofonotes@gmail.com</span>
             <div className="flex gap-3 mt-1.5">
               <a 
                 href="https://www.instagram.com/uonotes/?hl=en" 
