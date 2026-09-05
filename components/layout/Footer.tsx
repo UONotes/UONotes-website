@@ -7,10 +7,11 @@ import { usePathname } from "next/navigation";
 export function Footer() {
   const pathname = usePathname();
 
-  // Automatically hide the global footer on admin pages
-  const isAdminRoute = pathname.startsWith("/admin");
+  // Maintain an array of prefixes. If the pathname starts with any of these, hide the footer.
+  const hiddenRoutes = ["/admin", "/contact", "/signin", "/signup", "/forgot-password"];
+  const shouldHide = hiddenRoutes.some((route) => pathname.startsWith(route));
 
-  if (isAdminRoute) {
+  if (shouldHide) {
     return null;
   }
 

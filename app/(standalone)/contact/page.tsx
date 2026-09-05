@@ -2,7 +2,9 @@ import { ContactSection } from "@/components/contact/ContactSection";
 
 export default function ContactPage() {
   return (
-    <div className="w-full h-[calc(100vh-72px)] max-h-[calc(100vh-72px)] overflow-hidden text-gray-900 box-border p-0 m-0">
+    // Removed h-, max-h-, and overflow-hidden.
+    // Also removed p-0, m-0, box-border as Tailwind's preflight handles these globally.
+    <div className="w-full text-gray-900">
       <ContactSection />
     </div>
   );
