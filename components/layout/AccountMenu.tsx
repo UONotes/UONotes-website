@@ -76,8 +76,7 @@ export function AccountMenu({ lang, toggleLang, onSignOut, isAdmin }: AccountMen
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -8, scale: 0.95 }}
             transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
-            className="absolute right-0 top-full mt-3 w-72 bg-white/90 backdrop-blur-2xl rounded-2xl shadow-[0_12px_32px_rgba(185,28,28,0.08)] border border-white/80 py-3 z-50 origin-top overflow-hidden"
-          >
+            className="absolute right-0 top-full mt-3 w-72 bg-white rounded-2xl shadow-[0_12px_32px_rgba(185,28,28,0.08)] border border-white/80 py-3 z-50 origin-top overflow-hidden"          >
             {/* Menu Items with dynamic active route styling */}
             {[
               { href: "/dashboard", label: "My Dashboard", icon: <StarFilledIcon className="w-4 h-4" /> },
