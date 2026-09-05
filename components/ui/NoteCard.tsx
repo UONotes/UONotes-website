@@ -1,5 +1,5 @@
 "use client";
-
+import { PdfThumbnail } from "@/components/notes/PdfThumbnail";
 import { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
@@ -12,6 +12,7 @@ type NoteCardProps = {
   course?: string;
   thumb?: string;
   id?: string;
+  fileUrl?: string;
 };
 
 const fadeUp: Variants = {
@@ -23,7 +24,8 @@ export function NoteCard({
   title = "Note title", 
   course = "Course title and code", 
   thumb,
-  id = "1"
+  id = "1",
+  fileUrl
 }: NoteCardProps) {
   const [isSaved, setIsSaved] = useState(false);
   const [isToggling, setIsToggling] = useState(false);
@@ -87,6 +89,19 @@ export function NoteCard({
             fill 
             sizes="(max-width: 768px) 100vw, 33vw" 
             className="object-cover transition-transform duration-500 group-hover:scale-105" 
+          />
+        ) : fileUrl ? (
+          <PdfThumbnail
+            fileUrl={fileUrl}
+            className="w-full h-full transition-transform duration-500 group-hover:scale-105"
+            fallback={
+              <div className="w-full h-full flex items-center justify-center">
+                <div className="absolute inset-0 opacity-20" style={{ backgroundImage: "repeating-linear-gradient(transparent, transparent 23px, #D9A79E 24px)" }} />
+                <div className="z-10 bg-white px-4 py-2 rounded shadow-sm border border-brand-red/10 flex items-center gap-2 group-hover:border-brand-red/40 transition-colors">
+                  <span className="font-logo font-bold text-brand-red">PDF</span>
+                </div>
+              </div>
+            }
           />
         ) : (
           <>
