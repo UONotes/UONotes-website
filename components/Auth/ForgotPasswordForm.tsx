@@ -174,6 +174,9 @@ function ForgotPasswordFormLogic() {
               <p className="text-xs sm:text-sm text-gray-600 font-light mt-1 max-w-xs">
                 Enter the 8-digit code sent to <span className="font-medium text-gray-900">{email}</span> along with your new password.
               </p>
+              <p className="text-[11px] text-brand-red font-semibold mt-1.5">
+                Don't see it? Check your junk or spam folder.
+              </p>
             </div>
 
             <form onSubmit={handleResetSubmit} noValidate aria-label="Reset password" className="flex flex-col gap-3.5">
@@ -252,10 +255,7 @@ function ForgotPasswordFormLogic() {
                 Forgot password?
               </h2>
               <p className="text-xs sm:text-sm text-gray-600 font-light mt-1 max-w-xs">
-                Enter the 8-digit code sent to <span className="font-medium text-gray-900">{email}</span> along with your new password.
-              </p>
-              <p className="text-[11px] text-brand-red font-semibold mt-1.5">
-                Don't see it? Check your junk or spam folder.
+                Enter your student email and we&apos;ll send you a code to reset your password.
               </p>
             </div>
 
