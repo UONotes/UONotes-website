@@ -64,9 +64,8 @@ export const TEAM_DATA: TeamSection[] = [
     description: "Managing club budgeting, sponsorships, funding allocations, and financial logistics for student initiatives.",
     members: [
       { name: "Rojvan Adbullah", role: "VP Finance", imageUrl: "/about/Rojvan-Headshot.png" },
-      { name: "Mai Ha", role: "VP Finance", imageUrl: "/about/Placeholder.png" },
+      { name: "Mai Ha", role: "VP Finance", imageUrl: "/about/Mai-Headshot.jpg" },
       { name: "Halann Tanflotien", role: "Director", imageUrl: "/about/Halann-Headshot.png" },
-      { name: "Haris Sohail", role: "Director", imageUrl: "/about/Placeholder.png" },
       { name: "Adnan Nehme", role: "Director", imageUrl: "/about/Placeholder.png" },
     ],
   },
@@ -97,7 +96,7 @@ export const TEAM_DATA: TeamSection[] = [
     teamName: "Outreach Team",
     description: "Building partnerships with university faculties, student associations, and external academic communities.",
     members: [
-      { name: "Laura Jensen", role: "VP Outreach", imageUrl: "/about/Placeholder.png" },
+      { name: "Shan Stas", role: "VP Outreach", imageUrl: "/about/Placeholder.png" },
     ],
   },
   {

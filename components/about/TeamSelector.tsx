@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { TEAM_DATA } from "@/lib/team-data";
 import { ProfileCard } from "./ProfileCard";
 
-// Filter out both Presidential Team and Founders so they do not pollute the tab selector
+// Filter out Presidential Team and Founders from the selector tabs
 const nonFounderTeams = TEAM_DATA.filter(
   (team) => team.teamName !== "Presidential Team" && team.teamName !== "Founders"
 );
@@ -14,9 +14,19 @@ export function TeamSelector() {
   const [activeTeam, setActiveTeam] = useState(nonFounderTeams[0]?.teamName || "");
   const currentTeamData = nonFounderTeams.find((team) => team.teamName === activeTeam);
 
-  // Separate members into VPs and Directors/Others for structural hierarchy
-  const vps = currentTeamData?.members.filter((m) => m.role.toLowerCase().includes("vp") || m.role.toLowerCase().includes("vice president")) || [];
-  const others = currentTeamData?.members.filter((m) => !vps.includes(m)) || [];
+  // Check if the current active team should be flat (Design or Media Production)
+  const isFlatTeam = 
+    activeTeam === "Design Team" || 
+    activeTeam === "Media Production Team";
+
+  // Helper for leadership roles
+  const isLeader = (role: string) => {
+    const r = role.toLowerCase();
+    return r.includes("vp") || r.includes("vice president") || r.includes("president") || r.includes("founder");
+  };
+
+  const vps = currentTeamData?.members.filter((m) => isLeader(m.role)) || [];
+  const others = currentTeamData?.members.filter((m) => !isLeader(m.role)) || [];
 
   return (
     <motion.section 
@@ -78,7 +88,7 @@ export function TeamSelector() {
         </AnimatePresence>
       </div>
 
-      {/* Structured Multi-Row Layout with VPs on Top and Directors Below */}
+      {/* Conditional Layout Area */}
       <div className="w-full max-w-5xl mx-auto px-4 min-h-[320px]"> 
         <AnimatePresence mode="wait">
           {currentTeamData && (
@@ -88,27 +98,37 @@ export function TeamSelector() {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -15 }}
               transition={{ duration: 0.35, ease: "easeOut" }}
-              className="flex flex-col items-center gap-10 w-full"
+              className="w-full flex justify-center"
             >
-              {/* VP Row */}
-              {vps.length > 0 && (
-                <div className="w-full flex flex-col items-center">
-                  <div className="flex flex-wrap justify-center gap-6 md:gap-8 w-full">
-                    {vps.map((member, idx) => (
-                      <ProfileCard key={`vp-${idx}`} member={member} />
-                    ))}
-                  </div>
+              {isFlatTeam ? (
+                /* FLAT LAYOUT FOR DESIGN & MEDIA PRODUCTION (All members side-by-side) */
+                <div className="flex flex-wrap justify-center gap-6 md:gap-8 w-full">
+                  {currentTeamData.members.map((member, idx) => (
+                    <ProfileCard key={`flat-${idx}`} member={member} />
+                  ))}
                 </div>
-              )}
+              ) : (
+                /* HIERARCHICAL LAYOUT FOR ALL OTHER TEAMS (VPs on top, others below) */
+                <div className="flex flex-col items-center gap-10 w-full">
+                  {vps.length > 0 && (
+                    <div className="w-full flex flex-col items-center">
+                      <div className="flex flex-wrap justify-center gap-6 md:gap-8 w-full">
+                        {vps.map((member, idx) => (
+                          <ProfileCard key={`vp-${idx}`} member={member} />
+                        ))}
+                      </div>
+                    </div>
+                  )}
 
-              {/* Directors / Members Row */}
-              {others.length > 0 && (
-                <div className="w-full flex flex-col items-center">
-                  <div className="flex flex-wrap justify-center gap-6 md:gap-8 w-full">
-                    {others.map((member, idx) => (
-                      <ProfileCard key={`other-${idx}`} member={member} />
-                    ))}
-                  </div>
+                  {others.length > 0 && (
+                    <div className="w-full flex flex-col items-center">
+                      <div className="flex flex-wrap justify-center gap-6 md:gap-8 w-full">
+                        {others.map((member, idx) => (
+                          <ProfileCard key={`other-${idx}`} member={member} />
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </motion.div>
