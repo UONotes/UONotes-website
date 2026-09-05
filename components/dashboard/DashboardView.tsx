@@ -3,7 +3,8 @@
 import { useState, useMemo } from "react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
-import { FileUp, Clock, CheckCircle2, XCircle, Search, MessageSquareText, X, Flag } from "lucide-react";
+import { FileUp, Clock, CheckCircle2, XCircle, Search, MessageSquareText, X, Flag, Bookmark, Eye, Trash2 } from "lucide-react";
+import { createClient } from "@/lib/supabase/client";
 
 const notebookStyle = {
   backgroundImage: `
@@ -29,6 +30,12 @@ interface SubmissionItem {
   feedback?: string;
 }
 
+interface DatabaseSavedNote {
+  id: string;
+  note_id: string;
+  notes: { id: string; title: string; course_code: string } | { id: string; title: string; course_code: string }[] | null;
+}
+
 function mapStatus(status: string): SubmissionItem["status"] {
   if (status === "approved") return "Accepted";
   if (status === "rejected") return "Rejected";
@@ -36,9 +43,16 @@ function mapStatus(status: string): SubmissionItem["status"] {
   return "Pending";
 }
 
-export function DashboardView({ submissions: rawSubmissions }: { submissions: DatabaseSubmission[] }) {
+export function DashboardView({
+  submissions: rawSubmissions,
+  savedNotes: rawSavedNotes,
+}: {
+  submissions: DatabaseSubmission[];
+  savedNotes: DatabaseSavedNote[];
+}) {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedSubmission, setSelectedSubmission] = useState<SubmissionItem | null>(null);
+  const [savedNotes, setSavedNotes] = useState(rawSavedNotes);
 
   const submissions: SubmissionItem[] = useMemo(
     () =>
@@ -64,6 +78,16 @@ export function DashboardView({ submissions: rawSubmissions }: { submissions: Da
     const pendingSubmissions = submissions.filter((s) => s.status === "Pending").length;
     return { totalSubmissions, hoursEarned, pendingSubmissions };
   }, [submissions]);
+
+  async function handleUnsave(savedRowId: string, noteId: string) {
+    setSavedNotes((prev) => prev.filter((s) => s.id !== savedRowId));
+
+    const supabase = createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    await supabase.from("saved_notes").delete().eq("user_id", user.id).eq("note_id", noteId);
+  }
 
   return (
     <motion.div
@@ -125,13 +149,13 @@ export function DashboardView({ submissions: rawSubmissions }: { submissions: Da
               </div>
             </div>
 
-            <div>
-              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-                <div className="flex items-center gap-2">
-                  <span className="w-2.5 h-2.5 rounded-full bg-brand-red animate-pulse" />
-                  <h2 className="text-xl font-bold font-logo text-brand-red tracking-wide">My Submissions</h2>
-                </div>
+            <div className="mb-12">
+              <div className="flex items-center gap-2 mb-6">
+                <span className="w-2.5 h-2.5 rounded-full bg-brand-red animate-pulse" />
+                <h2 className="text-xl font-bold font-logo text-brand-red tracking-wide">My Submissions</h2>
+              </div>
 
+              <div className="flex flex-col sm:flex-row justify-end items-start sm:items-center gap-4 mb-4">
                 <div className="relative w-full sm:w-72">
                   <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                   <input
@@ -203,7 +227,69 @@ export function DashboardView({ submissions: rawSubmissions }: { submissions: Da
                   </table>
                 </div>
               </div>
+            </div>
 
+            {/* Saved Notes Section */}
+            <div>
+              <div className="flex items-center gap-2 mb-6">
+                <span className="w-2.5 h-2.5 rounded-full bg-brand-red animate-pulse" />
+                <h2 className="text-xl font-bold font-logo text-brand-red tracking-wide">Saved Notes</h2>
+              </div>
+
+              <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-xs">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left border-collapse">
+                    <thead>
+                      <tr className="border-b border-gray-200 bg-gray-50/80 text-[11px] font-mono font-bold uppercase tracking-wider text-gray-500">
+                        <th className="py-4 px-6">Note Title</th>
+                        <th className="py-4 px-6">Course</th>
+                        <th className="py-4 px-6 text-right">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100 text-sm font-sans text-gray-700">
+                      {savedNotes.length > 0 ? (
+                        savedNotes.map((saved) => {
+                          const note = Array.isArray(saved.notes) ? saved.notes[0] : saved.notes;
+                          if (!note) return null;
+                          return (
+                            <tr key={saved.id} className="hover:bg-gray-50/60 transition-colors">
+                              <td className="py-4 px-6 font-semibold text-gray-900">{note.title}</td>
+                              <td className="py-4 px-6 font-mono text-xs text-brand-red font-bold">{note.course_code}</td>
+                              <td className="py-4 px-6 text-right">
+                                <div className="flex items-center justify-end gap-2">
+                                  <Link
+                                    href={`/notes/view/${note.id}`}
+                                    className="inline-flex items-center gap-1.5 text-xs font-mono font-bold text-brand-red bg-brand-red/10 hover:bg-brand-red hover:text-white px-3 py-1.5 rounded-lg transition-colors cursor-pointer"
+                                  >
+                                    <Eye className="w-3.5 h-3.5" />
+                                    View
+                                  </Link>
+                                  <button
+                                    onClick={() => handleUnsave(saved.id, note.id)}
+                                    className="inline-flex items-center gap-1.5 text-xs font-mono font-bold text-gray-500 bg-gray-100 hover:bg-rose-100 hover:text-rose-600 px-3 py-1.5 rounded-lg transition-colors cursor-pointer"
+                                  >
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                    Remove
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })
+                      ) : (
+                        <tr>
+                          <td colSpan={3} className="py-12 text-center text-gray-500 font-light">
+                            <div className="flex flex-col items-center gap-2">
+                              <Bookmark className="w-6 h-6 text-gray-300" />
+                              You haven't saved any notes yet.
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
             </div>
 
           </div>

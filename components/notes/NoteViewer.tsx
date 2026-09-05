@@ -5,6 +5,7 @@ import Link from "next/link";
 import { motion } from "framer-motion";
 import { ArrowLeft, Download, Bookmark, Flag, Loader2 } from "lucide-react";
 import { ReportModal } from "@/components/notes/ReportModal";
+import { SaveNoteButton } from "@/components/notes/SaveNoteButton";
 
 const notebookStyle = {
   backgroundImage: `
@@ -89,12 +90,23 @@ export function NoteViewer({ note, fileUrl }: { note: any; fileUrl: string }) {
                 >
                   <Flag className="w-3.5 h-3.5" /> Report
                 </button>
-                <button
-                  className="shrink-0 p-2.5 bg-gray-50 hover:bg-gray-100 text-gray-700 rounded-xl border border-gray-200 transition-colors cursor-pointer"
-                  title="Bookmark"
-                >
-                  <Bookmark className="w-4 h-4 sm:w-4 sm:h-4" />
-                </button>
+                <SaveNoteButton
+                  noteId={note.id}
+                  render={({ isSaved, isToggling, toggle }) => (
+                    <button
+                      onClick={toggle}
+                      disabled={isToggling}
+                      className={`shrink-0 p-2.5 rounded-xl border transition-colors cursor-pointer disabled:opacity-60 ${
+                        isSaved
+                          ? "bg-brand-red/10 hover:bg-brand-red/20 text-brand-red border-brand-red/30"
+                          : "bg-gray-50 hover:bg-gray-100 text-gray-700 border-gray-200"
+                      }`}
+                      title={isSaved ? "Remove from saved" : "Bookmark"}
+                    >
+                      <Bookmark className="w-4 h-4" style={{ fill: isSaved ? "currentColor" : "none" }} />
+                    </button>
+                  )}
+                />
                 <a
                   href={fileUrl}
                   download={`${note.course_code}_${note.title}.pdf`}

@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { Folder, FileText, Bookmark, ArrowLeft, Search, Flag } from "lucide-react";
+import { SaveNoteButton } from "@/components/notes/SaveNoteButton";
 import { ReportModal } from "@/components/notes/ReportModal";
 
 const notebookStyle = {
@@ -143,13 +144,26 @@ export function CourseFolderView({ courseCode, notes }: CourseFolderViewProps) {
                         >
                           View PDF
                         </Link>
-                        <button
-                          onClick={() => alert("Note saved to bookmarks!")}
-                          className="shrink-0 p-2 sm:p-2.5 bg-gray-50 hover:bg-gray-100 text-gray-700 rounded-lg sm:rounded-xl border border-gray-200 transition-colors cursor-pointer"
-                          title="Save note"
-                        >
-                          <Bookmark className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                        </button>
+                        <SaveNoteButton
+                          noteId={note.id}
+                          render={({ isSaved, isToggling, toggle }) => (
+                            <button
+                              onClick={toggle}
+                              disabled={isToggling}
+                              className={`shrink-0 p-2 sm:p-2.5 rounded-lg sm:rounded-xl border transition-colors cursor-pointer disabled:opacity-60 ${
+                                isSaved
+                                  ? "bg-brand-red/10 hover:bg-brand-red/20 text-brand-red border-brand-red/30"
+                                  : "bg-gray-50 hover:bg-gray-100 text-gray-700 border-gray-200"
+                              }`}
+                              title={isSaved ? "Remove from saved" : "Save note"}
+                            >
+                              <Bookmark
+                                className="w-3.5 h-3.5 sm:w-4 sm:h-4"
+                                style={{ fill: isSaved ? "currentColor" : "none" }}
+                              />
+                            </button>
+                          )}
+                        />
                         <button
                           onClick={() => setReportNote(note)}
                           className="shrink-0 p-2 sm:p-2.5 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-lg sm:rounded-xl border border-rose-200 transition-colors cursor-pointer"

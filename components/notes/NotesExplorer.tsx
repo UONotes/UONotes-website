@@ -106,14 +106,6 @@ export function NotesExplorer({ isLoggedIn = false, notes = [] }: NotesExplorerP
                 <div className="absolute top-0 right-0 w-48 h-48 sm:w-96 sm:h-96 bg-brand-red/5 rounded-full blur-2xl sm:blur-3xl -mr-16 -mt-16 sm:-mr-32 sm:-mt-32 pointer-events-none" />
                 
                 <div className="relative z-10 w-full max-w-3xl">
-                  <div className="inline-flex items-center gap-1.5 sm:gap-2 px-2.5 py-1 mb-3 sm:mb-4 rounded-md bg-brand-red/10 border border-brand-red/20 text-brand-red text-[9px] sm:text-[10px] font-mono font-bold uppercase tracking-widest">
-                    <span className="relative flex h-1.5 w-1.5">
-                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-brand-red opacity-75"></span>
-                      <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-brand-red"></span>
-                    </span>
-                    UONotes App Beta
-                  </div>
-
                   <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black text-gray-900 tracking-tight font-sans mb-2">
                     Search Course Resources
                   </h1>

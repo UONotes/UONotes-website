@@ -14,15 +14,25 @@ export default async function DashboardPage() {
 
   if (!user) redirect("/signin");
 
-  const { data: notes, error } = await supabase
-    .from("notes")
-    .select("id, title, status, hours_awarded, flag_reason")
-    .eq("uploader_id", user.id)
-    .order("created_at", { ascending: false });
+  const [{ data: notes, error }, { data: savedNotes, error: savedError }] = await Promise.all([
+    supabase
+      .from("notes")
+      .select("id, title, status, hours_awarded, flag_reason")
+      .eq("uploader_id", user.id)
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("saved_notes")
+      .select("id, note_id, notes(id, title, course_code)")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false }),
+  ]);
 
   if (error) {
     console.error("Failed to fetch user's submissions:", error.message);
   }
+  if (savedError) {
+    console.error("Failed to fetch user's saved notes:", savedError.message);
+  }
 
-  return <DashboardView submissions={notes || []} />;
+  return <DashboardView submissions={notes || []} savedNotes={savedNotes || []} />;
 }
