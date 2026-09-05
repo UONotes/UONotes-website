@@ -235,6 +235,9 @@ function SignUpFormLogic() {
               <p className="text-xs sm:text-sm text-gray-600 font-light mt-1 max-w-xs sm:max-w-sm">
                 We sent an 8-digit code to <span className="font-medium text-gray-900">{email}</span>.
               </p>
+              <p className="text-[11px] text-brand-red font-semibold mt-1.5">
+                Don't see it? Check your junk or spam folder.
+              </p>
             </div>
 
             <form onSubmit={handleCodeSubmit} className="flex flex-col gap-3.5 sm:gap-4">
