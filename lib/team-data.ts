@@ -111,10 +111,10 @@ export const TEAM_DATA: TeamSection[] = [
     teamName: "Website Developers",
     description: "Architecting the high-performance code that powers the UONotes platform.",
     members: [
-      { name: "Jack Mackenzie", role: "VP Web Dev", imageUrl: "/about/Placeholder.png" },
+      { name: "Jack Mackenzie", role: "VP Web Dev", imageUrl: "/about/Jack-Headshot.jpg" },
       { name: "Kwabena Asante", role: "VP Web Dev", imageUrl: "/about/Placeholder.png" },
       { name: "Elias Mikrojyan", role: "Director", imageUrl: "/about/Placeholder.png" },
-      { name: "Roheen Ghafuri", role: "Director", imageUrl: "/about/Placeholder.png" },
+      { name: "Roheen Ghafuri", role: "Director", imageUrl: "/about/Roheen-Headshot.jpg" },
     ],
   },
   {
