@@ -65,7 +65,12 @@ export default async function AdminUsersPage({
 
       <UserSearchControls initialQuery={query} initialRole={roleFilter} />
 
-      <UserListTable users={formattedUsers} />
+      <UserListTable
+        users={formattedUsers}
+        totalUsers={totalUsers || 0}
+        query={query}
+        roleFilter={roleFilter}
+      />
     </div>
   );
 }
