@@ -17,9 +17,9 @@ export const pastEvents: EventItem[] = [
   {
     id: "pathways-dentistry-medicine-law",
     title: "Pathways to Dentistry, Medicine and Law",
-    date: "November 14, 2025",
-    time: "6:00 PM - 8:30 PM",
-    location: "CRX Hall, uOttawa",
+    date: "June 25, 2026",
+    time: "5:00 PM - 8:30 PM",
+    location: "STM 664",
     image: "/events/PathwaysDML/1st.jpg", // Using first image as primary
     images: [
       "/events/PathwaysDML/1st.jpg",
@@ -37,9 +37,9 @@ export const pastEvents: EventItem[] = [
   {
     id: "trivia-night",
     title: "Trivia Night",
-    date: "October 20, 2025", // Replace with your actual date
-    time: "7:00 PM - 10:00 PM", // Replace with your actual time
-    location: "Campus Pub", // Replace with your actual location
+    date: "March 26, 2026", // Replace with your actual date
+    time: "5:45 PM - 8:00 PM", // Replace with your actual time
+    location: "STM 664", // Replace with your actual location
     image: "/events/Trivia/1.jpg", // Using first image as primary
     images: [
       "/events/Trivia/1.jpg",
@@ -56,9 +56,9 @@ export const pastEvents: EventItem[] = [
   {
     id: "f1-night",
     title: "F1 Night & Social",
-    date: "October 05, 2025",
-    time: "7:00 PM - 10:00 PM",
-    location: "University Centre",
+    date: "February 27, 2026",
+    time: "6:00 PM - 9:00 PM",
+    location: "DMS 7170",
     image: "/events/f1-1.png",
     images: [
       "/events/past-events/event1.png",
