@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { AdminUser } from "@/lib/admin";
-import { banUserAction, unbanUserAction } from "@/app/admin/users/actions";
+import { banUserAction, unbanUserAction, fetchMoreUsersAction } from "@/app/admin/users/actions";
 import { Shield, Ban, CheckCircle2, X, Check, Unlock, AlertCircle } from "lucide-react";
 
 // 1. Define the exact roles the UI supports
@@ -32,7 +32,37 @@ const UNBAN_REASONS = [
   "Admin Override",
 ];
 
-export function UserListTable({ users = [] }: { users?: IncomingUser[] }) {
+export function UserListTable({
+  users: initialUsers = [],
+  totalUsers = 0,
+  query = "",
+  roleFilter = "ALL",
+}: {
+  users?: IncomingUser[];
+  totalUsers?: number;
+  query?: string;
+  roleFilter?: string;
+}) {
+  const [users, setUsers] = useState<IncomingUser[]>(initialUsers);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const hasMore = users.length < totalUsers;
+
+  async function handleShowMore() {
+    if (isLoadingMore) return;
+    setIsLoadingMore(true);
+    try {
+      const nextPage = currentPage + 1;
+      const moreUsers = await fetchMoreUsersAction(nextPage, query, roleFilter);
+      setUsers((prev) => [...prev, ...moreUsers]);
+      setCurrentPage(nextPage);
+    } catch (err) {
+      console.error("Failed to load more users:", err);
+    } finally {
+      setIsLoadingMore(false);
+    }
+  }
+
   const [isProcessing, setIsProcessing] = useState<string | null>(null);
   const [optimisticStatuses, setOptimisticStatuses] = useState<Record<string, string>>({});
   
@@ -218,8 +248,19 @@ export function UserListTable({ users = [] }: { users?: IncomingUser[] }) {
           </table>
         </div>
       </div>
-
+      {hasMore && (
+        <div className="flex justify-center py-6">
+          <button
+            onClick={handleShowMore}
+            disabled={isLoadingMore}
+            className="px-6 py-3 bg-white border border-gray-200 text-gray-700 text-xs font-mono font-bold uppercase tracking-wider rounded-xl hover:border-brand-red/40 hover:text-brand-red transition-colors shadow-xs cursor-pointer disabled:opacity-60"
+          >
+            {isLoadingMore ? "Loading..." : `Show More (${totalUsers - users.length} remaining)`}
+          </button>
+        </div>
+      )}
       {/* CUSTOM PREMIUM BACKDROP MODAL */}
+      
       {activeModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs animate-in fade-in duration-200">
           <div className="bg-white rounded-3xl shadow-2xl border border-gray-100 w-full max-w-lg overflow-hidden animate-in zoom-in-95 duration-200">

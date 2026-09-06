@@ -11,6 +11,59 @@ const supabaseAdmin = createAdminClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
+const PAGE_SIZE = 20;
+
+export async function fetchMoreUsersAction(
+  page: number,
+  query: string,
+  roleFilter: string
+) {
+  const supabase = await createServerClient();
+  const { data: { user: caller } } = await supabase.auth.getUser();
+  if (!caller) throw new Error("Unauthorized");
+
+  const { data: callerProfile } = await supabase
+    .from("profiles")
+    .select("is_admin")
+    .eq("id", caller.id)
+    .single();
+  if (!callerProfile?.is_admin) throw new Error("Insufficient privileges.");
+
+  let dbQuery = supabaseAdmin
+    .from("profiles")
+    .select("id, full_name, email, is_admin, status, created_at, notes!notes_uploader_id_fkey(count)");
+
+  if (query) {
+    dbQuery = dbQuery.or(`full_name.ilike.%${query}%,email.ilike.%${query}%`);
+  }
+  if (roleFilter === "ADMIN") {
+    dbQuery = dbQuery.eq("is_admin", true);
+  } else if (roleFilter === "STUDENT") {
+    dbQuery = dbQuery.eq("is_admin", false);
+  }
+
+  const from = (page - 1) * PAGE_SIZE;
+  const to = from + PAGE_SIZE - 1;
+  const { data: usersData, error } = await dbQuery
+    .order("created_at", { ascending: false })
+    .range(from, to);
+
+  if (error) {
+    throw new Error("Failed to load more users.");
+  }
+
+  return (usersData || []).map((user: any) => ({
+    id: user.id,
+    name: user.full_name || "Unknown",
+    email: user.email,
+    role: (user.is_admin ? "ADMIN" : "STUDENT") as "SUPER_ADMIN" | "ADMIN" | "STUDENT",
+    status: user.status || "ACTIVE",
+    joinedAt: new Date(user.created_at).toLocaleDateString("en-US", { month: "short", year: "numeric" }),
+    submissionCount: user.notes?.[0]?.count || 0,
+  }));
+}
+
+
 export async function banUserAction(
   targetUserId: string,
   reasons: string[],
