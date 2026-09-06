@@ -240,7 +240,7 @@ export function NotesExplorer({ isLoggedIn = false, notes = [] }: NotesExplorerP
 
             </main>
 
-            <aside className="hidden lg:flex w-72 flex-shrink-0 flex-col gap-6 order-2 lg:order-1 lg:sticky lg:top-24 lg:self-start">              
+            <aside className="hidden lg:flex w-72 flex-shrink-0 flex-col gap-6 order-2 lg:order-1">              
               {isLoggedIn ? (
                 <div className="bg-white/95 backdrop-blur-sm p-5 rounded-3xl border border-brand-red/15 shadow-sm flex flex-col">
                   <div className="flex items-center gap-2 mb-4 px-1">
