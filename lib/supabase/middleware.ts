@@ -34,6 +34,21 @@ export async function updateSession(request: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser();
 
   const { pathname } = request.nextUrl;
+
+  // 1. Ignore static files, chunks, and assets so your logs stay clean
+  const isIgnoredAsset = pathname.startsWith('/_next') || pathname.includes('.');
+
+  if (!isIgnoredAsset) {
+    // 2. Prints user identity and target path into Vercel runtime logs
+    console.log(JSON.stringify({
+      email: user?.email ?? 'anonymous',
+      userId: user?.id ?? 'unauthenticated',
+      path: pathname,
+      method: request.method,
+      timestamp: new Date().toISOString(),
+    }));
+  }
+
   const isProtectedPath = PROTECTED_PATHS.some((path) => pathname.startsWith(path));
   const isAdminPath = ADMIN_PATHS.some((path) => pathname.startsWith(path));
 
