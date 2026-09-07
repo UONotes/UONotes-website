@@ -7,10 +7,16 @@ export default async function AdminUsersPage({
 }: {
   searchParams: Promise<{ q?: string; role?: string; page?: string }>;
 }) {
-  const supabase = await createClient();
+   const supabase = await createClient();
   
   // UNWRAP THE PROMISE (Required in Next.js latest versions)
   const resolvedParams = await searchParams;
+
+  const { data: { user: caller } } = await supabase.auth.getUser();
+  const { data: callerProfile } = caller
+    ? await supabase.from("profiles").select("is_super_admin").eq("id", caller.id).single()
+    : { data: null };
+  const viewerIsSuperAdmin = callerProfile?.is_super_admin ?? false;
   
   const query = resolvedParams.q?.trim() || "";
   const roleFilter = resolvedParams.role || "ALL";
@@ -19,16 +25,18 @@ export default async function AdminUsersPage({
 
   let dbQuery = supabase
     .from("profiles")
-    .select("id, full_name, email, is_admin, status, created_at, notes!notes_uploader_id_fkey(count)", { count: "exact" });
+    .select("id, full_name, email, is_admin, is_super_admin, status, created_at, notes!notes_uploader_id_fkey(count)", { count: "exact" });
 
   if (query) {
-    dbQuery.or(`full_name.ilike.%${query}%,email.ilike.%${query}%`);
+    dbQuery = dbQuery.or(`full_name.ilike.%${query}%,email.ilike.%${query}%`);
   }
 
-  if (roleFilter === "ADMIN") {
-    dbQuery.eq("is_admin", true);
+  if (roleFilter === "SUPER_ADMIN") {
+    dbQuery = dbQuery.eq("is_super_admin", true);
+  } else if (roleFilter === "ADMIN") {
+    dbQuery = dbQuery.eq("is_admin", true).eq("is_super_admin", false);
   } else if (roleFilter === "STUDENT") {
-    dbQuery.eq("is_admin", false);
+    dbQuery = dbQuery.eq("is_admin", false);
   }
 
   const from = (currentPage - 1) * PAGE_SIZE;
@@ -46,7 +54,7 @@ export default async function AdminUsersPage({
     name: user.full_name || "Unknown",
     email: user.email,
     // THE FIX: Explicitly cast the string to the expected union type to satisfy strict Next.js builds
-    role: (user.is_admin ? "ADMIN" : "STUDENT") as "SUPER_ADMIN" | "ADMIN" | "STUDENT",
+    role: (user.is_super_admin ? "SUPER_ADMIN" : user.is_admin ? "ADMIN" : "STUDENT") as "SUPER_ADMIN" | "ADMIN" | "STUDENT",
     status: user.status || "ACTIVE",
     joinedAt: new Date(user.created_at).toLocaleDateString("en-US", { month: 'short', year: 'numeric' }),
     submissionCount: user.notes?.[0]?.count || 0,
@@ -65,12 +73,7 @@ export default async function AdminUsersPage({
 
       <UserSearchControls initialQuery={query} initialRole={roleFilter} />
 
-      <UserListTable
-        users={formattedUsers}
-        totalUsers={totalUsers || 0}
-        query={query}
-        roleFilter={roleFilter}
-      />
+        <UserListTable users={formattedUsers} totalUsers={totalUsers || 0} query={query} roleFilter={roleFilter} viewerIsSuperAdmin={viewerIsSuperAdmin} viewerId={caller?.id} />
     </div>
   );
 }

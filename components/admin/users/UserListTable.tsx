@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { AdminUser } from "@/lib/admin";
 import { banUserAction, unbanUserAction, fetchMoreUsersAction } from "@/app/admin/users/actions";
 import { Shield, Ban, CheckCircle2, X, Check, Unlock, AlertCircle } from "lucide-react";
@@ -37,14 +37,28 @@ export function UserListTable({
   totalUsers = 0,
   query = "",
   roleFilter = "ALL",
+  viewerIsSuperAdmin = false,
+  viewerId,
 }: {
   users?: IncomingUser[];
   totalUsers?: number;
   query?: string;
   roleFilter?: string;
+  viewerIsSuperAdmin?: boolean;
+  viewerId?: string;
 }) {
-  const [users, setUsers] = useState<IncomingUser[]>(initialUsers);
+   const [users, setUsers] = useState<IncomingUser[]>(initialUsers);
   const [currentPage, setCurrentPage] = useState(1);
+
+  // The server sends a fresh initialUsers list whenever the search or
+  // role filter changes (a real URL navigation) — but since this
+  // component itself doesn't remount, its own accumulated state
+  // (built up via "Show More") needs to be explicitly reset to match,
+  // or it'll keep showing stale results from before the filter changed.
+  useEffect(() => {
+    setUsers(initialUsers);
+    setCurrentPage(1);
+  }, [initialUsers]);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const hasMore = users.length < totalUsers;
 
@@ -166,6 +180,8 @@ export function UserListTable({
                   const safeRole = isValidRole(user.role) ? user.role : "STUDENT";
                   const isSuperAdmin = safeRole === "SUPER_ADMIN";
                   const isAdmin = safeRole === "ADMIN";
+                  const isSelf = user.id === viewerId;
+                  const isProtected = isSuperAdmin || isSelf || (isAdmin && !viewerIsSuperAdmin);
 
                   return (
                     <tr key={user.id} className={`hover:bg-gray-50/50 transition-colors ${isBanned ? "bg-gray-50/30" : ""}`}>
@@ -186,7 +202,7 @@ export function UserListTable({
                       <td className="px-6 py-4">
                         {isSuperAdmin ? (
                           <span className="inline-flex items-center gap-1.5 text-[10px] font-mono font-bold text-purple-700 bg-purple-50 px-3 py-1 rounded-xl border border-purple-100">
-                            <Shield className="w-3 h-3 text-purple-600" /> PRESIDENT
+                            <Shield className="w-3 h-3 text-purple-600" /> SUPER ADMIN
                           </span>
                         ) : isAdmin ? (
                           <span className="inline-flex items-center gap-1.5 text-[11px] font-mono font-bold text-red-700 bg-red-50 px-3 py-1 rounded-xl border border-red-100/60">
@@ -228,15 +244,14 @@ export function UserListTable({
                         ) : (
                           <button
                             onClick={() => { setActiveModal({ user, type: "BAN" }); setSelectedReasons([]); setCustomReason(""); }}
-                            disabled={isProcessing === user.id || isSuperAdmin || isAdmin}
-                            className={`px-3.5 py-2 text-xs font-semibold rounded-xl transition-colors shadow-2xs ${
-                              isSuperAdmin || isAdmin
+                            disabled={isProcessing === user.id || isProtected}                            className={`px-3.5 py-2 text-xs font-semibold rounded-xl transition-colors shadow-2xs ${
+                              isProtected
                                 ? "text-gray-300 bg-gray-50 border border-gray-100 cursor-not-allowed"
                                 : "text-rose-600 bg-rose-50/50 hover:bg-rose-100/80 border border-rose-100 disabled:opacity-50"
                             }`}
-                            title={isSuperAdmin || isAdmin ? "Protected Account" : "Suspend user"}
+                            title={isProtected ? "Protected Account" : "Suspend user"}
                           >
-                            {isProcessing === user.id ? "Processing..." : isSuperAdmin || isAdmin ? "Protected" : "Ban User"}
+                            {isProcessing === user.id ? "Processing..." : isProtected ? "Protected" : "Ban User"}
                           </button>
                         )}
                       </td>
