@@ -29,15 +29,18 @@ export async function fetchMoreUsersAction(
     .single();
   if (!callerProfile?.is_admin) throw new Error("Insufficient privileges.");
 
-  let dbQuery = supabaseAdmin
+   let dbQuery = supabase
     .from("profiles")
-    .select("id, full_name, email, is_admin, status, created_at, notes!notes_uploader_id_fkey(count)");
+    .select("id, full_name, email, is_admin, is_super_admin, status, created_at, notes!notes_uploader_id_fkey(count)", { count: "exact" });
 
   if (query) {
     dbQuery = dbQuery.or(`full_name.ilike.%${query}%,email.ilike.%${query}%`);
   }
-  if (roleFilter === "ADMIN") {
-    dbQuery = dbQuery.eq("is_admin", true);
+
+  if (roleFilter === "SUPER_ADMIN") {
+    dbQuery = dbQuery.eq("is_super_admin", true);
+  } else if (roleFilter === "ADMIN") {
+    dbQuery = dbQuery.eq("is_admin", true).eq("is_super_admin", false);
   } else if (roleFilter === "STUDENT") {
     dbQuery = dbQuery.eq("is_admin", false);
   }
@@ -56,8 +59,7 @@ export async function fetchMoreUsersAction(
     id: user.id,
     name: user.full_name || "Unknown",
     email: user.email,
-    role: (user.is_admin ? "ADMIN" : "STUDENT") as "SUPER_ADMIN" | "ADMIN" | "STUDENT",
-    status: user.status || "ACTIVE",
+    role: (user.is_super_admin ? "SUPER_ADMIN" : user.is_admin ? "ADMIN" : "STUDENT") as "SUPER_ADMIN" | "ADMIN" | "STUDENT",    status: user.status || "ACTIVE",
     joinedAt: new Date(user.created_at).toLocaleDateString("en-US", { month: "short", year: "numeric" }),
     submissionCount: user.notes?.[0]?.count || 0,
   }));
@@ -80,12 +82,32 @@ export async function banUserAction(
   // 2. Explicitly check if the caller is an admin
   const { data: callerProfile } = await supabase
     .from("profiles")
-    .select("is_admin")
+    .select("is_admin, is_super_admin")
     .eq("id", caller.id)
     .single();
 
   if (!callerProfile?.is_admin) {
     throw new Error("Insufficient privileges to execute a platform ban.");
+  }
+
+  // 2b. Real, server-side protection for who can ban whom — this is
+  // the actual security boundary; any "Protected" label in the UI is
+  // just a courtesy, this check is what actually matters.
+  if (targetUserId === caller.id) {
+    throw new Error("You cannot ban your own account.");
+  }
+
+  const { data: targetProfile } = await supabaseAdmin
+    .from("profiles")
+    .select("is_admin, is_super_admin")
+    .eq("id", targetUserId)
+    .single();
+
+  if (targetProfile?.is_super_admin) {
+    throw new Error("Super Admins cannot be banned.");
+  }
+  if (targetProfile?.is_admin && !callerProfile.is_super_admin) {
+    throw new Error("Only a Super Admin can ban an Admin.");
   }
 
   // 3. The Hard Ban: Suspend the user at the Identity Provider level

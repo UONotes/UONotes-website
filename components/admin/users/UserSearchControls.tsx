@@ -53,8 +53,9 @@ export function UserSearchControls({ initialQuery, initialRole }: { initialQuery
     });
   };
 
-  const roles = [
+    const roles = [
     { label: "All Users", value: "ALL" },
+    { label: "Super Admins", value: "SUPER_ADMIN" },
     { label: "Admins", value: "ADMIN" },
     { label: "Students", value: "STUDENT" },
   ];
