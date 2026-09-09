@@ -2,9 +2,12 @@
 
 import { useState, useMemo } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { FileUp, Clock, CheckCircle2, XCircle, Search, MessageSquareText, X, Flag, Bookmark, Eye, Trash2 } from "lucide-react";
+import { FileUp, Clock, CheckCircle2, XCircle, Search, MessageSquareText, X, Flag, RotateCcw, Bookmark, Eye, Trash2, UploadCloud, Loader2, Paperclip } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { resubmitNoteAction, getFeedbackAttachmentUrlAction } from "@/app/(main)/notes/actions";
+import { ALLOWED_FILE_EXTENSIONS, isAllowedFileType, isAllowedFileSize } from "@/lib/fileValidation";
 
 const notebookStyle = {
   backgroundImage: `
@@ -20,14 +23,16 @@ interface DatabaseSubmission {
   status: string;
   hours_awarded: number | null;
   flag_reason: string | null;
+  feedback_attachment_key: string | null;
 }
 
 interface SubmissionItem {
   id: string;
   title: string;
   hours: number;
-  status: "Pending" | "Accepted" | "Rejected" | "Flagged";
+  status: "Pending" | "Accepted" | "Rejected" | "Flagged" | "Changes Requested";
   feedback?: string;
+  hasAttachment: boolean;
 }
 
 interface DatabaseSavedNote {
@@ -40,6 +45,7 @@ function mapStatus(status: string): SubmissionItem["status"] {
   if (status === "approved") return "Accepted";
   if (status === "rejected") return "Rejected";
   if (status === "flagged") return "Flagged";
+  if (status === "changes_requested") return "Changes Requested";
   return "Pending";
 }
 
@@ -50,9 +56,18 @@ export function DashboardView({
   submissions: DatabaseSubmission[];
   savedNotes: DatabaseSavedNote[];
 }) {
+  const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedSubmission, setSelectedSubmission] = useState<SubmissionItem | null>(null);
   const [savedNotes, setSavedNotes] = useState(rawSavedNotes);
+
+  const [resubmitFile, setResubmitFile] = useState<File | null>(null);
+  const [isResubmitting, setIsResubmitting] = useState(false);
+  const [resubmitError, setResubmitError] = useState("");
+  const [resubmitSuccess, setResubmitSuccess] = useState(false);
+
+  const [isFetchingAttachment, setIsFetchingAttachment] = useState(false);
+  const [attachmentError, setAttachmentError] = useState("");
 
   const submissions: SubmissionItem[] = useMemo(
     () =>
@@ -62,6 +77,7 @@ export function DashboardView({
         hours: note.hours_awarded ?? 0,
         status: mapStatus(note.status),
         feedback: note.flag_reason || undefined,
+        hasAttachment: Boolean(note.feedback_attachment_key),
       })),
     [rawSubmissions]
   );
@@ -87,6 +103,90 @@ export function DashboardView({
     if (!user) return;
 
     await supabase.from("saved_notes").delete().eq("user_id", user.id).eq("note_id", noteId);
+  }
+
+  function closeModal() {
+    setSelectedSubmission(null);
+    setResubmitFile(null);
+    setResubmitError("");
+    setResubmitSuccess(false);
+    setAttachmentError("");
+  }
+
+  async function handleViewAttachment() {
+    if (!selectedSubmission) return;
+    setAttachmentError("");
+    setIsFetchingAttachment(true);
+    try {
+      const url = await getFeedbackAttachmentUrlAction(selectedSubmission.id);
+      window.open(url, "_blank", "noopener,noreferrer");
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Couldn't load the attachment.";
+      setAttachmentError(message);
+    } finally {
+      setIsFetchingAttachment(false);
+    }
+  }
+
+  async function handleResubmit() {
+    if (!selectedSubmission || !resubmitFile) return;
+
+    if (!isAllowedFileType(resubmitFile.type || "application/pdf")) {
+      setResubmitError("Unsupported file format. Please upload a PDF, DOCX, PPTX, PNG, or JPG.");
+      return;
+    }
+    if (!isAllowedFileSize(resubmitFile.size)) {
+      setResubmitError("File exceeds the 25MB limit.");
+      return;
+    }
+
+    setResubmitError("");
+    setIsResubmitting(true);
+
+    try {
+      const presignRes = await fetch("/api/notes/upload-url", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          fileName: resubmitFile.name,
+          fileType: resubmitFile.type || "application/pdf",
+          fileSize: resubmitFile.size,
+        }),
+      });
+
+      const presignData = await presignRes.json();
+      if (!presignRes.ok) {
+        throw new Error(presignData.error || "Failed to generate storage authorization.");
+      }
+
+      const { uploadUrl, fileKey } = presignData;
+
+      const uploadRes = await fetch(uploadUrl, {
+        method: "PUT",
+        headers: { "Content-Type": resubmitFile.type || "application/pdf" },
+        body: resubmitFile,
+      });
+
+      if (!uploadRes.ok) {
+        throw new Error("Direct file upload to storage failed. Please check your connection.");
+      }
+
+      await resubmitNoteAction(
+        selectedSubmission.id,
+        fileKey,
+        resubmitFile.size,
+        resubmitFile.type || "application/pdf"
+      );
+
+      setResubmitSuccess(true);
+      setResubmitFile(null);
+      router.refresh();
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Something went wrong resubmitting your file.";
+      setResubmitError(message);
+    } finally {
+      setIsResubmitting(false);
+    }
   }
 
   return (
@@ -189,11 +289,13 @@ export function DashboardView({
                               <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-mono font-bold uppercase tracking-wider ${
                                 item.status === "Accepted" ? "bg-emerald-50 text-emerald-700 border border-emerald-200" :
                                 item.status === "Pending" ? "bg-amber-50 text-amber-700 border border-amber-200" :
+                                item.status === "Changes Requested" ? "bg-orange-50 text-orange-700 border border-orange-200" :
                                 item.status === "Flagged" ? "bg-purple-50 text-purple-700 border border-purple-200" :
                                 "bg-rose-50 text-rose-700 border border-rose-200"
                               }`}>
                                 {item.status === "Accepted" && <CheckCircle2 className="w-3.5 h-3.5" />}
                                 {item.status === "Pending" && <Clock className="w-3.5 h-3.5" />}
+                                {item.status === "Changes Requested" && <RotateCcw className="w-3.5 h-3.5" />}
                                 {item.status === "Flagged" && <Flag className="w-3.5 h-3.5" />}
                                 {item.status === "Rejected" && <XCircle className="w-3.5 h-3.5" />}
                                 {item.status}
@@ -203,10 +305,14 @@ export function DashboardView({
                               {item.feedback ? (
                                 <button
                                   onClick={() => setSelectedSubmission(item)}
-                                  className="inline-flex items-center gap-1.5 text-xs font-mono font-bold text-brand-red bg-brand-red/10 hover:bg-brand-red hover:text-white px-3 py-1.5 rounded-lg transition-colors cursor-pointer"
+                                  className={`inline-flex items-center gap-1.5 text-xs font-mono font-bold px-3 py-1.5 rounded-lg transition-colors cursor-pointer ${
+                                    item.status === "Changes Requested"
+                                      ? "text-orange-700 bg-orange-100 hover:bg-orange-600 hover:text-white"
+                                      : "text-brand-red bg-brand-red/10 hover:bg-brand-red hover:text-white"
+                                  }`}
                                 >
                                   <MessageSquareText className="w-3.5 h-3.5" />
-                                  View Feedback
+                                  {item.status === "Changes Requested" ? "View & Resubmit" : "View Feedback"}
                                 </button>
                               ) : (
                                 <span className="text-gray-400 font-mono text-xs">N/A</span>
@@ -281,7 +387,7 @@ export function DashboardView({
                           <td colSpan={3} className="py-12 text-center text-gray-500 font-light">
                             <div className="flex flex-col items-center gap-2">
                               <Bookmark className="w-6 h-6 text-gray-300" />
-                              You haven't saved any notes yet.
+                              You haven&apos;t saved any notes yet.
                             </div>
                           </td>
                         </tr>
@@ -309,11 +415,13 @@ export function DashboardView({
             >
               <div className="flex justify-between items-center mb-6 border-b border-gray-100 pb-4">
                 <div>
-                  <span className="text-[10px] font-mono uppercase tracking-widest text-brand-red font-bold">Review Notes</span>
+                  <span className="text-[10px] font-mono uppercase tracking-widest text-brand-red font-bold">
+                    {selectedSubmission.status === "Changes Requested" ? "Fixes Requested" : "Review Notes"}
+                  </span>
                   <h3 className="text-xl font-bold font-logo text-gray-900 mt-0.5">{selectedSubmission.title}</h3>
                 </div>
                 <button
-                  onClick={() => setSelectedSubmission(null)}
+                  onClick={closeModal}
                   className="p-2 rounded-full bg-gray-100 text-gray-500 hover:bg-brand-red hover:text-white transition-colors cursor-pointer"
                   aria-label="Close modal"
                 >
@@ -322,15 +430,75 @@ export function DashboardView({
               </div>
 
               <div className="mb-6">
-                <p className="text-xs font-mono uppercase tracking-wider text-gray-400 font-bold mb-2">Reviewer Feedback Comment:</p>
-                <div className="bg-[#FFF0F0]/60 border border-brand-red/20 p-5 rounded-2xl text-sm text-gray-800 leading-relaxed font-sans">
+                <p className="text-xs font-mono uppercase tracking-wider text-gray-400 font-bold mb-2">
+                  {selectedSubmission.status === "Changes Requested" ? "What needs to be fixed:" : "Reviewer Feedback Comment:"}
+                </p>
+                <div className={`p-5 rounded-2xl text-sm leading-relaxed font-sans border ${
+                  selectedSubmission.status === "Changes Requested"
+                    ? "bg-orange-50/60 border-orange-200 text-orange-950"
+                    : "bg-[#FFF0F0]/60 border-brand-red/20 text-gray-800"
+                }`}>
                   {selectedSubmission.feedback}
                 </div>
+                {selectedSubmission.hasAttachment && (
+                  <div className="mt-3 flex flex-col gap-2">
+                    <button
+                      onClick={handleViewAttachment}
+                      disabled={isFetchingAttachment}
+                      className="inline-flex items-center gap-1.5 text-xs font-mono font-bold text-gray-700 bg-gray-100 hover:bg-gray-200 px-3 py-1.5 rounded-lg transition-colors cursor-pointer w-fit disabled:opacity-50"
+                    >
+                      {isFetchingAttachment ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Paperclip className="w-3.5 h-3.5" />}
+                      {isFetchingAttachment ? "Loading..." : "View Reviewer's Attachment"}
+                    </button>
+                    {attachmentError && (
+                      <div className="p-2.5 bg-red-50 text-red-600 text-[11px] font-mono font-bold uppercase tracking-wider rounded-lg border border-red-200 text-center">
+                        {attachmentError}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
+
+              {selectedSubmission.status === "Changes Requested" && (
+                <div className="mb-6 flex flex-col gap-3">
+                  {resubmitSuccess ? (
+                    <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-sm font-medium flex items-center gap-2">
+                      <CheckCircle2 className="w-4 h-4 shrink-0" />
+                      Fixed file uploaded — it&apos;s back in the review queue.
+                    </div>
+                  ) : (
+                    <>
+                      <label className="flex items-center gap-2 text-[10px] font-black text-gray-500 uppercase tracking-widest">
+                        <UploadCloud className="w-4 h-4 text-gray-400" />
+                        Upload your corrected file
+                      </label>
+                      <input
+                        type="file"
+                        accept={ALLOWED_FILE_EXTENSIONS}
+                        onChange={(e) => setResubmitFile(e.target.files?.[0] ?? null)}
+                        className="w-full text-xs font-sans text-gray-600 file:mr-4 file:py-2.5 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-mono file:font-bold file:uppercase file:tracking-wider file:bg-orange-100 file:text-orange-700 hover:file:bg-orange-200 file:cursor-pointer cursor-pointer border border-gray-200 rounded-xl"
+                      />
+                      {resubmitError && (
+                        <div className="p-3 bg-red-50 text-red-600 text-[11px] font-mono font-bold uppercase tracking-wider rounded-lg border border-red-200 text-center">
+                          {resubmitError}
+                        </div>
+                      )}
+                      <button
+                        onClick={handleResubmit}
+                        disabled={!resubmitFile || isResubmitting}
+                        className="w-full py-3.5 bg-orange-600 text-white text-xs font-black uppercase tracking-widest rounded-xl hover:bg-orange-700 transition-all shadow-md active:scale-[0.98] flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {isResubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <UploadCloud className="w-4 h-4" />}
+                        {isResubmitting ? "Uploading..." : "Resubmit Fixed File"}
+                      </button>
+                    </>
+                  )}
+                </div>
+              )}
 
               <div className="flex justify-end">
                 <button
-                  onClick={() => setSelectedSubmission(null)}
+                  onClick={closeModal}
                   className="px-6 py-2.5 bg-brand-red text-white text-xs font-mono font-bold uppercase tracking-wider rounded-xl hover:bg-brand-red-hover transition-all cursor-pointer shadow-sm"
                 >
                   Close
