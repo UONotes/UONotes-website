@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { buildDailyBuckets } from "@/lib/analytics";
+import { TrendChart } from "@/components/admin/TrendChart";
 import { Users, FileStack, Clock, Award, ArrowRight } from "lucide-react";
 
 function formatRelativeTime(dateString: string | null): string {
@@ -76,6 +78,7 @@ export default async function AdminAnalyticsPage() {
     { data: adminRoster },
     { data: auditRows },
     { data: submissionDates },
+    { data: signupDates },
   ] = await Promise.all([
     supabase.from("profiles").select("*", { count: "exact", head: true }),
     supabase.from("profiles").select("*", { count: "exact", head: true }).gte("created_at", weekAgo),
@@ -99,6 +102,7 @@ export default async function AdminAnalyticsPage() {
       .order("created_at", { ascending: true })
       .limit(5000),
     supabase.from("notes").select("created_at").gte("created_at", monthAgo),
+    supabase.from("profiles").select("created_at").gte("created_at", monthAgo),
   ]);
 
   const totalHoursAwarded = (hoursData || []).reduce((sum, n) => sum + (n.hours_awarded || 0), 0);
@@ -191,24 +195,9 @@ export default async function AdminAnalyticsPage() {
     ? Math.round((resubmittedApproved / totalEverChangesRequested) * 100)
     : null;
 
-  // --- Daily submission volume, last 30 days ---
-  const dayBuckets: { date: string; label: string; count: number }[] = [];
-  for (let i = 29; i >= 0; i--) {
-    const d = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
-    const key = d.toISOString().slice(0, 10);
-    dayBuckets.push({
-      date: key,
-      label: d.toLocaleDateString("en-US", { month: "short", day: "numeric" }),
-      count: 0,
-    });
-  }
-  const bucketIndex = new Map(dayBuckets.map((b, i) => [b.date, i]));
-  for (const row of submissionDates || []) {
-    const key = new Date(row.created_at).toISOString().slice(0, 10);
-    const idx = bucketIndex.get(key);
-    if (idx !== undefined) dayBuckets[idx].count += 1;
-  }
-  const maxDailyCount = Math.max(1, ...dayBuckets.map((b) => b.count));
+  // --- Daily volume, last 30 days ---
+  const submissionBuckets = buildDailyBuckets(submissionDates || [], 30, now);
+  const signupBuckets = buildDailyBuckets(signupDates || [], 30, now);
 
   return (
     <div className="w-full max-w-6xl mx-auto space-y-6">
@@ -229,25 +218,20 @@ export default async function AdminAnalyticsPage() {
       </div>
 
       {/* Submission volume trend */}
-      <div className="bg-white border border-black/5 rounded-2xl p-6">
-        <h2 className="font-logo text-lg font-bold text-[#23201D]">Submissions, last 30 days</h2>
-        <p className="text-xs text-gray-400 mt-0.5 mb-6">Daily volume of new note submissions. Hover a bar for the exact count.</p>
-        <div className="h-32 flex items-end gap-[3px]">
-          {dayBuckets.map((b) => (
-            <div
-              key={b.date}
-              title={`${b.label}: ${b.count} submission${b.count === 1 ? "" : "s"}`}
-              className="flex-1 bg-brand-red/70 hover:bg-brand-red rounded-t-sm transition-colors min-h-[3px]"
-              style={{ height: `${(b.count / maxDailyCount) * 100}%` }}
-            />
-          ))}
-        </div>
-        <div className="flex justify-between mt-2 text-[10px] text-gray-400">
-          <span>{dayBuckets[0].label}</span>
-          <span>{dayBuckets[Math.floor(dayBuckets.length / 2)].label}</span>
-          <span>{dayBuckets[dayBuckets.length - 1].label}</span>
-        </div>
-      </div>
+      <TrendChart
+        title="Submissions, last 30 days"
+        description="Daily volume of new note submissions. Hover a bar for the exact count."
+        buckets={submissionBuckets}
+      />
+
+      {/* Signup volume trend */}
+      <TrendChart
+        title="Signups, last 30 days"
+        description="Daily volume of new account registrations. Hover a bar for the exact count."
+        buckets={signupBuckets}
+        barColor="bg-blue-500/70"
+        barHoverColor="hover:bg-blue-500"
+      />
 
       {/* Signup & submission detail */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
