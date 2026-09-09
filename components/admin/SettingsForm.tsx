@@ -3,16 +3,13 @@
 import { useState } from "react";
 import { saveSettingsAction } from "@/app/admin/settings/actions";
 import { 
-  Sliders, 
   Bell, 
   HardDrive, 
   Save, 
   Check, 
   Lock, 
   Loader2, 
-  AlertTriangle, 
-  Cpu,
-  Shield,
+  AlertTriangle,
 } from "lucide-react";
 
 interface InitialSettings {
@@ -21,6 +18,29 @@ interface InitialSettings {
   maxFileSize: string;
   announcementText: string;
   allowPublicRegistrations: boolean;
+}
+
+function Toggle({
+  checked,
+  onChange,
+  disabled,
+}: {
+  checked: boolean;
+  onChange: () => void;
+  disabled?: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      disabled={disabled}
+      onClick={onChange}
+      className={`w-11 h-6 rounded-full transition-colors relative p-1 shrink-0 ${
+        disabled ? "opacity-40 cursor-not-allowed" : "cursor-pointer"
+      } ${checked ? "bg-brand-red" : "bg-gray-200"}`}
+    >
+      <div className={`w-4 h-4 rounded-full bg-white transition-transform ${checked ? "translate-x-5" : "translate-x-0"}`} />
+    </button>
+  );
 }
 
 export function SettingsForm({
@@ -56,208 +76,148 @@ export function SettingsForm({
 
       setSavedToast(true);
       setTimeout(() => setSavedToast(false), 3500);
-    } catch (err: any) {
-      setErrorMessage(err.message || "Failed to save settings.");
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Failed to save settings.";
+      setErrorMessage(message);
     } finally {
       setSaving(false);
     }
   };
 
   return (
-    <div className="w-full max-w-6xl mx-auto py-10 px-4 sm:px-6 space-y-8 animate-in fade-in duration-500 relative">
-      
+    <div className="w-full max-w-6xl mx-auto space-y-6">
+
       {savedToast && (
-        <div className="fixed bottom-6 right-6 z-50 flex items-center gap-3 bg-gray-900 text-white px-5 py-3.5 rounded-2xl shadow-xl border border-gray-800 animate-in slide-in-from-bottom-4 duration-300">
+        <div className="fixed bottom-6 right-6 z-50 flex items-center gap-3 bg-[#23201D] text-white px-4 py-3 rounded-xl shadow-xl animate-in slide-in-from-bottom-4 duration-300">
           <div className="w-5 h-5 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0">
             <Check className="w-3 h-3 stroke-[3]" />
           </div>
-          <p className="text-xs font-semibold tracking-tight">System configuration committed & audit logged.</p>
+          <p className="text-xs font-medium">Settings saved.</p>
         </div>
       )}
 
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-gray-100 pb-6">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <div className="flex items-center gap-2 mb-1">
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-gray-100 text-gray-700 text-[10px] font-mono font-bold uppercase tracking-wider">
-              <Cpu className="w-3 h-3 text-gray-500" /> Global Environment
-            </span>
-            {!isSuperAdmin && (
-              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 bg-amber-50 text-amber-700 border border-amber-200 rounded-md text-[10px] font-mono font-bold">
-                <Lock className="w-3 h-3" /> Standard Admin Restrictions Active
-              </span>
-            )}
-          </div>
-          <h1 className="text-3xl font-black text-gray-900 tracking-tight">Platform Settings</h1>
-          <p className="text-xs text-gray-500 mt-1 max-w-xl">
-            Configure feature availability flags, storage thresholds, and live dashboard broadcasts with audit trails.
+          <h1 className="font-logo text-3xl font-bold text-[#23201D] tracking-tight">Settings</h1>
+          <p className="text-sm text-gray-500 mt-1">
+            Platform-wide controls. Changes here affect everyone.
           </p>
         </div>
 
         <button
           onClick={handleSaveSettings}
           disabled={saving}
-          className="inline-flex items-center gap-2 px-5 py-2.5 bg-gray-900 hover:bg-black text-white text-xs font-bold uppercase tracking-wider rounded-2xl transition-all shadow-md shadow-gray-900/10 disabled:opacity-50 cursor-pointer"
+          className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#23201D] hover:bg-black text-white text-sm font-semibold rounded-xl transition-all disabled:opacity-50 cursor-pointer"
         >
           {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-          Save & Audit Log
+          Save changes
         </button>
       </div>
 
       {errorMessage && (
-        <div className="p-4 bg-rose-50 border border-rose-100 rounded-2xl flex items-center gap-3 text-rose-700 text-xs font-medium">
-          <AlertTriangle className="w-4 h-4 shrink-0 text-rose-600" />
+        <div className="p-4 bg-rose-50 border border-rose-100 rounded-xl flex items-center gap-3 text-rose-700 text-sm">
+          <AlertTriangle className="w-4 h-4 shrink-0" />
           <span>{errorMessage}</span>
         </div>
       )}
 
-      <form onSubmit={handleSaveSettings} className="space-y-6">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          
-          <div className="lg:col-span-2 space-y-6">
-            
-            <div className="bg-white border border-gray-100 rounded-3xl p-7 shadow-xs space-y-6">
-              <div className="flex items-center gap-3 pb-4 border-b border-gray-100">
-                <div className="w-10 h-10 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0 border border-blue-100/60">
-                  <Sliders className="w-4 h-4" />
-                </div>
+      <form onSubmit={handleSaveSettings} className="space-y-4">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+
+          <div className="lg:col-span-2 space-y-4">
+
+            <div className="bg-white border border-black/5 rounded-2xl p-6 space-y-5">
+              <h2 className="font-logo text-lg font-bold text-[#23201D]">Site availability</h2>
+
+              <div className="flex items-start justify-between gap-4">
                 <div>
-                  <h2 className="text-base font-bold text-gray-900">Operational Toggles</h2>
-                  <p className="text-xs text-gray-400">Manage global site availability and automated moderation workflows.</p>
+                  <p className="text-sm font-semibold text-gray-900 flex items-center gap-2">
+                    Maintenance mode
+                    {!isSuperAdmin && <span className="text-gray-300"><Lock className="w-3.5 h-3.5" /></span>}
+                  </p>
+                  <p className="text-xs text-gray-500 max-w-md mt-0.5">
+                    Blocks new note submissions from students while it&apos;s on. Super admins only.
+                  </p>
                 </div>
+                <Toggle checked={maintenanceMode} onChange={() => setMaintenanceMode(!maintenanceMode)} disabled={!isSuperAdmin} />
               </div>
 
-              <div className="space-y-6">
-                <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <p className="text-sm font-bold text-gray-900 flex items-center gap-2">
-                      Emergency Maintenance Mode
-                      <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-rose-50 text-rose-600 border border-rose-100">SUPER ADMIN ONLY</span>
-                    </p>
-                    <p className="text-xs text-gray-500 max-w-md mt-0.5">
-                      Restricts student uploads during major migrations. Restricted to super-admins.
-                    </p>
-                  </div>
-                  <button
-                    type="button"
-                    disabled={!isSuperAdmin}
-                    onClick={() => setMaintenanceMode(!maintenanceMode)}
-                    className={`w-12 h-6 rounded-full transition-colors relative p-1 shrink-0 ${
-                      !isSuperAdmin ? "opacity-50 cursor-not-allowed" : "cursor-pointer"
-                    } ${maintenanceMode ? "bg-rose-600" : "bg-gray-200"}`}
-                  >
-                    <div className={`w-4 h-4 rounded-full bg-white transition-transform ${maintenanceMode ? "translate-x-6" : "translate-x-0"}`} />
-                  </button>
-                </div>
+              <div className="h-px bg-black/5" />
 
-                <div className="h-px bg-gray-50" />
-                <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <p className="text-sm font-bold text-gray-900 flex items-center gap-2">
-                      Public Registration
-                      <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-rose-50 text-rose-600 border border-rose-100">SUPER ADMIN ONLY</span>
-                    </p>
-                    <p className="text-xs text-gray-500 max-w-md mt-0.5">
-                      Allow new students to create accounts. Turn off to temporarily pause signups.
-                    </p>
-                  </div>
-                  <button
-                    type="button"
-                    disabled={!isSuperAdmin}
-                    onClick={() => setAllowPublicRegistrations(!allowPublicRegistrations)}
-                    className={`w-12 h-6 rounded-full transition-colors relative p-1 shrink-0 ${
-                      !isSuperAdmin ? "opacity-50 cursor-not-allowed" : "cursor-pointer"
-                    } ${allowPublicRegistrations ? "bg-rose-600" : "bg-gray-200"}`}
-                  >
-                    <div className={`w-4 h-4 rounded-full bg-white transition-transform ${allowPublicRegistrations ? "translate-x-6" : "translate-x-0"}`} />
-                  </button>
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <p className="text-sm font-semibold text-gray-900 flex items-center gap-2">
+                    Public registration
+                    {!isSuperAdmin && <span className="text-gray-300"><Lock className="w-3.5 h-3.5" /></span>}
+                  </p>
+                  <p className="text-xs text-gray-500 max-w-md mt-0.5">
+                    Let new students sign up. Super admins only.
+                  </p>
+                  <p className="text-xs text-amber-600 mt-1">
+                    Not enforced yet. signup isn&apos;t currently gated by this setting.
+                  </p>
                 </div>
+                <Toggle checked={allowPublicRegistrations} onChange={() => setAllowPublicRegistrations(!allowPublicRegistrations)} disabled={!isSuperAdmin} />
+              </div>
 
-                <div className="h-px bg-gray-50" />
+              <div className="h-px bg-black/5" />
 
-                <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <p className="text-sm font-bold text-gray-900">Automated Plagiarism Pre-Screening</p>
-                    <p className="text-xs text-gray-500 max-w-md mt-0.5">
-                      Automatically route PDFs with high text matches straight to the flagged compliance queue.
-                    </p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setAutoFlagPlagiarism(!autoFlagPlagiarism)}
-                    className={`w-12 h-6 rounded-full transition-colors relative p-1 shrink-0 cursor-pointer ${
-                      autoFlagPlagiarism ? "bg-gray-900" : "bg-gray-200"
-                    }`}
-                  >
-                    <div className={`w-4 h-4 rounded-full bg-white transition-transform ${autoFlagPlagiarism ? "translate-x-6" : "translate-x-0"}`} />
-                  </button>
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <p className="text-sm font-semibold text-gray-900">Automatic plagiarism flagging</p>
+                  <p className="text-xs text-gray-500 max-w-md mt-0.5">
+                    Route submissions with high text overlap straight to the flagged queue.
+                  </p>
+                  <p className="text-xs text-amber-600 mt-1">
+                    Not built yet. there&apos;s no plagiarism detection system behind this toggle atm.
+                  </p>
                 </div>
+                <Toggle checked={autoFlagPlagiarism} onChange={() => setAutoFlagPlagiarism(!autoFlagPlagiarism)} />
               </div>
             </div>
 
-            <div className="bg-white border border-gray-100 rounded-3xl p-7 shadow-xs space-y-6">
-              <div className="flex items-center gap-3 pb-4 border-b border-gray-100">
-                <div className="w-10 h-10 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center shrink-0 border border-amber-100/60">
+            <div className="bg-white border border-black/5 rounded-2xl p-6 space-y-4">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">
                   <Bell className="w-4 h-4" />
                 </div>
                 <div>
-                  <h2 className="text-base font-bold text-gray-900">Command Center Broadcast Banner</h2>
-                  <p className="text-xs text-gray-400">Display an announcement notice across all active moderator dashboards.</p>
+                  <h2 className="font-logo text-lg font-bold text-[#23201D]">Announcement</h2>
+                  <p className="text-xs text-gray-400">Shows on the admin overview page for other reviewers.</p>
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <label className="block text-xs font-mono font-bold text-gray-700 uppercase tracking-wider">
-                  Active Notice Text
-                </label>
-                <textarea 
-                  rows={2}
-                  value={announcementText}
-                  onChange={(e) => setAnnouncementText(e.target.value)}
-                  placeholder="Enter broadcast message here..."
-                  className="w-full p-4 bg-gray-50 border border-gray-200/80 rounded-2xl text-xs font-medium text-gray-900 focus:outline-none focus:ring-2 focus:ring-brand-red/10 focus:border-brand-red focus:bg-white transition-all resize-none"
-                />
-              </div>
+              <textarea 
+                rows={2}
+                value={announcementText}
+                onChange={(e) => setAnnouncementText(e.target.value)}
+                placeholder="A short note for other admins…"
+                className="w-full p-3.5 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-900 focus:outline-none focus:border-gray-400 focus:bg-white transition-all resize-none placeholder:text-gray-400"
+              />
             </div>
 
           </div>
 
-          <div className="space-y-6">
-            <div className="bg-white border border-gray-100 rounded-3xl p-7 shadow-xs space-y-6">
-              <div className="flex items-center gap-3 pb-4 border-b border-gray-100">
-                <div className="w-10 h-10 rounded-2xl bg-purple-50 text-purple-600 flex items-center justify-center shrink-0 border border-purple-100/60">
+          <div className="space-y-4">
+            <div className="bg-white border border-black/5 rounded-2xl p-6 space-y-3">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center shrink-0">
                   <HardDrive className="w-4 h-4" />
                 </div>
-                <div>
-                  <h2 className="text-base font-bold text-gray-900">Storage Limit</h2>
-                  <p className="text-xs text-gray-400">Upload constraints.</p>
-                </div>
+                <h2 className="font-logo text-lg font-bold text-[#23201D]">Max file size</h2>
               </div>
 
-              <div className="space-y-3">
-                <label className="block text-xs font-mono font-bold text-gray-700 uppercase tracking-wider">
-                  Max File Size (MB)
-                </label>
+              <div className="flex items-center gap-2">
                 <input 
                   type="number"
                   value={maxFileSize}
                   onChange={(e) => setMaxFileSize(e.target.value)}
-                  className="w-full p-3.5 bg-gray-50 border border-gray-200/80 rounded-2xl text-sm font-bold text-gray-900 focus:outline-none"
+                  className="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-medium text-gray-900 focus:outline-none focus:border-gray-400 focus:bg-white transition-all"
                 />
+                <span className="text-sm text-gray-400 shrink-0">MB</span>
               </div>
-            </div>
-
-            <div className="bg-gradient-to-br from-gray-900 to-gray-950 text-white rounded-3xl p-7 shadow-xl space-y-4 border border-gray-800">
-              <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-xl bg-white/10 text-white flex items-center justify-center shrink-0">
-                  <Shield className="w-4 h-4" />
-                </div>
-                <div>
-                  <h3 className="font-bold text-sm">Audit Trail Protection</h3>
-                  <p className="text-[11px] text-gray-400 font-mono">Immutable Logging Active</p>
-                </div>
-              </div>
-              <p className="text-xs text-gray-300 leading-relaxed">
-                All changes to settings record your admin credentials to the audit log table.
+              <p className="text-xs text-amber-600">
+                Not enforced yet. uploads are currently capped at a fixed 25MB regardless of this value.
               </p>
             </div>
           </div>

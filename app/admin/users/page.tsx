@@ -61,19 +61,17 @@ export default async function AdminUsersPage({
   }));
 
   return (
-    <div className="w-full flex flex-col gap-8 animate-in fade-in duration-500">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-black text-gray-900 tracking-tight">Directory</h1>
-          <p className="text-sm text-gray-500 mt-1">
-            Manage platform users, roles, and access. ({totalUsers || 0} total)
-          </p>
-        </div>
+    <div className="w-full max-w-6xl mx-auto flex flex-col gap-6">
+      <div>
+        <h1 className="font-logo text-3xl font-bold text-[#23201D] tracking-tight">Users</h1>
+        <p className="text-sm text-gray-500 mt-1">
+          {totalUsers || 0} people registered on the platform.
+        </p>
       </div>
 
       <UserSearchControls initialQuery={query} initialRole={roleFilter} />
 
-        <UserListTable users={formattedUsers} totalUsers={totalUsers || 0} query={query} roleFilter={roleFilter} viewerIsSuperAdmin={viewerIsSuperAdmin} viewerId={caller?.id} />
+      <UserListTable users={formattedUsers} totalUsers={totalUsers || 0} query={query} roleFilter={roleFilter} viewerIsSuperAdmin={viewerIsSuperAdmin} viewerId={caller?.id} />
     </div>
   );
 }

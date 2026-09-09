@@ -3,7 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { PdfViewer } from "@/components/admin/PdfViewer";
 import { DocumentMetadata } from "@/components/admin/DocumentMetadata";
 import { ReviewActionPanel } from "@/components/admin/ReviewActionPanel";
-import { AlertTriangle } from "lucide-react";
+import { AlertTriangle, Clock3 } from "lucide-react";
 import { GetObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { createR2Client, R2_BUCKET_NAME } from "@/lib/r2";
@@ -30,6 +30,7 @@ export default async function DocumentReviewPage({
       file_size,
       flag_reason,
       flagged_by,
+      feedback_attachment_key,
       created_at,
       language,
       note_types,
@@ -51,16 +52,16 @@ export default async function DocumentReviewPage({
       .single();
 
     return (
-      <div className="w-full h-[80vh] flex flex-col items-center justify-center p-6 text-center">
-        <div className="w-16 h-16 rounded-3xl bg-amber-50 border border-amber-100 flex items-center justify-center text-amber-600 mb-4 shadow-xs">
-          <AlertTriangle className="w-8 h-8" />
+      <div className="w-full h-full flex flex-col items-center justify-center p-6 text-center bg-[#FBF8F3]">
+        <div className="w-14 h-14 rounded-2xl bg-amber-50 border border-amber-100 flex items-center justify-center text-amber-600 mb-4">
+          <AlertTriangle className="w-6 h-6" />
         </div>
-        <h2 className="text-xl font-black text-gray-900 tracking-tight">Document Currently Locked</h2>
-        <p className="text-xs text-gray-500 max-w-sm mt-1 mb-6">
-          This submission is actively being reviewed by another administrator ({reviewerProfile?.email || "Unknown Admin"}). Please select a different item from the queue.
+        <h2 className="font-logo text-xl font-bold text-[#23201D]">Someone else has this one</h2>
+        <p className="text-sm text-gray-500 max-w-sm mt-1.5 mb-6">
+          {reviewerProfile?.email || "Another admin"} is currently reviewing this submission. Pick a different item from the queue.
         </p>
-        <a href="/admin/queue" className="px-5 py-2.5 bg-gray-900 text-white text-xs font-bold uppercase tracking-wider rounded-xl shadow-md hover:bg-gray-800 transition-colors">
-          Return to Queue
+        <a href="/admin/queue" className="px-5 py-2.5 bg-[#23201D] text-white text-sm font-semibold rounded-xl hover:bg-black transition-colors">
+          Back to queue
         </a>
       </div>
     );
@@ -84,6 +85,15 @@ export default async function DocumentReviewPage({
     reporterEmail = reporterProfile?.email ?? null;
   }
 
+  let feedbackAttachmentUrl: string | null = null;
+  if (note.feedback_attachment_key) {
+    const attachmentCommand = new GetObjectCommand({
+      Bucket: R2_BUCKET_NAME,
+      Key: note.feedback_attachment_key,
+    });
+    feedbackAttachmentUrl = await getSignedUrl(r2, attachmentCommand, { expiresIn: 3600 });
+  }
+
   const formattedNote = {
     id: note.id,
     title: note.title,
@@ -92,25 +102,40 @@ export default async function DocumentReviewPage({
     reporterEmail,
     fileSize: note.file_size || 0,
     flagReason: note.flag_reason || null,
+    feedbackAttachmentUrl,
     status: note.status,
     createdAt: note.created_at,
     language: note.language || "EN",
     noteTypes: note.note_types || [],
   };
 
+  const isChangesRequested = note.status === "changes_requested";
+
   return (
-    <div className="flex flex-col lg:flex-row h-[calc(100vh-4rem)] bg-gray-50 overflow-hidden relative">
-      <div className="flex-1 h-full bg-gray-950 overflow-hidden relative shadow-[inset_-10px_0_20px_rgba(0,0,0,0.2)] z-0">
-        <PdfViewer documentId={formattedNote.id} title={formattedNote.title} fileUrl={fileUrl} />
+    <div className="flex flex-col lg:flex-row h-full bg-[#FBF8F3] overflow-hidden relative">
+      <div className="flex-1 h-full bg-[#3D3A36] overflow-hidden relative z-0">
+        <PdfViewer documentId={formattedNote.id} title={formattedNote.title} fileUrl={fileUrl} readOnly={isChangesRequested} />
       </div>
       
-      <div className="w-full lg:w-[460px] h-full bg-[#FAFAFA] border-l border-gray-200 flex flex-col justify-between overflow-y-auto shadow-2xl z-10 pt-12 lg:pt-0">
+      <div className="w-full lg:w-[420px] h-full bg-white border-l border-black/5 flex flex-col justify-between overflow-y-auto z-10">
         <DocumentMetadata note={formattedNote} />
-        <ReviewActionPanel
-          noteId={formattedNote.id}
-          currentHoursAwarded={note.hours_awarded}
-          currentStatus={note.status}
-        />
+        {isChangesRequested ? (
+          <div className="border-t border-orange-100 bg-orange-50/60 p-6 flex flex-col gap-2 shrink-0">
+            <div className="flex items-center gap-2 text-orange-800 text-sm font-semibold">
+              <Clock3 className="w-4 h-4" /> Waiting on the student
+            </div>
+            <p className="text-xs text-orange-900/80 leading-relaxed">
+              This note is out with the submitter for the fixes requested above. It can&apos;t be claimed or
+              re-reviewed until they resubmit — it&apos;ll return to the Pending queue automatically when they do.
+            </p>
+          </div>
+        ) : (
+          <ReviewActionPanel
+            noteId={formattedNote.id}
+            currentHoursAwarded={note.hours_awarded}
+            currentStatus={note.status}
+          />
+        )}
       </div>
     </div>
   );

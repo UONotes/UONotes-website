@@ -17,7 +17,7 @@ export default async function DashboardPage() {
   const [{ data: notes, error }, { data: savedNotes, error: savedError }] = await Promise.all([
     supabase
       .from("notes")
-      .select("id, title, status, hours_awarded, flag_reason")
+      .select("id, title, status, hours_awarded, flag_reason, feedback_attachment_key")
       .eq("uploader_id", user.id)
       .order("created_at", { ascending: false }),
     supabase
