@@ -56,7 +56,7 @@ export default async function AdminUsersPage({
     // THE FIX: Explicitly cast the string to the expected union type to satisfy strict Next.js builds
     role: (user.is_super_admin ? "SUPER_ADMIN" : user.is_admin ? "ADMIN" : "STUDENT") as "SUPER_ADMIN" | "ADMIN" | "STUDENT",
     status: user.status || "ACTIVE",
-    joinedAt: new Date(user.created_at).toLocaleDateString("en-US", { month: 'short', year: 'numeric' }),
+    joinedAt: new Date(user.created_at).toLocaleDateString("en-US", { month: 'short', day: 'numeric', year: 'numeric' }),
     submissionCount: user.notes?.[0]?.count || 0,
   }));
 
