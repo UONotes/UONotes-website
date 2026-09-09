@@ -3,7 +3,8 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { Users, FileStack, Clock, Award, ArrowRight } from "lucide-react";
 
-function formatRelativeTime(dateString: string): string {
+function formatRelativeTime(dateString: string | null): string {
+  if (!dateString) return "Never";
   const date = new Date(dateString);
   const diffInSec = Math.floor((Date.now() - date.getTime()) / 1000);
 
@@ -13,24 +14,32 @@ function formatRelativeTime(dateString: string): string {
   return `${Math.floor(diffInSec / 86400)}d ago`;
 }
 
-type AdminInfo = { full_name: string | null; email: string | null } | null;
+function formatDuration(hours: number | null): string {
+  if (hours === null) return "—";
+  if (hours < 1) return `${Math.round(hours * 60)}m`;
+  if (hours < 48) return `${hours.toFixed(1)}h`;
+  return `${(hours / 24).toFixed(1)}d`;
+}
 
 type AuditRow = {
   admin_id: string | null;
   action_type: string;
+  target_type: string | null;
+  target_id: string | null;
   created_at: string;
-  admin: AdminInfo | AdminInfo[];
 };
 
 type AdminAgg = {
   id: string;
   name: string;
   email: string;
+  lastActive: string | null;
   approved: number;
   rejected: number;
   changesRequested: number;
+  banned: number;
+  unbanned: number;
   total: number;
-  lastActive: string;
 };
 
 export default async function AdminAnalyticsPage() {
@@ -64,7 +73,9 @@ export default async function AdminAnalyticsPage() {
     { count: flaggedCount },
     { count: changesRequestedCount },
     { data: hoursData },
+    { data: adminRoster },
     { data: auditRows },
+    { data: submissionDates },
   ] = await Promise.all([
     supabase.from("profiles").select("*", { count: "exact", head: true }),
     supabase.from("profiles").select("*", { count: "exact", head: true }).gte("created_at", weekAgo),
@@ -77,39 +88,127 @@ export default async function AdminAnalyticsPage() {
     supabase.from("notes").select("*", { count: "exact", head: true }).eq("status", "flagged"),
     supabase.from("notes").select("*", { count: "exact", head: true }).eq("status", "changes_requested"),
     supabase.from("notes").select("hours_awarded").eq("status", "approved"),
+    // The full admin roster — this is the base of the leaderboard, not
+    // the audit log. An admin who's logged in but hasn't reviewed
+    // anything yet should still show up with a real last-active time.
+    supabase.from("profiles").select("id, full_name, email, last_admin_active_at").eq("is_admin", true),
     supabase
       .from("admin_audit_log")
-      .select("admin_id, action_type, created_at, admin:profiles(full_name, email)")
-      .eq("target_type", "note")
-      .order("created_at", { ascending: false })
-      .limit(2000),
+      .select("admin_id, action_type, target_type, target_id, created_at")
+      .in("action_type", ["NOTE_APPROVED", "NOTE_REJECTED", "NOTE_CHANGES_REQUESTED", "BAN", "UNBAN"])
+      .order("created_at", { ascending: true })
+      .limit(5000),
+    supabase.from("notes").select("created_at").gte("created_at", monthAgo),
   ]);
 
   const totalHoursAwarded = (hoursData || []).reduce((sum, n) => sum + (n.hours_awarded || 0), 0);
   const avgDailySubmissions = ((notesLast30 ?? 0) / 30).toFixed(1);
 
   const adminMap = new Map<string, AdminAgg>();
-  for (const row of (auditRows as AuditRow[] | null) || []) {
-    if (!row.admin_id) continue;
-    const adminInfo = Array.isArray(row.admin) ? row.admin[0] : row.admin;
-    const existing = adminMap.get(row.admin_id) ?? {
-      id: row.admin_id,
-      name: adminInfo?.full_name || adminInfo?.email?.split("@")[0] || "Unknown",
-      email: adminInfo?.email || "",
+  for (const admin of adminRoster || []) {
+    adminMap.set(admin.id, {
+      id: admin.id,
+      name: admin.full_name || admin.email?.split("@")[0] || "Unknown",
+      email: admin.email || "",
+      lastActive: admin.last_admin_active_at,
       approved: 0,
       rejected: 0,
       changesRequested: 0,
+      banned: 0,
+      unbanned: 0,
       total: 0,
-      lastActive: row.created_at,
-    };
+    });
+  }
+
+  for (const row of (auditRows as AuditRow[] | null) || []) {
+    if (!row.admin_id) continue;
+    const existing = adminMap.get(row.admin_id);
+    if (!existing) continue; // admin no longer in the roster (demoted/removed)
     existing.total += 1;
     if (row.action_type === "NOTE_APPROVED") existing.approved += 1;
     if (row.action_type === "NOTE_REJECTED") existing.rejected += 1;
     if (row.action_type === "NOTE_CHANGES_REQUESTED") existing.changesRequested += 1;
-    if (row.created_at > existing.lastActive) existing.lastActive = row.created_at;
-    adminMap.set(row.admin_id, existing);
+    if (row.action_type === "BAN") existing.banned += 1;
+    if (row.action_type === "UNBAN") existing.unbanned += 1;
   }
-  const adminStats = Array.from(adminMap.values()).sort((a, b) => b.total - a.total);
+
+  const adminStats = Array.from(adminMap.values()).sort((a, b) => {
+    const aTime = a.lastActive ? new Date(a.lastActive).getTime() : 0;
+    const bTime = b.lastActive ? new Date(b.lastActive).getTime() : 0;
+    return bTime - aTime;
+  });
+
+  // --- Review turnaround time & resubmission success rate ---
+  // Both are derived from the same audit log rows (sorted ascending
+  // above), so a note's *first* decision is just the first time we see
+  // its target_id, and "ever sent back for fixes" is any note with a
+  // NOTE_CHANGES_REQUESTED entry.
+  const noteDecisionRows = ((auditRows as AuditRow[] | null) || []).filter(
+    (r) => r.target_type === "note" && r.target_id
+  );
+
+  const firstDecisionAt = new Map<string, string>();
+  const changesRequestedNoteIds = new Set<string>();
+  for (const row of noteDecisionRows) {
+    const id = row.target_id as string;
+    if (!firstDecisionAt.has(id)) firstDecisionAt.set(id, row.created_at);
+    if (row.action_type === "NOTE_CHANGES_REQUESTED") changesRequestedNoteIds.add(id);
+  }
+
+  const relevantNoteIds = Array.from(new Set([...firstDecisionAt.keys(), ...changesRequestedNoteIds]));
+  const { data: relevantNotes } = relevantNoteIds.length > 0
+    ? await supabase.from("notes").select("id, created_at, status").in("id", relevantNoteIds)
+    : { data: [] as { id: string; created_at: string; status: string }[] };
+
+  const noteInfoMap = new Map((relevantNotes || []).map((n) => [n.id, n]));
+
+  let turnaroundTotalHours = 0;
+  let turnaroundCount = 0;
+  for (const [noteId, decisionAt] of firstDecisionAt) {
+    const note = noteInfoMap.get(noteId);
+    if (!note) continue;
+    const hours = (new Date(decisionAt).getTime() - new Date(note.created_at).getTime()) / (1000 * 60 * 60);
+    if (hours >= 0) {
+      turnaroundTotalHours += hours;
+      turnaroundCount += 1;
+    }
+  }
+  const avgTurnaroundHours = turnaroundCount > 0 ? turnaroundTotalHours / turnaroundCount : null;
+
+  let resubmittedApproved = 0;
+  let resubmittedRejected = 0;
+  let resubmittedInProgress = 0; // back to pending, awaiting a fresh review
+  let resubmittedStillStuck = 0; // never resubmitted, or requested again
+  for (const noteId of changesRequestedNoteIds) {
+    const status = noteInfoMap.get(noteId)?.status;
+    if (status === "approved") resubmittedApproved += 1;
+    else if (status === "rejected") resubmittedRejected += 1;
+    else if (status === "pending") resubmittedInProgress += 1;
+    else resubmittedStillStuck += 1; // changes_requested (again) or flagged
+  }
+  const totalEverChangesRequested = changesRequestedNoteIds.size;
+  const resubmissionSuccessRate = totalEverChangesRequested > 0
+    ? Math.round((resubmittedApproved / totalEverChangesRequested) * 100)
+    : null;
+
+  // --- Daily submission volume, last 30 days ---
+  const dayBuckets: { date: string; label: string; count: number }[] = [];
+  for (let i = 29; i >= 0; i--) {
+    const d = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
+    const key = d.toISOString().slice(0, 10);
+    dayBuckets.push({
+      date: key,
+      label: d.toLocaleDateString("en-US", { month: "short", day: "numeric" }),
+      count: 0,
+    });
+  }
+  const bucketIndex = new Map(dayBuckets.map((b, i) => [b.date, i]));
+  for (const row of submissionDates || []) {
+    const key = new Date(row.created_at).toISOString().slice(0, 10);
+    const idx = bucketIndex.get(key);
+    if (idx !== undefined) dayBuckets[idx].count += 1;
+  }
+  const maxDailyCount = Math.max(1, ...dayBuckets.map((b) => b.count));
 
   return (
     <div className="w-full max-w-6xl mx-auto space-y-6">
@@ -127,6 +226,27 @@ export default async function AdminAnalyticsPage() {
         <StatCell icon={FileStack} label="Total submissions" value={totalNotes ?? 0} sub={`${avgDailySubmissions}/day avg, last 30d`} color="orange" />
         <StatCell icon={Clock} label="Pending review" value={pendingCount ?? 0} sub={`${flaggedCount ?? 0} flagged`} color="purple" />
         <StatCell icon={Award} label="Hours awarded" value={totalHoursAwarded} sub={`${approvedCount ?? 0} approved notes`} color="red" />
+      </div>
+
+      {/* Submission volume trend */}
+      <div className="bg-white border border-black/5 rounded-2xl p-6">
+        <h2 className="font-logo text-lg font-bold text-[#23201D]">Submissions, last 30 days</h2>
+        <p className="text-xs text-gray-400 mt-0.5 mb-6">Daily volume of new note submissions. Hover a bar for the exact count.</p>
+        <div className="h-32 flex items-end gap-[3px]">
+          {dayBuckets.map((b) => (
+            <div
+              key={b.date}
+              title={`${b.label}: ${b.count} submission${b.count === 1 ? "" : "s"}`}
+              className="flex-1 bg-brand-red/70 hover:bg-brand-red rounded-t-sm transition-colors min-h-[3px]"
+              style={{ height: `${(b.count / maxDailyCount) * 100}%` }}
+            />
+          ))}
+        </div>
+        <div className="flex justify-between mt-2 text-[10px] text-gray-400">
+          <span>{dayBuckets[0].label}</span>
+          <span>{dayBuckets[Math.floor(dayBuckets.length / 2)].label}</span>
+          <span>{dayBuckets[dayBuckets.length - 1].label}</span>
+        </div>
       </div>
 
       {/* Signup & submission detail */}
@@ -161,29 +281,63 @@ export default async function AdminAnalyticsPage() {
         </div>
       </div>
 
+      {/* Review speed & resubmission outcomes */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="bg-white border border-black/5 rounded-2xl p-6">
+          <h2 className="font-logo text-lg font-bold text-[#23201D]">Review turnaround</h2>
+          <p className="text-xs text-gray-400 mt-0.5 mb-4">Time from submission to a note&apos;s first decision.</p>
+          <p className="text-3xl font-bold font-logo text-[#23201D]">{formatDuration(avgTurnaroundHours)}</p>
+          <p className="text-xs text-gray-500 mt-1">average, across {turnaroundCount} decided submission{turnaroundCount === 1 ? "" : "s"}</p>
+        </div>
+
+        <div className="bg-white border border-black/5 rounded-2xl p-6">
+          <h2 className="font-logo text-lg font-bold text-[#23201D]">Resubmission success rate</h2>
+          <p className="text-xs text-gray-400 mt-0.5 mb-4">Of notes ever sent back for fixes, how many ended up approved.</p>
+          {totalEverChangesRequested === 0 ? (
+            <p className="text-sm text-gray-400">No notes have been sent back for fixes yet.</p>
+          ) : (
+            <>
+              <p className="text-3xl font-bold font-logo text-[#23201D]">{resubmissionSuccessRate}%</p>
+              <p className="text-xs text-gray-500 mt-1 mb-3">
+                {resubmittedApproved} of {totalEverChangesRequested} eventually approved
+              </p>
+              <div className="space-y-2">
+                <StatusBar label="Approved" count={resubmittedApproved} total={totalEverChangesRequested} color="bg-emerald-500" />
+                <StatusBar label="Back in queue" count={resubmittedInProgress} total={totalEverChangesRequested} color="bg-blue-500" />
+                <StatusBar label="Still awaiting fixes" count={resubmittedStillStuck} total={totalEverChangesRequested} color="bg-orange-500" />
+                <StatusBar label="Rejected" count={resubmittedRejected} total={totalEverChangesRequested} color="bg-rose-500" />
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+
       {/* Per-admin leaderboard */}
       <div className="bg-white border border-black/5 rounded-2xl overflow-hidden">
         <div className="px-6 py-4 border-b border-black/5">
           <h2 className="font-logo text-lg font-bold text-[#23201D]">Admin activity</h2>
-          <p className="text-xs text-gray-400 mt-0.5">Based on the last 2,000 logged decisions. Click an admin to see their full history.</p>
+          <p className="text-xs text-gray-400 mt-0.5">
+            &quot;Last active&quot; is when they last loaded an admin page, not their last review. Click an admin for their full history.
+          </p>
         </div>
         <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse min-w-[600px]">
+          <table className="w-full text-left border-collapse min-w-[700px]">
             <thead>
               <tr className="bg-gray-50/60 border-b border-black/5 text-xs text-gray-400">
                 <th className="px-5 py-3 font-medium">Admin</th>
                 <th className="px-5 py-3 font-medium text-center">Approved</th>
                 <th className="px-5 py-3 font-medium text-center">Rejected</th>
                 <th className="px-5 py-3 font-medium text-center">Fixes requested</th>
-                <th className="px-5 py-3 font-medium text-center">Total</th>
+                <th className="px-5 py-3 font-medium text-center">Banned</th>
+                <th className="px-5 py-3 font-medium text-center">Unbanned</th>
                 <th className="px-5 py-3 font-medium text-right">Last active</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-black/5 text-sm">
               {adminStats.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-5 py-10 text-center text-gray-400 text-sm">
-                    No review activity logged yet.
+                  <td colSpan={7} className="px-5 py-10 text-center text-gray-400 text-sm">
+                    No admins found.
                   </td>
                 </tr>
               ) : (
@@ -203,7 +357,8 @@ export default async function AdminAnalyticsPage() {
                     <td className="px-5 py-3.5 text-center text-emerald-700 font-medium">{admin.approved}</td>
                     <td className="px-5 py-3.5 text-center text-rose-600 font-medium">{admin.rejected}</td>
                     <td className="px-5 py-3.5 text-center text-orange-600 font-medium">{admin.changesRequested}</td>
-                    <td className="px-5 py-3.5 text-center font-semibold text-gray-900">{admin.total}</td>
+                    <td className="px-5 py-3.5 text-center text-rose-600 font-medium">{admin.banned}</td>
+                    <td className="px-5 py-3.5 text-center text-emerald-700 font-medium">{admin.unbanned}</td>
                     <td className="px-5 py-3.5 text-right">
                       <Link href={`/admin/analytics/${admin.id}`} className="inline-flex items-center gap-1 text-xs text-gray-400 hover:text-brand-red transition-colors">
                         {formatRelativeTime(admin.lastActive)} <ArrowRight className="w-3 h-3" />

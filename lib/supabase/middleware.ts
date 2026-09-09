@@ -1,4 +1,5 @@
 import { createServerClient, type CookieOptionsWithName } from "@supabase/ssr";
+import { createClient as createServiceClient } from "@supabase/supabase-js";
 import { NextResponse, type NextRequest } from "next/server";
 
 // Paths that require being logged in regardless of admin status
@@ -69,6 +70,26 @@ export async function updateSession(request: NextRequest) {
 
     if (!profile?.is_admin) {
       return NextResponse.redirect(new URL("/", request.url));
+    }
+
+    // Record real "last active in admin" time, separate from — and more
+    // accurate than — inferring it from their last review decision. Uses
+    // the service-role client since this writes a column the user's own
+    // RLS policy may not grant them write access to. Best-effort: a
+    // failure here should never block the actual page from loading.
+    if (!isIgnoredAsset) {
+      try {
+        const supabaseAdmin = createServiceClient(
+          process.env.NEXT_PUBLIC_SUPABASE_URL!,
+          process.env.SUPABASE_SERVICE_ROLE_KEY!
+        );
+        await supabaseAdmin
+          .from("profiles")
+          .update({ last_admin_active_at: new Date().toISOString() })
+          .eq("id", user.id);
+      } catch (err) {
+        console.error("Failed to record admin activity:", err);
+      }
     }
   }
 
