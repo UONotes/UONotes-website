@@ -5,6 +5,7 @@ import Link from "next/link";
 import { motion } from "framer-motion";
 import { ArrowLeft, ChevronRight, Download, Bookmark, Flag, Loader2, Languages, User, Calendar, HardDrive, FileType } from "lucide-react";import { ReportModal } from "@/components/notes/ReportModal";
 import { SaveNoteButton } from "@/components/notes/SaveNoteButton";
+import { formatDate } from "@/lib/dateFormat";
 
 const notebookStyle = {
   backgroundImage: `
@@ -180,7 +181,7 @@ export function NoteViewer({
                 <Calendar className="w-4 h-4 text-gray-300 mt-0.5 shrink-0" />
                 <div>
                   <p className="text-gray-400 uppercase tracking-wider text-[10px] font-bold mb-0.5">Uploaded</p>
-                  <p className="font-semibold text-gray-800">{new Date(note.created_at).toLocaleDateString("en-US")}</p>
+                  <p className="font-semibold text-gray-800">{formatDate(note.created_at)}</p>
                 </div>
               </div>
               <div className="flex items-start gap-2.5">

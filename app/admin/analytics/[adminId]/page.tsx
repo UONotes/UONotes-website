@@ -5,6 +5,7 @@ import { GetObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { createR2Client, R2_BUCKET_NAME } from "@/lib/r2";
 import { ArrowLeft, Check, XCircle, MessageSquareText, Paperclip, Ban, Unlock } from "lucide-react";
+import { formatDate } from "@/lib/dateFormat";
 
 type NoteAuditDetails = {
   note_title?: string | null;
@@ -41,16 +42,6 @@ function formatRelativeTime(dateString: string | null): string {
     if (diffInSec < 3600) return `${Math.floor(diffInSec / 60)}m ago`;
     if (diffInSec < 86400) return `${Math.floor(diffInSec / 3600)}h ago`;
     return `${Math.floor(diffInSec / 86400)}d ago`;
-  }
-  
-  function formatDateTime(dateString: string): string {
-    return new Date(dateString).toLocaleString("en-US", {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-      hour: "numeric",
-      minute: "2-digit",
-    });
   }
 
 export default async function AdminAnalyticsDetailPage({
@@ -228,7 +219,7 @@ export default async function AdminAnalyticsDetailPage({
                         )}
                       </div>
                       <span className="text-xs text-gray-400 shrink-0 whitespace-nowrap">
-                        {new Date(entry.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                        {formatDate(entry.createdAt)}
                       </span>
                     </div>
                   </li>
@@ -258,7 +249,7 @@ export default async function AdminAnalyticsDetailPage({
                       )}
                     </div>
                     <span className="text-xs text-gray-400 shrink-0 whitespace-nowrap">
-                      {new Date(entry.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                      {formatDate(entry.createdAt)}
                     </span>
                   </div>
                 </li>

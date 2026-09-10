@@ -3,6 +3,7 @@
 import { createClient as createAdminClient } from "@supabase/supabase-js";
 import { createClient as createServerClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
+import { formatMonthYear } from "@/lib/dateFormat";
 
 // Initialize the Admin client. This BYPASSES RLS. 
 // It must never be exposed to the browser.
@@ -60,7 +61,7 @@ export async function fetchMoreUsersAction(
     name: user.full_name || "Unknown",
     email: user.email,
     role: (user.is_super_admin ? "SUPER_ADMIN" : user.is_admin ? "ADMIN" : "STUDENT") as "SUPER_ADMIN" | "ADMIN" | "STUDENT",    status: user.status || "ACTIVE",
-    joinedAt: new Date(user.created_at).toLocaleDateString("en-US", { month: "short", year: "numeric" }),
+    joinedAt: formatMonthYear(user.created_at),
     submissionCount: user.notes?.[0]?.count || 0,
   }));
 }

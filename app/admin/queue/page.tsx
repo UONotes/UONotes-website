@@ -5,7 +5,8 @@ import Link from "next/link";
 import { QueueHeader } from "@/components/admin/QueueHeader";
 import { QueueStats } from "@/components/admin/QueueStats";
 import { Loader2, FileText, AlertTriangle, Lock, RotateCcw, ArrowRight } from "lucide-react";
-import { createClient } from "@/lib/supabase/client"; 
+import { createClient } from "@/lib/supabase/client";
+import { formatShortDate } from "@/lib/dateFormat";
 
 type QueueNote = {
   id: string;
@@ -230,9 +231,7 @@ export default function AdminQueuePage() {
 
                       <td className="px-5 py-3.5">
                         <span className="text-xs text-gray-400">
-                          {new Date(note.created_at).toLocaleDateString("en-US", {
-                            month: "short", day: "numeric"
-                          })}
+                          {formatShortDate(note.created_at)}
                         </span>
                       </td>
 
