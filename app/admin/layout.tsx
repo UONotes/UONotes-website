@@ -10,6 +10,7 @@ import {
   Settings,
   BookOpen,
   BarChart3,
+  History,
   ArrowLeft,
   Menu,
   X,
@@ -19,6 +20,7 @@ import { createClient } from "@/lib/supabase/client";
 const ADMIN_NAV = [
   { name: "Overview", href: "/admin", icon: LayoutGrid },
   { name: "Review Queue", href: "/admin/queue", icon: FileStack },
+  { name: "Decision History", href: "/admin/history", icon: History },
   { name: "Users", href: "/admin/users", icon: Users },
   { name: "Guidelines", href: "/admin/guidelines", icon: BookOpen },
   { name: "Settings", href: "/admin/settings", icon: Settings },
@@ -198,7 +200,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
       {/* MAIN CONTENT */}
       <main className="flex-1 h-full overflow-y-auto relative">
-        {pathname.startsWith("/admin/review/") ? (
+        {pathname.startsWith("/admin/review/") || pathname.startsWith("/admin/history/") ? (
           children
         ) : (
           <div className="p-6 sm:p-10 max-w-6xl mx-auto min-h-full">

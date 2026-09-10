@@ -1,9 +1,19 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { buildDailyBuckets } from "@/lib/analytics";
+import { buildDailyBuckets, computeTrend, pct, type Trend } from "@/lib/analytics";
 import { TrendChart } from "@/components/admin/TrendChart";
-import { Users, FileStack, Clock, Award, ArrowRight } from "lucide-react";
+import { DeltaBadge } from "@/components/admin/DeltaBadge";
+import {
+  Users,
+  FileStack,
+  Award,
+  ArrowRight,
+  CheckCircle2,
+  XCircle,
+  ShieldAlert,
+  Gauge,
+} from "lucide-react";
 
 function formatRelativeTime(dateString: string | null): string {
   if (!dateString) return "Never";
@@ -61,20 +71,29 @@ export default async function AdminAnalyticsPage() {
 
   const now = new Date();
   const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString();
+  const twoWeeksAgo = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000).toISOString();
   const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString();
+  const twoMonthsAgo = new Date(now.getTime() - 60 * 24 * 60 * 60 * 1000).toISOString();
 
   const [
     { count: totalUsers },
     { count: newUsersWeek },
     { count: newUsersMonth },
+    { count: prevWeekUsers },
+    { count: prevMonthUsers },
     { count: totalNotes },
     { count: notesLast30 },
+    { count: newNotesWeek },
+    { count: prevWeekNotes },
+    { count: prevMonthNotes },
     { count: pendingCount },
     { count: approvedCount },
     { count: rejectedCount },
     { count: flaggedCount },
     { count: changesRequestedCount },
     { data: hoursData },
+    { data: hoursThisWeekData },
+    { data: hoursPrevWeekData },
     { data: adminRoster },
     { data: auditRows },
     { data: submissionDates },
@@ -83,14 +102,21 @@ export default async function AdminAnalyticsPage() {
     supabase.from("profiles").select("*", { count: "exact", head: true }),
     supabase.from("profiles").select("*", { count: "exact", head: true }).gte("created_at", weekAgo),
     supabase.from("profiles").select("*", { count: "exact", head: true }).gte("created_at", monthAgo),
+    supabase.from("profiles").select("*", { count: "exact", head: true }).gte("created_at", twoWeeksAgo).lt("created_at", weekAgo),
+    supabase.from("profiles").select("*", { count: "exact", head: true }).gte("created_at", twoMonthsAgo).lt("created_at", monthAgo),
     supabase.from("notes").select("*", { count: "exact", head: true }),
     supabase.from("notes").select("*", { count: "exact", head: true }).gte("created_at", monthAgo),
+    supabase.from("notes").select("*", { count: "exact", head: true }).gte("created_at", weekAgo),
+    supabase.from("notes").select("*", { count: "exact", head: true }).gte("created_at", twoWeeksAgo).lt("created_at", weekAgo),
+    supabase.from("notes").select("*", { count: "exact", head: true }).gte("created_at", twoMonthsAgo).lt("created_at", monthAgo),
     supabase.from("notes").select("*", { count: "exact", head: true }).eq("status", "pending"),
     supabase.from("notes").select("*", { count: "exact", head: true }).eq("status", "approved"),
     supabase.from("notes").select("*", { count: "exact", head: true }).eq("status", "rejected"),
     supabase.from("notes").select("*", { count: "exact", head: true }).eq("status", "flagged"),
     supabase.from("notes").select("*", { count: "exact", head: true }).eq("status", "changes_requested"),
     supabase.from("notes").select("hours_awarded").eq("status", "approved"),
+    supabase.from("notes").select("hours_awarded").eq("status", "approved").gte("reviewed_at", weekAgo),
+    supabase.from("notes").select("hours_awarded").eq("status", "approved").gte("reviewed_at", twoWeeksAgo).lt("reviewed_at", weekAgo),
     // The full admin roster — this is the base of the leaderboard, not
     // the audit log. An admin who's logged in but hasn't reviewed
     // anything yet should still show up with a real last-active time.
@@ -106,7 +132,37 @@ export default async function AdminAnalyticsPage() {
   ]);
 
   const totalHoursAwarded = (hoursData || []).reduce((sum, n) => sum + (n.hours_awarded || 0), 0);
-  const avgDailySubmissions = ((notesLast30 ?? 0) / 30).toFixed(1);
+  const hoursThisWeek = (hoursThisWeekData || []).reduce((sum, n) => sum + (n.hours_awarded || 0), 0);
+  const hoursPrevWeek = (hoursPrevWeekData || []).reduce((sum, n) => sum + (n.hours_awarded || 0), 0);
+  const needsAttention = (pendingCount ?? 0) + (flaggedCount ?? 0);
+
+  // --- Week/month-over-week trends ---
+  const usersWeekTrend = computeTrend(newUsersWeek ?? 0, prevWeekUsers ?? 0);
+  const usersMonthTrend = computeTrend(newUsersMonth ?? 0, prevMonthUsers ?? 0);
+  const notesWeekTrend = computeTrend(newNotesWeek ?? 0, prevWeekNotes ?? 0);
+  const notesMonthTrend = computeTrend(notesLast30 ?? 0, prevMonthNotes ?? 0);
+  const hoursWeekTrend = computeTrend(hoursThisWeek, hoursPrevWeek);
+
+  // Plain per-day averages for the two Growth charts. A raw % change
+  // reads as a meaningless "New" badge when the prior 30-day window had
+  // zero activity (very common on a young dataset) — showing both
+  // months' daily averages side by side stays informative either way.
+  const avgSubmissionsThisMonth = (notesLast30 ?? 0) / 30;
+  const avgSubmissionsPrevMonth = (prevMonthNotes ?? 0) / 30;
+  const avgSignupsThisMonth = (newUsersMonth ?? 0) / 30;
+  const avgSignupsPrevMonth = (prevMonthUsers ?? 0) / 30;
+  const submissionsComparisonText = `${avgSubmissionsThisMonth.toFixed(1)}/day this month vs ${avgSubmissionsPrevMonth.toFixed(1)}/day last month`;
+  const signupsComparisonText = `${avgSignupsThisMonth.toFixed(1)}/day this month vs ${avgSignupsPrevMonth.toFixed(1)}/day last month`;
+
+  // --- Submission funnel percentages ---
+  // "Decided" excludes anything still pending/flagged/awaiting fixes —
+  // it's the share of submissions a reviewer has actually ruled on.
+  const decidedCount = (approvedCount ?? 0) + (rejectedCount ?? 0);
+  const approvalRate = pct(approvedCount ?? 0, decidedCount);
+  const rejectionRate = pct(rejectedCount ?? 0, decidedCount);
+  // Of everything ever approved, how much later got reported.
+  const everApproved = (approvedCount ?? 0) + (flaggedCount ?? 0);
+  const flagRate = pct(flaggedCount ?? 0, everApproved);
 
   const adminMap = new Map<string, AdminAgg>();
   for (const admin of adminRoster || []) {
@@ -141,6 +197,14 @@ export default async function AdminAnalyticsPage() {
     const bTime = b.lastActive ? new Date(b.lastActive).getTime() : 0;
     return bTime - aTime;
   });
+
+  // Share of total note decisions each admin handled, and each admin's
+  // own approval rate — bans/unbans don't count toward either, since
+  // they're a different kind of action.
+  const totalNoteDecisions = adminStats.reduce(
+    (sum, a) => sum + a.approved + a.rejected + a.changesRequested,
+    0
+  );
 
   // --- Review turnaround time & resubmission success rate ---
   // Both are derived from the same audit log rows (sorted ascending
@@ -200,61 +264,135 @@ export default async function AdminAnalyticsPage() {
   const signupBuckets = buildDailyBuckets(signupDates || [], 30, now);
 
   return (
-    <div className="w-full max-w-6xl mx-auto space-y-6">
+    <div className="w-full max-w-6xl mx-auto space-y-10">
 
       <div>
         <h1 className="font-logo text-3xl font-bold text-[#23201D] tracking-tight">Analytics</h1>
         <p className="text-sm text-gray-500 mt-1">
-          Visible to super admins only.
+          How the platform is doing, at a glance. Visible to super admins only.
         </p>
       </div>
 
-      {/* Top-level stats */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <StatCell icon={Users} label="Total users" value={totalUsers ?? 0} sub={`+${newUsersWeek ?? 0} this week`} color="blue" />
-        <StatCell icon={FileStack} label="Total submissions" value={totalNotes ?? 0} sub={`${avgDailySubmissions}/day avg, last 30d`} color="orange" />
-        <StatCell icon={Clock} label="Pending review" value={pendingCount ?? 0} sub={`${flaggedCount ?? 0} flagged`} color="purple" />
-        <StatCell icon={Award} label="Hours awarded" value={totalHoursAwarded} sub={`${approvedCount ?? 0} approved notes`} color="red" />
-      </div>
+      {/* ── Overview ─────────────────────────────────────────── */}
+      <section className="space-y-4">
+        <SectionHeader
+          title="This week at a glance"
+          description="Headline numbers, compared to the 7 days before."
+        />
+        <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
+          <StatCell
+            icon={Users}
+            label="Total users"
+            value={totalUsers ?? 0}
+            sub={`${newUsersWeek ?? 0} new this week`}
+            color="blue"
+            trend={usersWeekTrend}
+          />
+          <StatCell
+            icon={FileStack}
+            label="Total submissions"
+            value={totalNotes ?? 0}
+            sub={`${newNotesWeek ?? 0} new this week`}
+            color="orange"
+            trend={notesWeekTrend}
+          />
+          <StatCell
+            icon={Award}
+            label="Hours awarded this week"
+            value={hoursThisWeek}
+            sub={`${totalHoursAwarded} lifetime total`}
+            color="red"
+            trend={hoursWeekTrend}
+          />
+          <StatCell
+            icon={CheckCircle2}
+            label="Approval rate"
+            value={`${approvalRate}%`}
+            sub={`${approvedCount ?? 0} of ${decidedCount} decided`}
+            color="emerald"
+          />
+          <StatCell
+            icon={ShieldAlert}
+            label="Needs attention"
+            value={needsAttention}
+            sub={`${pendingCount ?? 0} pending · ${flaggedCount ?? 0} flagged`}
+            color="purple"
+          />
+          <StatCell
+            icon={Gauge}
+            label="Avg. review turnaround"
+            value={formatDuration(avgTurnaroundHours)}
+            sub={`across ${turnaroundCount} decided submission${turnaroundCount === 1 ? "" : "s"}`}
+            color="gray"
+          />
+        </div>
+      </section>
 
-      {/* Submission volume trend */}
-      <TrendChart
-        title="Submissions, last 30 days"
-        description="Daily volume of new note submissions. Hover a bar for the exact count."
-        buckets={submissionBuckets}
-      />
+      {/* ── Growth ───────────────────────────────────────────── */}
+      <section className="space-y-4">
+        <SectionHeader title="Growth" description="Signups and submissions over the last 30 days." />
 
-      {/* Signup volume trend */}
-      <TrendChart
-        title="Signups, last 30 days"
-        description="Daily volume of new account registrations. Hover a bar for the exact count."
-        buckets={signupBuckets}
-        barColor="bg-blue-500/70"
-        barHoverColor="hover:bg-blue-500"
-      />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <TrendChart
+            title="Submissions"
+            description="Daily volume of new note submissions."
+            buckets={submissionBuckets}
+            total={notesLast30 ?? 0}
+            comparisonText={submissionsComparisonText}
+          />
+          <TrendChart
+            title="Signups"
+            description="Daily volume of new account registrations."
+            buckets={signupBuckets}
+            barColor="bg-blue-500/70"
+            barHoverColor="hover:bg-blue-500"
+            total={newUsersMonth ?? 0}
+            comparisonText={signupsComparisonText}
+          />
+        </div>
 
-      {/* Signup & submission detail */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="bg-white border border-black/5 rounded-2xl p-6">
-          <h2 className="font-logo text-lg font-bold text-[#23201D] mb-4">Signups</h2>
-          <div className="space-y-3 text-sm">
-            <div className="flex items-center justify-between">
-              <span className="text-gray-500">New this week</span>
-              <span className="font-semibold text-gray-900">{newUsersWeek ?? 0}</span>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="bg-white border border-black/5 rounded-2xl p-6">
+            <h3 className="font-logo text-base font-bold text-[#23201D] mb-4">Signups</h3>
+            <div className="space-y-3 text-sm">
+              <DetailRow label="New this week" value={newUsersWeek ?? 0} trend={usersWeekTrend} />
+              <DetailRow label="New this month" value={newUsersMonth ?? 0} trend={usersMonthTrend} />
+              <div className="flex items-center justify-between pt-1 border-t border-black/5">
+                <span className="text-gray-500">Total registered</span>
+                <span className="font-semibold text-gray-900">{totalUsers ?? 0}</span>
+              </div>
             </div>
-            <div className="flex items-center justify-between">
-              <span className="text-gray-500">New this month</span>
-              <span className="font-semibold text-gray-900">{newUsersMonth ?? 0}</span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-gray-500">Total registered</span>
-              <span className="font-semibold text-gray-900">{totalUsers ?? 0}</span>
+          </div>
+
+          <div className="bg-white border border-black/5 rounded-2xl p-6">
+            <h3 className="font-logo text-base font-bold text-[#23201D] mb-4">Submissions</h3>
+            <div className="space-y-3 text-sm">
+              <DetailRow label="New this week" value={newNotesWeek ?? 0} trend={notesWeekTrend} />
+              <DetailRow label="New this month" value={notesLast30 ?? 0} trend={notesMonthTrend} />
+              <div className="flex items-center justify-between pt-1 border-t border-black/5">
+                <span className="text-gray-500">Total all-time</span>
+                <span className="font-semibold text-gray-900">{totalNotes ?? 0}</span>
+              </div>
             </div>
           </div>
         </div>
+      </section>
+
+      {/* ── Submission funnel ────────────────────────────────── */}
+      <section className="space-y-4">
+        <SectionHeader
+          title="Submission funnel"
+          description="How reviewed submissions turn out, and what's still in the pipeline."
+        />
+
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <RatePill icon={CheckCircle2} label="Approval rate" value={approvalRate} color="emerald" sub={`${approvedCount ?? 0} of ${decidedCount} decided`} />
+          <RatePill icon={XCircle} label="Rejection rate" value={rejectionRate} color="rose" sub={`${rejectedCount ?? 0} of ${decidedCount} decided`} />
+          <RatePill icon={ShieldAlert} label="Flag rate" value={flagRate} color="purple" sub={`${flaggedCount ?? 0} of ${everApproved} ever approved`} />
+        </div>
 
         <div className="bg-white border border-black/5 rounded-2xl p-6">
-          <h2 className="font-logo text-lg font-bold text-[#23201D] mb-4">Submission status breakdown</h2>
+          <h3 className="font-logo text-base font-bold text-[#23201D] mb-4">All submissions, by status</h3>
           <div className="space-y-2.5">
             <StatusBar label="Approved" count={approvedCount ?? 0} total={totalNotes ?? 0} color="bg-emerald-500" />
             <StatusBar label="Pending" count={pendingCount ?? 0} total={totalNotes ?? 0} color="bg-blue-500" />
@@ -263,99 +401,131 @@ export default async function AdminAnalyticsPage() {
             <StatusBar label="Rejected" count={rejectedCount ?? 0} total={totalNotes ?? 0} color="bg-rose-500" />
           </div>
         </div>
-      </div>
+      </section>
 
-      {/* Review speed & resubmission outcomes */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="bg-white border border-black/5 rounded-2xl p-6">
-          <h2 className="font-logo text-lg font-bold text-[#23201D]">Review turnaround</h2>
-          <p className="text-xs text-gray-400 mt-0.5 mb-4">Time from submission to a note&apos;s first decision.</p>
-          <p className="text-3xl font-bold font-logo text-[#23201D]">{formatDuration(avgTurnaroundHours)}</p>
-          <p className="text-xs text-gray-500 mt-1">average, across {turnaroundCount} decided submission{turnaroundCount === 1 ? "" : "s"}</p>
-        </div>
+      {/* ── Review performance ───────────────────────────────── */}
+      <section className="space-y-4">
+        <SectionHeader
+          title="Review performance"
+          description="How quickly reviews happen, and what becomes of notes sent back for fixes."
+        />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="bg-white border border-black/5 rounded-2xl p-6">
+            <h3 className="font-logo text-base font-bold text-[#23201D]">Review turnaround</h3>
+            <p className="text-xs text-gray-400 mt-0.5 mb-4">Time from submission to a note&apos;s first decision.</p>
+            <p className="text-3xl font-bold font-logo text-[#23201D]">{formatDuration(avgTurnaroundHours)}</p>
+            <p className="text-xs text-gray-500 mt-1">average, across {turnaroundCount} decided submission{turnaroundCount === 1 ? "" : "s"}</p>
+          </div>
 
-        <div className="bg-white border border-black/5 rounded-2xl p-6">
-          <h2 className="font-logo text-lg font-bold text-[#23201D]">Resubmission success rate</h2>
-          <p className="text-xs text-gray-400 mt-0.5 mb-4">Of notes ever sent back for fixes, how many ended up approved.</p>
-          {totalEverChangesRequested === 0 ? (
-            <p className="text-sm text-gray-400">No notes have been sent back for fixes yet.</p>
-          ) : (
-            <>
-              <p className="text-3xl font-bold font-logo text-[#23201D]">{resubmissionSuccessRate}%</p>
-              <p className="text-xs text-gray-500 mt-1 mb-3">
-                {resubmittedApproved} of {totalEverChangesRequested} eventually approved
-              </p>
-              <div className="space-y-2">
-                <StatusBar label="Approved" count={resubmittedApproved} total={totalEverChangesRequested} color="bg-emerald-500" />
-                <StatusBar label="Back in queue" count={resubmittedInProgress} total={totalEverChangesRequested} color="bg-blue-500" />
-                <StatusBar label="Still awaiting fixes" count={resubmittedStillStuck} total={totalEverChangesRequested} color="bg-orange-500" />
-                <StatusBar label="Rejected" count={resubmittedRejected} total={totalEverChangesRequested} color="bg-rose-500" />
-              </div>
-            </>
-          )}
+          <div className="bg-white border border-black/5 rounded-2xl p-6">
+            <h3 className="font-logo text-base font-bold text-[#23201D]">Resubmission success rate</h3>
+            <p className="text-xs text-gray-400 mt-0.5 mb-4">Of notes ever sent back for fixes, how many ended up approved.</p>
+            {totalEverChangesRequested === 0 ? (
+              <p className="text-sm text-gray-400">No notes have been sent back for fixes yet.</p>
+            ) : (
+              <>
+                <p className="text-3xl font-bold font-logo text-[#23201D]">{resubmissionSuccessRate}%</p>
+                <p className="text-xs text-gray-500 mt-1 mb-3">
+                  {resubmittedApproved} of {totalEverChangesRequested} eventually approved
+                </p>
+                <div className="space-y-2">
+                  <StatusBar label="Approved" count={resubmittedApproved} total={totalEverChangesRequested} color="bg-emerald-500" />
+                  <StatusBar label="Back in queue" count={resubmittedInProgress} total={totalEverChangesRequested} color="bg-blue-500" />
+                  <StatusBar label="Still awaiting fixes" count={resubmittedStillStuck} total={totalEverChangesRequested} color="bg-orange-500" />
+                  <StatusBar label="Rejected" count={resubmittedRejected} total={totalEverChangesRequested} color="bg-rose-500" />
+                </div>
+              </>
+            )}
+          </div>
         </div>
-      </div>
+      </section>
 
-      {/* Per-admin leaderboard */}
-      <div className="bg-white border border-black/5 rounded-2xl overflow-hidden">
-        <div className="px-6 py-4 border-b border-black/5">
-          <h2 className="font-logo text-lg font-bold text-[#23201D]">Admin activity</h2>
-          <p className="text-xs text-gray-400 mt-0.5">
-            &quot;Last active&quot; is when they last loaded an admin page, not their last review. Click an admin for their full history.
-          </p>
-        </div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse min-w-[700px]">
-            <thead>
-              <tr className="bg-gray-50/60 border-b border-black/5 text-xs text-gray-400">
-                <th className="px-5 py-3 font-medium">Admin</th>
-                <th className="px-5 py-3 font-medium text-center">Approved</th>
-                <th className="px-5 py-3 font-medium text-center">Rejected</th>
-                <th className="px-5 py-3 font-medium text-center">Fixes requested</th>
-                <th className="px-5 py-3 font-medium text-center">Banned</th>
-                <th className="px-5 py-3 font-medium text-center">Unbanned</th>
-                <th className="px-5 py-3 font-medium text-right">Last active</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-black/5 text-sm">
-              {adminStats.length === 0 ? (
-                <tr>
-                  <td colSpan={7} className="px-5 py-10 text-center text-gray-400 text-sm">
-                    No admins found.
-                  </td>
+      {/* ── Admin activity ───────────────────────────────────── */}
+      <section className="space-y-4">
+        <SectionHeader
+          title="Admin activity"
+          description={'"Last active" is when they last loaded an admin page, not their last review. Click an admin for their full history.'}
+        />
+        <div className="bg-white border border-black/5 rounded-2xl overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse min-w-[820px]">
+              <thead>
+                <tr className="bg-gray-50/60 border-b border-black/5 text-xs text-gray-400">
+                  <th className="px-5 py-3 font-medium">Admin</th>
+                  <th className="px-5 py-3 font-medium text-center">Approved</th>
+                  <th className="px-5 py-3 font-medium text-center">Rejected</th>
+                  <th className="px-5 py-3 font-medium text-center">Fixes requested</th>
+                  <th className="px-5 py-3 font-medium text-center">Approval rate</th>
+                  <th className="px-5 py-3 font-medium text-center">Share of decisions</th>
+                  <th className="px-5 py-3 font-medium text-center">Banned</th>
+                  <th className="px-5 py-3 font-medium text-center">Unbanned</th>
+                  <th className="px-5 py-3 font-medium text-right">Last active</th>
                 </tr>
-              ) : (
-                adminStats.map((admin) => (
-                  <tr key={admin.id} className="hover:bg-gray-50/50 transition-colors">
-                    <td className="px-5 py-3.5">
-                      <Link href={`/admin/analytics/${admin.id}`} className="flex items-center gap-3 group">
-                        <div className="w-8 h-8 rounded-full bg-red-50 text-brand-red flex items-center justify-center font-semibold text-xs shrink-0">
-                          {admin.name.charAt(0)}
-                        </div>
-                        <div>
-                          <p className="font-semibold text-gray-900 group-hover:text-brand-red transition-colors">{admin.name}</p>
-                          <p className="text-xs text-gray-400">{admin.email}</p>
-                        </div>
-                      </Link>
-                    </td>
-                    <td className="px-5 py-3.5 text-center text-emerald-700 font-medium">{admin.approved}</td>
-                    <td className="px-5 py-3.5 text-center text-rose-600 font-medium">{admin.rejected}</td>
-                    <td className="px-5 py-3.5 text-center text-orange-600 font-medium">{admin.changesRequested}</td>
-                    <td className="px-5 py-3.5 text-center text-rose-600 font-medium">{admin.banned}</td>
-                    <td className="px-5 py-3.5 text-center text-emerald-700 font-medium">{admin.unbanned}</td>
-                    <td className="px-5 py-3.5 text-right">
-                      <Link href={`/admin/analytics/${admin.id}`} className="inline-flex items-center gap-1 text-xs text-gray-400 hover:text-brand-red transition-colors">
-                        {formatRelativeTime(admin.lastActive)} <ArrowRight className="w-3 h-3" />
-                      </Link>
+              </thead>
+              <tbody className="divide-y divide-black/5 text-sm">
+                {adminStats.length === 0 ? (
+                  <tr>
+                    <td colSpan={9} className="px-5 py-10 text-center text-gray-400 text-sm">
+                      No admins found.
                     </td>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
+                ) : (
+                  adminStats.map((admin) => {
+                    const adminDecisions = admin.approved + admin.rejected + admin.changesRequested;
+                    const adminApprovalRate =
+                      admin.approved + admin.rejected > 0
+                        ? pct(admin.approved, admin.approved + admin.rejected)
+                        : null;
+                    const shareOfDecisions = pct(adminDecisions, totalNoteDecisions);
 
+                    return (
+                      <tr key={admin.id} className="hover:bg-gray-50/50 transition-colors">
+                        <td className="px-5 py-3.5">
+                          <Link href={`/admin/analytics/${admin.id}`} className="flex items-center gap-3 group">
+                            <div className="w-8 h-8 rounded-full bg-red-50 text-brand-red flex items-center justify-center font-semibold text-xs shrink-0">
+                              {admin.name.charAt(0)}
+                            </div>
+                            <div>
+                              <p className="font-semibold text-gray-900 group-hover:text-brand-red transition-colors">{admin.name}</p>
+                              <p className="text-xs text-gray-400">{admin.email}</p>
+                            </div>
+                          </Link>
+                        </td>
+                        <td className="px-5 py-3.5 text-center text-emerald-700 font-medium">{admin.approved}</td>
+                        <td className="px-5 py-3.5 text-center text-rose-600 font-medium">{admin.rejected}</td>
+                        <td className="px-5 py-3.5 text-center text-orange-600 font-medium">{admin.changesRequested}</td>
+                        <td className="px-5 py-3.5 text-center text-gray-700 font-medium">
+                          {adminApprovalRate === null ? "—" : `${adminApprovalRate}%`}
+                        </td>
+                        <td className="px-5 py-3.5 text-center text-gray-700 font-medium">
+                          {totalNoteDecisions === 0 ? "—" : `${shareOfDecisions}%`}
+                        </td>
+                        <td className="px-5 py-3.5 text-center text-rose-600 font-medium">{admin.banned}</td>
+                        <td className="px-5 py-3.5 text-center text-emerald-700 font-medium">{admin.unbanned}</td>
+                        <td className="px-5 py-3.5 text-right">
+                          <Link href={`/admin/analytics/${admin.id}`} className="inline-flex items-center gap-1 text-xs text-gray-400 hover:text-brand-red transition-colors">
+                            {formatRelativeTime(admin.lastActive)} <ArrowRight className="w-3 h-3" />
+                          </Link>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+    </div>
+  );
+}
+
+function SectionHeader({ title, description }: { title: string; description: string }) {
+  return (
+    <div>
+      <h2 className="font-logo text-xl font-bold text-[#23201D]">{title}</h2>
+      <p className="text-sm text-gray-500 mt-0.5">{description}</p>
     </div>
   );
 }
@@ -365,9 +535,43 @@ const STAT_COLORS = {
   orange: { bg: "bg-orange-50", icon: "text-orange-600", bar: "bg-orange-500" },
   purple: { bg: "bg-purple-50", icon: "text-purple-600", bar: "bg-purple-500" },
   red: { bg: "bg-red-50", icon: "text-brand-red", bar: "bg-brand-red" },
+  emerald: { bg: "bg-emerald-50", icon: "text-emerald-600", bar: "bg-emerald-500" },
+  gray: { bg: "bg-gray-100", icon: "text-gray-600", bar: "bg-gray-400" },
 } as const;
 
 function StatCell({
+  label,
+  value,
+  sub,
+  icon: Icon,
+  color,
+  trend,
+}: {
+  label: string;
+  value: number | string;
+  sub: string;
+  icon: typeof Users;
+  color: keyof typeof STAT_COLORS;
+  trend?: Trend;
+}) {
+  const c = STAT_COLORS[color];
+  return (
+    <div className="relative bg-white border border-black/5 rounded-2xl p-4 overflow-hidden">
+      <div className={`absolute top-0 left-0 right-0 h-1 ${c.bar}`} />
+      <div className="flex items-start justify-between mb-3">
+        <div className={`w-9 h-9 rounded-xl ${c.bg} flex items-center justify-center`}>
+          <Icon className={`w-4.5 h-4.5 ${c.icon}`} />
+        </div>
+        {trend && <DeltaBadge trend={trend} />}
+      </div>
+      <p className="text-2xl font-bold font-logo text-[#23201D]">{value}</p>
+      <p className="text-xs text-gray-500 mt-0.5">{label}</p>
+      <p className="text-[11px] text-gray-400 mt-1">{sub}</p>
+    </div>
+  );
+}
+
+function RatePill({
   label,
   value,
   sub,
@@ -377,33 +581,51 @@ function StatCell({
   label: string;
   value: number;
   sub: string;
-  icon: typeof Users;
-  color: keyof typeof STAT_COLORS;
+  icon: typeof CheckCircle2;
+  color: "emerald" | "rose" | "purple";
 }) {
-  const c = STAT_COLORS[color];
+  const colors = {
+    emerald: { bg: "bg-emerald-50", icon: "text-emerald-600", text: "text-emerald-700" },
+    rose: { bg: "bg-rose-50", icon: "text-rose-600", text: "text-rose-700" },
+    purple: { bg: "bg-purple-50", icon: "text-purple-600", text: "text-purple-700" },
+  }[color];
+
   return (
-    <div className="relative bg-white border border-black/5 rounded-2xl p-4 overflow-hidden">
-      <div className={`absolute top-0 left-0 right-0 h-1 ${c.bar}`} />
-      <div className={`w-9 h-9 rounded-xl ${c.bg} flex items-center justify-center mb-3`}>
-        <Icon className={`w-4.5 h-4.5 ${c.icon}`} />
+    <div className="bg-white border border-black/5 rounded-2xl p-5 flex items-center gap-4">
+      <div className={`w-11 h-11 rounded-xl ${colors.bg} flex items-center justify-center shrink-0`}>
+        <Icon className={`w-5 h-5 ${colors.icon}`} />
       </div>
-      <p className="text-2xl font-bold font-logo text-[#23201D]">{value}</p>
-      <p className="text-xs text-gray-500 mt-0.5">{label}</p>
-      <p className="text-[11px] text-gray-400 mt-1">{sub}</p>
+      <div className="min-w-0">
+        <p className={`text-2xl font-bold font-logo ${colors.text}`}>{value}%</p>
+        <p className="text-xs font-medium text-gray-700">{label}</p>
+        <p className="text-[11px] text-gray-400 mt-0.5">{sub}</p>
+      </div>
+    </div>
+  );
+}
+
+function DetailRow({ label, value, trend }: { label: string; value: number; trend: Trend }) {
+  return (
+    <div className="flex items-center justify-between">
+      <span className="text-gray-500">{label}</span>
+      <span className="flex items-center gap-2">
+        <span className="font-semibold text-gray-900">{value}</span>
+        <DeltaBadge trend={trend} />
+      </span>
     </div>
   );
 }
 
 function StatusBar({ label, count, total, color }: { label: string; count: number; total: number; color: string }) {
-  const pct = total > 0 ? Math.round((count / total) * 100) : 0;
+  const p = total > 0 ? Math.round((count / total) * 100) : 0;
   return (
     <div>
       <div className="flex items-center justify-between text-xs mb-1">
         <span className="text-gray-600">{label}</span>
-        <span className="text-gray-400">{count} ({pct}%)</span>
+        <span className="text-gray-400">{count} ({p}%)</span>
       </div>
       <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
-        <div className={`h-full ${color} rounded-full`} style={{ width: `${pct}%` }} />
+        <div className={`h-full ${color} rounded-full`} style={{ width: `${p}%` }} />
       </div>
     </div>
   );

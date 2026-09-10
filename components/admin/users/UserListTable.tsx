@@ -1,9 +1,10 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Link from "next/link";
 import { AdminUser } from "@/lib/admin";
 import { banUserAction, unbanUserAction, fetchMoreUsersAction } from "@/app/admin/users/actions";
-import { Shield, Ban, CheckCircle2, X, Check, Unlock } from "lucide-react";
+import { Shield, Ban, CheckCircle2, X, Check, Unlock, ArrowRight } from "lucide-react";
 
 const VALID_ROLES = ["SUPER_ADMIN", "ADMIN", "STUDENT"] as const;
 type ValidRole = typeof VALID_ROLES[number];
@@ -181,17 +182,17 @@ export function UserListTable({
                   return (
                     <tr key={user.id} className={`hover:bg-gray-50/50 transition-colors ${isBanned ? "bg-gray-50/30" : ""}`}>
                       <td className="px-5 py-3.5">
-                        <div className="flex items-center gap-3">
+                        <Link href={`/admin/users/${user.id}`} className="flex items-center gap-3 group">
                           <div className={`w-8 h-8 rounded-full flex items-center justify-center font-semibold text-xs shrink-0 ${
                             isSuperAdmin ? "bg-purple-600 text-white" : isBanned ? "bg-gray-100 text-gray-400" : "bg-red-50 text-brand-red"
                           }`}>
                             {user.name.charAt(0)}
                           </div>
                           <div className={isBanned ? "opacity-50" : ""}>
-                            <p className="font-semibold text-gray-900 leading-tight">{user.name}</p>
+                            <p className="font-semibold text-gray-900 leading-tight group-hover:text-brand-red transition-colors">{user.name}</p>
                             <p className="text-xs text-gray-400">{user.email}</p>
                           </div>
-                        </div>
+                        </Link>
                       </td>
 
                       <td className="px-5 py-3.5">
@@ -209,10 +210,10 @@ export function UserListTable({
                       </td>
 
                       <td className="px-5 py-3.5">
-                        <div className={`flex flex-col ${isBanned ? "opacity-50" : ""}`}>
+                        <Link href={`/admin/users/${user.id}`} className={`flex flex-col hover:text-brand-red transition-colors ${isBanned ? "opacity-50" : ""}`}>
                           <span className="font-medium text-gray-800 text-sm">{user.submissionCount} submissions</span>
                           <span className="text-xs text-gray-400">Joined {user.joinedAt}</span>
-                        </div>
+                        </Link>
                       </td>
 
                       <td className="px-5 py-3.5">
@@ -228,28 +229,38 @@ export function UserListTable({
                       </td>
 
                       <td className="px-5 py-3.5 text-right">
-                        {isBanned ? (
-                          <button
-                            onClick={() => { setActiveModal({ user, type: "UNBAN" }); setSelectedReasons([]); setCustomReason(""); }}
-                            disabled={isProcessing === user.id}
-                            className="px-3 py-1.5 text-xs font-semibold rounded-lg text-emerald-700 bg-emerald-50 hover:bg-emerald-100 transition-colors disabled:opacity-50"
+                        <div className="flex items-center justify-end gap-2">
+                          <Link
+                            href={`/admin/users/${user.id}`}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#23201D] hover:bg-brand-red text-white text-xs font-semibold transition-colors whitespace-nowrap"
+                            title="View submissions and hours earned"
                           >
-                            {isProcessing === user.id ? "Working…" : "Restore access"}
-                          </button>
-                        ) : (
-                          <button
-                            onClick={() => { setActiveModal({ user, type: "BAN" }); setSelectedReasons([]); setCustomReason(""); }}
-                            disabled={isProcessing === user.id || isProtected}
-                            className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors ${
-                              isProtected
-                                ? "text-gray-300 bg-gray-50 cursor-not-allowed"
-                                : "text-rose-600 bg-rose-50/70 hover:bg-rose-100 disabled:opacity-50"
-                            }`}
-                            title={isProtected ? "Protected account" : "Suspend user"}
-                          >
-                            {isProcessing === user.id ? "Working…" : isProtected ? "Protected" : "Ban user"}
-                          </button>
-                        )}
+                            View <ArrowRight className="w-3 h-3" />
+                          </Link>
+
+                          {isBanned ? (
+                            <button
+                              onClick={() => { setActiveModal({ user, type: "UNBAN" }); setSelectedReasons([]); setCustomReason(""); }}
+                              disabled={isProcessing === user.id}
+                              className="px-3 py-1.5 text-xs font-semibold rounded-lg text-emerald-700 bg-emerald-50 hover:bg-emerald-100 transition-colors disabled:opacity-50"
+                            >
+                              {isProcessing === user.id ? "Working…" : "Restore access"}
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() => { setActiveModal({ user, type: "BAN" }); setSelectedReasons([]); setCustomReason(""); }}
+                              disabled={isProcessing === user.id || isProtected}
+                              className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors ${
+                                isProtected
+                                  ? "text-gray-300 bg-gray-50 cursor-not-allowed"
+                                  : "text-rose-600 bg-rose-50/70 hover:bg-rose-100 disabled:opacity-50"
+                              }`}
+                              title={isProtected ? "Protected account" : "Suspend user"}
+                            >
+                              {isProcessing === user.id ? "Working…" : isProtected ? "Protected" : "Ban user"}
+                            </button>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   );

@@ -1,6 +1,7 @@
 "use client";
 
 import { User, FileDigit, Calendar, Globe, Paperclip } from "lucide-react";
+import { formatDateTime } from "@/lib/dateFormat";
 
 type NoteMeta = { 
   id: string;
@@ -29,9 +30,7 @@ export function DocumentMetadata({ note }: { note: NoteMeta }) {
   const hasFlag = Boolean(note.flagReason);
   const isChangesRequested = note.status === "changes_requested";
   const isResubmissionHistory = hasFlag && note.status === "pending";
-  const formattedDate = new Date(note.createdAt).toLocaleDateString('en-US', {
-    month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit'
-  });
+  const formattedDate = formatDateTime(note.createdAt);
 
   return (
     <div className="flex flex-col">

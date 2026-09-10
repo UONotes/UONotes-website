@@ -52,7 +52,6 @@ export const TEAM_DATA: TeamSection[] = [
       { name: "Manwela Tache", role: "Director", imageUrl: "/about/Manwela-Headshot.png" },
       { name: "Perla Abou-Tayeh", role: "Director", imageUrl: "/about/Perla-Headshot.png" },
       { name: "Rayan Awada", role: "VP Bilingualism", imageUrl: "/about/Placeholder.png" },
-      { name: "Sophie Charles", role: "Director", imageUrl: "/about/Placeholder.png" },
       { name: "Lara Issa", role: "Director", imageUrl: "/about/Placeholder.png" },
       { name: "Heenna Jaffer", role: "Director", imageUrl: "/about/Placeholder.png" },
 

@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { UserSearchControls } from "@/components/admin/users/UserSearchControls";
 import { UserListTable } from "@/components/admin/users/UserListTable";
+import { formatDate } from "@/lib/dateFormat";
 
 export default async function AdminUsersPage({
   searchParams,
@@ -56,7 +57,7 @@ export default async function AdminUsersPage({
     // THE FIX: Explicitly cast the string to the expected union type to satisfy strict Next.js builds
     role: (user.is_super_admin ? "SUPER_ADMIN" : user.is_admin ? "ADMIN" : "STUDENT") as "SUPER_ADMIN" | "ADMIN" | "STUDENT",
     status: user.status || "ACTIVE",
-    joinedAt: new Date(user.created_at).toLocaleDateString("en-US", { month: 'short', day: 'numeric', year: 'numeric' }),
+    joinedAt: formatDate(user.created_at),
     submissionCount: user.notes?.[0]?.count || 0,
   }));
 
