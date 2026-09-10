@@ -30,9 +30,9 @@ const GUIDELINES: GuidelineSection[] = [
     id: "g_0",
     title: "Moderator conduct",
     category: "CONDUCT",
-    summary: "Reviewing gives you access to other students' submissions and accounts — treat that access carefully.",
+    summary: "Reviewing gives you access to other students' submissions and accounts, treat that access carefully.",
     rules: [
-      "Don't approve a friend's or roommate's submission if it wouldn't otherwise pass — apply the same bar to everyone.",
+      "Don't approve a friend's submission if it wouldn't otherwise pass, apply the same bar to everyone.",
       "Don't review or approve your own uploads. Ask another admin to handle them.",
       "Every approval, rejection, and ban is logged with your name in the audit trail, so decisions are traceable.",
       "Student emails and submission history are private. Don't share or export them outside the admin panel.",
@@ -46,28 +46,28 @@ const GUIDELINES: GuidelineSection[] = [
     rules: [
       "Check that the course code on the document matches what was entered (e.g. MAT1348, CSI2110).",
       "Reject vague titles like \"Math Notes\" unless the specific course is clearly identified.",
-      "For cross-listed courses, make sure the tagging is sensible.",
+      "For cross-listed courses make sure the tagging is sensible.",
     ],
   },
   {
     id: "g_2",
     title: "Scan quality & legibility",
     category: "APPROVAL",
-    summary: "Students rely on these during exam prep — they need to actually be readable.",
+    summary: "Students rely on these during exam prep, they need to actually be readable.",
     rules: [
-      "Pages should be right-side up and fully cropped, without heavy shadows or cut-off margins.",
+      "Pages should be right side up and fully cropped, without heavy shadows or cut off margins.",
       "Handwriting should be legible at a normal zoom level. Blurry photos of a screen don't pass.",
-      "Multi-page submissions should be one combined PDF, not separate files.",
+      "Multi page submissions should be one combined PDF, not separate files.",
     ],
   },
   {
     id: "g_3",
     title: "Copyright",
     category: "COPYRIGHT",
-    summary: "Student-authored notes are welcome; other people's copyrighted material isn't.",
+    summary: "Student authored notes are welcome; other people's copyrighted material isn't.",
     rules: [
       "Reject direct re-uploads of a professor's slide decks or scanned textbook pages.",
-      "Exam banks or materials shared under an academic-integrity agreement can't be hosted here.",
+      "Exam banks or materials shared under an academic integrity agreement can't be hosted here.",
       "Original study guides and summaries a student wrote themselves are fine, even if based on lecture content.",
     ],
   },
@@ -77,7 +77,7 @@ const GUIDELINES: GuidelineSection[] = [
     category: "REJECTION",
     summary: "When something doesn't pass, the student should know exactly why and what to do next.",
     rules: [
-      "Always leave feedback specific enough that the student can fix and resubmit — \"low quality\" isn't enough on its own.",
+      "Always leave feedback specific enough that the student can fix and resubmit \"low quality\" isn't enough on its own.",
       "For spam, malicious files, or clearly inappropriate content, reject it and flag the account for a closer look.",
       "If you suspect plagiarism, ask for proof of original authorship before approving.",
     ],
@@ -128,7 +128,7 @@ export default function AdminGuidelinesPage() {
           <div>
             <h2 className="font-logo text-lg font-bold text-[#23201D]">Moderator conduct</h2>
             <p className="text-sm text-gray-600 mt-1 leading-relaxed max-w-2xl">
-              Reviewing gives you access to other students&apos; submissions and accounts — treat that access carefully.
+              Reviewing gives you access to other students&apos; submissions and accounts, treat that access carefully.
               Every decision is logged with your name, so keep it fair and consistent.
             </p>
           </div>
