@@ -48,10 +48,21 @@ export function ReviewActionPanel({ noteId, currentHoursAwarded, currentStatus }
 
     const hours = parseInt(hoursInput, 10) || 0;
 
-    if (status === "approved" && hours < 1) {
+    // The hours field only exists in the fresh-approval view above —
+    // when we're just dismissing a report, there's nothing for the
+    // admin to have entered, and the note was already published with
+    // hours awarded the first time it was approved. Validating for a
+    // number they were never asked to type doesn't make sense here.
+    if (!isResolvingFlag && status === "approved" && hours < 1) {
       setError("Enter how many volunteer hours to award (1 or more).");
       return;
     }
+
+    // Same reasoning applies to what actually gets saved: when
+    // dismissing a report, restore the note's original hours exactly
+    // rather than resubmitting whatever the (hidden, unedited) hours
+    // state happens to hold.
+    const hoursToSubmit = isResolvingFlag ? (currentHoursAwarded ?? 1) : hours;
 
     setError("");
     setIsSubmitting(status);
@@ -92,7 +103,7 @@ export function ReviewActionPanel({ noteId, currentHoursAwarded, currentStatus }
         noteId,
         status,
         feedback.trim(),
-        status === "approved" ? hours : undefined,
+        status === "approved" ? hoursToSubmit : undefined,
         attachmentKey
       );
       router.push("/admin/queue");
