@@ -38,14 +38,26 @@ export async function claimNoteAction(noteId: string) {
     );
   }
 
-  const { error: claimError } = await supabaseAdmin
+  // .is("reviewed_by", null) makes this update atomic: it only ever
+  // touches a row that's still unclaimed. Checking claimError alone
+  // isn't enough though — a query that matches zero rows (because
+  // another admin's claim landed first) doesn't error, it just updates
+  // nothing. Selecting the affected row back lets us tell the two
+  // cases apart and report the race honestly instead of pretending the
+  // claim went through.
+  const { data: claimedRows, error: claimError } = await supabaseAdmin
     .from("notes")
     .update({ reviewed_by: caller.id })
     .eq("id", noteId)
-    .is("reviewed_by", null);
+    .is("reviewed_by", null)
+    .select("id");
 
   if (claimError) {
     throw new Error("Failed to claim document for review.");
+  }
+
+  if (!claimedRows || claimedRows.length === 0) {
+    throw new Error("Someone else just claimed this note. Refresh to see who has it.");
   }
 
   return { success: true };

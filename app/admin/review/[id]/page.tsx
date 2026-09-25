@@ -3,7 +3,8 @@ import { notFound, redirect } from "next/navigation";
 import { PdfViewer } from "@/components/admin/PdfViewer";
 import { DocumentMetadata } from "@/components/admin/DocumentMetadata";
 import { ReviewActionPanel } from "@/components/admin/ReviewActionPanel";
-import { AlertTriangle, Clock3 } from "lucide-react";
+import { ClaimGate } from "@/components/admin/ClaimGate";
+import { Lock, Clock3 } from "lucide-react";
 import { GetObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { createR2Client, R2_BUCKET_NAME } from "@/lib/r2";
@@ -44,27 +45,21 @@ export default async function DocumentReviewPage({
   if (error) console.error("Database Error on Review Page:", error.message);
   if (error || !note) notFound();
 
-  if (note.reviewed_by && note.reviewed_by !== caller.id) {
+  // Viewing a note never claims it — only an explicit click on "Claim
+  // for review" (via ClaimGate/claimNoteAction) does that. So a note
+  // already claimed by someone else is still fully viewable here; it
+  // just can't be acted on until they release it or decide on it.
+  const claimedByCaller = note.reviewed_by === caller.id;
+  const claimedByOther = Boolean(note.reviewed_by) && !claimedByCaller;
+
+  let claimedByOtherEmail: string | null = null;
+  if (claimedByOther) {
     const { data: reviewerProfile } = await supabase
       .from("profiles")
       .select("email")
-      .eq("id", note.reviewed_by)
+      .eq("id", note.reviewed_by as string)
       .single();
-
-    return (
-      <div className="w-full h-full flex flex-col items-center justify-center p-6 text-center bg-[#FBF8F3]">
-        <div className="w-14 h-14 rounded-2xl bg-amber-50 border border-amber-100 flex items-center justify-center text-amber-600 mb-4">
-          <AlertTriangle className="w-6 h-6" />
-        </div>
-        <h2 className="font-logo text-xl font-bold text-[#23201D]">Someone else has this one</h2>
-        <p className="text-sm text-gray-500 max-w-sm mt-1.5 mb-6">
-          {reviewerProfile?.email || "Another admin"} is currently reviewing this submission. Pick a different item from the queue.
-        </p>
-        <a href="/admin/queue" className="px-5 py-2.5 bg-[#23201D] text-white text-sm font-semibold rounded-xl hover:bg-black transition-colors">
-          Back to queue
-        </a>
-      </div>
-    );
+    claimedByOtherEmail = reviewerProfile?.email ?? null;
   }
 
   const r2 = createR2Client();
@@ -72,7 +67,7 @@ export default async function DocumentReviewPage({
     Bucket: R2_BUCKET_NAME,
     Key: note.file_key,
   });
-  
+
   const fileUrl = await getSignedUrl(r2, command, { expiresIn: 3600 });
 
   let reporterEmail: string | null = null;
@@ -114,9 +109,16 @@ export default async function DocumentReviewPage({
   return (
     <div className="flex flex-col lg:flex-row h-full bg-[#FBF8F3] overflow-hidden relative">
       <div className="flex-1 h-full bg-[#3D3A36] overflow-hidden relative z-0">
-        <PdfViewer documentId={formattedNote.id} title={formattedNote.title} fileUrl={fileUrl} readOnly={isChangesRequested} />
+        <PdfViewer
+          documentId={formattedNote.id}
+          title={formattedNote.title}
+          fileUrl={fileUrl}
+          readOnly={isChangesRequested}
+          claimedByCaller={claimedByCaller}
+          claimedByOtherEmail={claimedByOtherEmail}
+        />
       </div>
-      
+
       <div className="w-full lg:w-[420px] h-full bg-white border-l border-black/5 flex flex-col justify-between overflow-y-auto z-10">
         <DocumentMetadata note={formattedNote} />
         {isChangesRequested ? (
@@ -129,12 +131,25 @@ export default async function DocumentReviewPage({
               re-reviewed until they resubmit — it&apos;ll return to the Pending queue automatically when they do.
             </p>
           </div>
-        ) : (
+        ) : claimedByOther ? (
+          <div className="border-t border-amber-100 bg-amber-50/60 p-6 flex flex-col gap-2 shrink-0">
+            <div className="flex items-center gap-2 text-amber-800 text-sm font-semibold">
+              <Lock className="w-4 h-4" /> Claimed by another admin
+            </div>
+            <p className="text-xs text-amber-900/80 leading-relaxed">
+              {claimedByOtherEmail || "Another admin"} currently has this submission claimed for review.
+              You can keep looking through it, but approve/reject/request-fixes actions are locked until
+              they release it or make a decision.
+            </p>
+          </div>
+        ) : claimedByCaller ? (
           <ReviewActionPanel
             noteId={formattedNote.id}
             currentHoursAwarded={note.hours_awarded}
             currentStatus={note.status}
           />
+        ) : (
+          <ClaimGate noteId={formattedNote.id} />
         )}
       </div>
     </div>
