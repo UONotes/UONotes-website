@@ -210,7 +210,7 @@ function TeamSheet({
   colour,
 }: {
   teamName: string;
-  description: string;
+  description?: string;
   teamNumber: string;
   teamTotal: string;
   memberCount: number;
@@ -232,7 +232,9 @@ function TeamSheet({
             {teamName}
           </span>
         </h3>
-        <p className="mt-3 max-w-xl text-[21px] font-medium leading-[1.35] text-[#2e3650] sm:text-[23px]">{description}</p>
+        {description && (
+          <p className="mt-3 max-w-xl text-[21px] font-medium leading-[1.35] text-[#2e3650] sm:text-[23px]">{description}</p>
+        )}
       </div>
 
       {/* Member count, circled in pen */}
