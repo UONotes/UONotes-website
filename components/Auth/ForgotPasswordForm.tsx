@@ -166,7 +166,7 @@ function ForgotPasswordFormLogic() {
                 <IconChip icon={<Lock className="w-6 h-6" />} />
               </div>
               <span className="text-[10px] font-mono uppercase tracking-[0.25em] text-brand-red font-bold mb-1">
-                // RESET PASSWORD
+                {"// RESET PASSWORD"}
               </span>
               <h2 className="text-2xl sm:text-3xl font-black tracking-tight text-gray-900 font-sans uppercase">
                 Set a new password.
@@ -175,7 +175,7 @@ function ForgotPasswordFormLogic() {
                 Enter the 8-digit code sent to <span className="font-medium text-gray-900">{email}</span> along with your new password.
               </p>
               <p className="text-[11px] text-brand-red font-semibold mt-1.5">
-                Don't see it? Check your junk or spam folder.
+                Don&apos;t see it? Check your junk or spam folder.
               </p>
             </div>
 
@@ -249,7 +249,7 @@ function ForgotPasswordFormLogic() {
                 <IconChip icon={<KeyRound className="w-6 h-6" />} />
               </div>
               <span className="text-[10px] font-mono uppercase tracking-[0.25em] text-brand-red font-bold mb-1">
-                // ACCOUNT RECOVERY
+                {"// ACCOUNT RECOVERY"}
               </span>
               <h2 className="text-2xl sm:text-3xl font-black tracking-tight text-gray-900 font-sans uppercase">
                 Forgot password?

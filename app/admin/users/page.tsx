@@ -3,6 +3,17 @@ import { UserSearchControls } from "@/components/admin/users/UserSearchControls"
 import { UserListTable } from "@/components/admin/users/UserListTable";
 import { formatDate } from "@/lib/dateFormat";
 
+type UserRow = {
+  id: string;
+  full_name: string | null;
+  email: string | null;
+  is_admin: boolean | null;
+  is_super_admin: boolean | null;
+  status: "ACTIVE" | "BANNED" | null;
+  created_at: string;
+  notes?: { count: number }[];
+};
+
 export default async function AdminUsersPage({
   searchParams,
 }: {
@@ -50,10 +61,10 @@ export default async function AdminUsersPage({
     console.error("Supabase Database Error (Users):", JSON.stringify(error, null, 2));
   }
 
-  const formattedUsers = (usersData || []).map((user: any) => ({
+  const formattedUsers = ((usersData || []) as UserRow[]).map((user) => ({
     id: user.id,
     name: user.full_name || "Unknown",
-    email: user.email,
+    email: user.email || "",
     // THE FIX: Explicitly cast the string to the expected union type to satisfy strict Next.js builds
     role: (user.is_super_admin ? "SUPER_ADMIN" : user.is_admin ? "ADMIN" : "STUDENT") as "SUPER_ADMIN" | "ADMIN" | "STUDENT",
     status: user.status || "ACTIVE",

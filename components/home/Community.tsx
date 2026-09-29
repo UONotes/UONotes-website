@@ -54,7 +54,7 @@ export function Community() {
               <AnimatedCounter to={100000} suffix="+" />
             </h4>
             <span className="text-[10px] font-mono uppercase tracking-[0.2em] text-gray-400 font-bold mt-0.5 block">
-              // TOTAL INTERACTIONS
+              {"// TOTAL INTERACTIONS"}
             </span>
           </div>
         </div>
@@ -68,7 +68,7 @@ export function Community() {
               <AnimatedCounter to={100} suffix="+" />
             </h4>
             <span className="text-[10px] font-mono uppercase tracking-[0.2em] text-gray-400 font-bold mt-0.5 block">
-              // ACTIVE CONTRIBUTORS
+              {"// ACTIVE CONTRIBUTORS"}
             </span>
           </div>
         </div>
@@ -82,7 +82,7 @@ export function Community() {
               <AnimatedCounter to={10} suffix="" />
             </h4>
             <span className="text-[10px] font-mono uppercase tracking-[0.2em] text-gray-400 font-bold mt-0.5 block">
-              // FACULTIES COVERED
+              {"// FACULTIES COVERED"}
             </span>
           </div>
         </div>

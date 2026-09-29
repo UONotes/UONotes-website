@@ -94,8 +94,8 @@ export function DocumentMetadata({ note }: { note: NoteMeta }) {
             {note.feedbackAttachmentUrl && ( <a>
               
                 href={note.feedbackAttachmentUrl}
-                target="_blank"
-                rel="noopener noreferrer"
+                target=&quot;_blank&quot;
+                rel=&quot;noopener noreferrer&quot;
                 className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-semibold mt-3 ${
                   isChangesRequested
                     ? "bg-orange-100 text-orange-800 hover:bg-orange-200"

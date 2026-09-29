@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";import Link from "next/link";
+import { useState, useMemo } from "react";
+import Link from "next/link";
 import { motion } from "framer-motion";
 import { NoteCard } from "@/components/ui/NoteCard";
 import { Folder, UploadCloud, Library, Compass, Lock, ChevronRight, Search } from "lucide-react";
@@ -84,9 +85,12 @@ export function NotesExplorer({ isLoggedIn = false, notes = [] }: NotesExplorerP
 
   // Reset back to the first page whenever the actual result set changes,
   // so switching filters doesn't leave you stuck deep in a stale list.
-  useEffect(() => {
+  const filterKey = `${activeFaculty}|${searchQuery}`;
+  const [prevFilterKey, setPrevFilterKey] = useState(filterKey);
+  if (filterKey !== prevFilterKey) {
+    setPrevFilterKey(filterKey);
     setVisibleCount(15);
-  }, [activeFaculty, searchQuery]);
+  }
 
   const visibleNotes = filteredNotes.slice(0, visibleCount);
   const hasMore = visibleCount < filteredNotes.length;

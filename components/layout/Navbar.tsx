@@ -103,7 +103,7 @@ export function Navbar() {
               UONotes
             </span>
             <span className="text-[9px] font-mono uppercase tracking-[0.2em] text-gray-400 font-bold hidden sm:block mt-0.5">
-              // uOttawa
+              {"// uOttawa"}
             </span>
           </div>
         </Link>
@@ -198,7 +198,7 @@ export function Navbar() {
             <div className="flex flex-col py-6 px-6 gap-3">
               
               <span className="text-[10px] font-mono uppercase tracking-[0.2em] text-gray-400 px-2 pb-1">
-                // NAVIGATION
+                {"// NAVIGATION"}
               </span>
 
               {navLinks.map((link) => {
@@ -224,7 +224,7 @@ export function Navbar() {
                 <>
                   <div className="w-full h-px bg-brand-red/15 my-2" />
                   <span className="text-[10px] font-mono uppercase tracking-[0.2em] text-gray-400 px-2 pb-1">
-                    // WORKSPACE
+                    {"// WORKSPACE"}
                   </span>
                   
                   <Link 

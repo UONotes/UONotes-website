@@ -106,7 +106,7 @@ function SignInFormLogic() {
                 <IconChip icon={<LogIn className="w-6 h-6" />} />
               </div>
               <span className="text-[10px] font-mono uppercase tracking-[0.25em] text-brand-red font-bold mb-1">
-                // MEMBER SIGN IN
+                {"// MEMBER SIGN IN"}
               </span>
               <h2 className="text-2xl sm:text-3xl font-black tracking-tight text-gray-900 font-sans uppercase">
                 Welcome back.

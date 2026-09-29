@@ -37,8 +37,8 @@ export function ContactForm() {
       }
 
       setIsSent(true);
-    } catch (err: any) {
-      setError(err.message || "Something went wrong. Please try again.");
+    } catch (err) {
+      setError((err instanceof Error && err.message) || "Something went wrong. Please try again.");
     } finally {
       setIsSubmitting(false);
     }
@@ -51,7 +51,7 @@ export function ContactForm() {
       <div className="flex items-center justify-between pb-6 mb-6 border-b border-gray-100">
         <div>
           <span className="text-[10px] font-mono uppercase tracking-[0.2em] text-brand-red font-bold block mb-1">
-            // SECURE TRANSMISSION
+            {"// SECURE TRANSMISSION"}
           </span>
           <h2 className="text-xl sm:text-2xl font-black text-gray-900 font-sans uppercase tracking-tight">
             Send a message

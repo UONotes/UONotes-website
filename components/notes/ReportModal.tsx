@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Flag, CheckCircle2, Loader2 } from "lucide-react";
@@ -23,16 +23,13 @@ const reportReasons = [
 ];
 
 export function ReportModal({ isOpen, onClose, documentTitle, noteId }: ReportModalProps) {
-  const [mounted, setMounted] = useState(false);
+  // true on the client only, so the portal never renders during SSR
+  const mounted = useSyncExternalStore(() => () => {}, () => true, () => false);
   const [selectedReason, setSelectedReason] = useState<string>("");
   const [comment, setComment] = useState("");
   const [isSent, setIsSent] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
 
   if (!mounted) return null;
 
@@ -50,8 +47,8 @@ export function ReportModal({ isOpen, onClose, documentTitle, noteId }: ReportMo
     try {
       await reportNoteAction(noteId, fullReason);
       setIsSent(true);
-    } catch (err: any) {
-      setError(err.message || "Could not submit your report. Please try again.");
+    } catch (err) {
+      setError((err instanceof Error && err.message) || "Could not submit your report. Please try again.");
     } finally {
       setIsSubmitting(false);
     }

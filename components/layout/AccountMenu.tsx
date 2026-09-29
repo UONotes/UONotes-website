@@ -15,7 +15,7 @@ interface AccountMenuProps {
   isAdmin: boolean;
 }
 
-export function AccountMenu({ lang, toggleLang, onSignOut, isAdmin }: AccountMenuProps) {
+export function AccountMenu({ onSignOut, isAdmin }: AccountMenuProps) {
   const [open, setOpen] = useState(false);
   const [firstName, setFirstName] = useState<string>("");
   const menuRef = useRef<HTMLDivElement>(null);
@@ -110,7 +110,7 @@ export function AccountMenu({ lang, toggleLang, onSignOut, isAdmin }: AccountMen
                 <div className="border-t border-brand-red/10 my-2 mx-4" />
                 <div className="px-5 py-0.5 mb-1">
                   <span className="text-[10px] font-mono uppercase tracking-[0.2em] text-gray-500 font-bold">
-                    // ADMINISTRATION
+                    {"// ADMINISTRATION"}
                   </span>
                 </div>
                 {/* Removed the nested px-2 container and matched mx-2 to align with standard links */}
