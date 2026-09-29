@@ -4,10 +4,10 @@ import { TeamSelector } from "@/components/about/TeamSelector";
 
 export default function AboutPage() {
   return (
-    <div className="flex flex-col items-center w-full py-16 px-4 max-w-6xl mx-auto">
+    <div className="flex w-full flex-col items-center">
       <AboutHero />
-      <FoundersSection/>
-      <TeamSelector/>
+      <FoundersSection />
+      <TeamSelector />
     </div>
   );
 }
