@@ -3,7 +3,7 @@
 import type { FormEvent } from "react";
 import { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { UserPlus, Mail, ArrowRight } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
@@ -64,7 +64,6 @@ function SignUpFormLogic() {
   const [resendCooldown, setResendCooldown] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
   
-  const router = useRouter();
   const searchParams = useSearchParams();
 
   const fromParam = searchParams.get("from");
@@ -227,7 +226,7 @@ function SignUpFormLogic() {
                 <IconChip icon={<Mail className="w-6 h-6" />} />
               </div>
               <span className="text-[10px] font-mono uppercase tracking-[0.25em] text-brand-red font-bold mb-1">
-                // VERIFY EMAIL
+                {"// VERIFY EMAIL"}
               </span>
               <h2 className="text-2xl sm:text-3xl font-black tracking-tight text-gray-900 font-sans uppercase">
                 Check your inbox.
@@ -236,7 +235,7 @@ function SignUpFormLogic() {
                 We sent an 8-digit code to <span className="font-medium text-gray-900">{email}</span>.
               </p>
               <p className="text-[11px] text-brand-red font-semibold mt-1.5">
-                Don't see it? Check your junk or spam folder.
+                Don&apos;t see it? Check your junk or spam folder.
               </p>
             </div>
 
@@ -317,7 +316,7 @@ function SignUpFormLogic() {
                 <IconChip icon={<UserPlus className="w-6 h-6" />} />
               </div>
               <span className="text-[10px] font-mono uppercase tracking-[0.25em] text-brand-red font-bold mb-1">
-                // NEW MEMBER
+                {"// NEW MEMBER"}
               </span>
               <h2 className="text-2xl sm:text-3xl font-black tracking-tight text-gray-900 font-sans uppercase">
                 Join UONotes.

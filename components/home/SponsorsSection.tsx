@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { motion, Variants } from "framer-motion";
 import { SPONSORS } from "@/lib/sponsors-data";
 
@@ -44,10 +45,12 @@ export function SponsorsSection() {
               key={`${sponsor.name}-${idx}`} 
               className="relative w-32 h-16 transition-transform duration-300 hover:scale-105"
             >
-              <img 
-                src={sponsor.imageUrl} 
-                alt={sponsor.name} 
-                className="object-contain w-full h-full"
+              <Image
+                src={sponsor.imageUrl}
+                alt={sponsor.name}
+                fill
+                sizes="128px"
+                className="object-contain"
               />
             </div>
           ))}

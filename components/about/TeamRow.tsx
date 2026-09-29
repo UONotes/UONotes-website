@@ -1,6 +1,6 @@
 "use client";
 
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { ProfileCard } from "./ProfileCard";
 import type { TeamSection } from "@/lib/team-data";
 

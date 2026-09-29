@@ -16,6 +16,7 @@ import {
   X,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { AdminPresenceProvider } from "@/components/admin/AdminPresence";
 
 const ADMIN_NAV = [
   { name: "Overview", href: "/admin", icon: LayoutGrid },
@@ -34,6 +35,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   const [adminProfile, setAdminProfile] = useState<{ name: string; email: string; initials: string } | null>(null);
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
+  // Stable identity for the live-presence channel (set once per session)
+  const [presenceUser, setPresenceUser] = useState<{ id: string; name: string } | null>(null);
   const [isMobileOpen, setIsMobileOpen] = useState(false);
 
   useEffect(() => {
@@ -60,6 +63,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           email: email,
           initials: initials || "AD",
         });
+        setPresenceUser((prev) => (prev?.id === user.id ? prev : { id: user.id, name: displayName }));
 
         const { data: profileRow } = await supabase
           .from("profiles")
@@ -200,13 +204,15 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
       {/* MAIN CONTENT */}
       <main className="flex-1 h-full overflow-y-auto relative">
-        {pathname.startsWith("/admin/review/") || pathname.startsWith("/admin/history/") ? (
-          children
-        ) : (
-          <div className="p-6 sm:p-10 max-w-6xl mx-auto min-h-full">
-            {children}
-          </div>
-        )}
+        <AdminPresenceProvider user={presenceUser} pathname={pathname}>
+          {pathname.startsWith("/admin/review/") || pathname.startsWith("/admin/history/") ? (
+            children
+          ) : (
+            <div className="p-6 sm:p-10 max-w-6xl mx-auto min-h-full">
+              {children}
+            </div>
+          )}
+        </AdminPresenceProvider>
       </main>
     </div>
   );

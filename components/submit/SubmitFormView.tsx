@@ -171,8 +171,8 @@ export function SubmitFormView() {
       }
 
       setIsSubmitted(true);
-    } catch (err: any) {
-      setFormError(err.message || "An unexpected error occurred during transmission.");
+    } catch (err) {
+      setFormError((err instanceof Error && err.message) || "An unexpected error occurred during transmission.");
     } finally {
       setIsUploading(false);
     }

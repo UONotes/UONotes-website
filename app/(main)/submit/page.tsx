@@ -36,7 +36,7 @@ export default async function SubmitPage() {
             Submissions Paused
           </h1>
           <p className="text-sm text-gray-500 leading-relaxed">
-            We're doing some maintenance behind the scenes. Note submissions are
+            We&apos;re doing some maintenance behind the scenes. Note submissions are
             temporarily paused — please check back a little later.
           </p>
         </div>

@@ -8,6 +8,9 @@ const PROTECTED_PATHS = ["/submit", "/dashboard", "/settings", "/notes"];
 const ADMIN_PATHS = ["/admin"];
 // Paths that make no sense to show someone who's already logged in.
 const LOGGED_OUT_ONLY_PATHS = ["/signin", "/signup", "/forgot-password"];
+// Throttles the "last active in admin" write (see below)
+const ADMIN_SEEN_COOKIE = "uon_admin_seen";
+const ADMIN_SEEN_THROTTLE_MS = 60 * 1000;
 
 export async function updateSession(request: NextRequest) {
   let response = NextResponse.next({ request });
@@ -77,7 +80,19 @@ export async function updateSession(request: NextRequest) {
     // the service-role client since this writes a column the user's own
     // RLS policy may not grant them write access to. Best-effort: a
     // failure here should never block the actual page from loading.
-    if (!isIgnoredAsset) {
+    //
+    // Skips link prefetches (the admin didn't actually open anything) and
+    // writes at most once a minute per browser, tracked with a cookie, so
+    // normal navigation doesn't cost a database write per click. Background
+    // data refreshes (e.g. live analytics) go through /api, which this
+    // middleware doesn't run on, so an idle open tab doesn't count as active.
+    const isPrefetch =
+      request.headers.get("next-router-prefetch") === "1" ||
+      request.headers.get("purpose") === "prefetch" ||
+      (request.headers.get("sec-purpose") ?? "").includes("prefetch");
+    const lastRecorded = Number(request.cookies.get(ADMIN_SEEN_COOKIE)?.value) || 0;
+
+    if (!isIgnoredAsset && !isPrefetch && Date.now() - lastRecorded > ADMIN_SEEN_THROTTLE_MS) {
       try {
         const supabaseAdmin = createServiceClient(
           process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -87,6 +102,12 @@ export async function updateSession(request: NextRequest) {
           .from("profiles")
           .update({ last_admin_active_at: new Date().toISOString() })
           .eq("id", user.id);
+        response.cookies.set(ADMIN_SEEN_COOKIE, String(Date.now()), {
+          httpOnly: true,
+          sameSite: "lax",
+          path: "/admin",
+          maxAge: 60 * 60,
+        });
       } catch (err) {
         console.error("Failed to record admin activity:", err);
       }

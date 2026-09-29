@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { AdminUser } from "@/lib/admin";
 import { banUserAction, unbanUserAction, fetchMoreUsersAction } from "@/app/admin/users/actions";
@@ -47,10 +47,13 @@ export function UserListTable({
   const [users, setUsers] = useState<IncomingUser[]>(initialUsers);
   const [currentPage, setCurrentPage] = useState(1);
 
-  useEffect(() => {
+  // New search/filter results from the server replace the list and reset paging
+  const [prevInitialUsers, setPrevInitialUsers] = useState(initialUsers);
+  if (initialUsers !== prevInitialUsers) {
+    setPrevInitialUsers(initialUsers);
     setUsers(initialUsers);
     setCurrentPage(1);
-  }, [initialUsers]);
+  }
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const hasMore = users.length < totalUsers;
 

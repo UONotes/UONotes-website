@@ -3,10 +3,10 @@
 import Image from "next/image";
 import { motion, Variants } from "framer-motion";
 import { TEAM_DATA } from "@/lib/team-data";
-import { GraduationCap, Quote } from "lucide-react";
+import { Quote } from "lucide-react";
 
 const presidentialTeamData = TEAM_DATA.find(
-  (team: any) => team.teamName === "Presidential Team"
+  (team) => team.teamName === "Presidential Team"
 );
 
 // CONTROL PANEL: Adjust scaling, positioning, and hover states per member independently.
@@ -64,7 +64,7 @@ export function FoundersSection() {
 
       {/* Tightly Packed Z-Pattern Rows with reduced gap */}
       <div className="w-full max-w-5xl flex flex-col gap-6 md:gap-8">
-        {presidentialTeamData.members.map((member: any, idx: number) => {
+        {presidentialTeamData.members.map((member, idx) => {
           const isEven = idx % 2 === 0;
           
           const config = MEMBER_IMAGE_CONFIG[idx] || { 
@@ -83,7 +83,7 @@ export function FoundersSection() {
               {/* Image Container - Slightly streamlined proportions */}
               <div className="w-48 sm:w-52 lg:w-56 aspect-[3/4] relative rounded-3xl overflow-hidden shadow-md border border-gray-200/50 shrink-0">
                 <Image 
-                  src={member.image || member.imageUrl || "/placeholder.jpg"} 
+                  src={member.imageUrl || "/placeholder.jpg"} 
                   alt={member.name} 
                   fill 
                   className={`object-cover transition-transform duration-700 ease-in-out ${config.position} ${config.scale} ${config.hoverScale}`}
@@ -108,7 +108,7 @@ export function FoundersSection() {
                         {member.name}
                       </h3>
                       <span className="inline-block px-2 py-0.5 rounded bg-brand-red text-white text-[9px] font-mono font-bold uppercase tracking-widest shadow-2xs">
-                        {member.role || member.title || "Founder"}
+                        {member.role || "Founder"}
                       </span>
                     </div>
 

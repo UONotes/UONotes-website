@@ -30,17 +30,17 @@ export function ContactSection() {
         {/* Left Column */}
         <motion.div variants={fadeUp} className="flex flex-col w-full lg:w-[45%] max-w-lg">
           <h1 className="font-logo text-4xl sm:text-5xl lg:text-6xl font-black text-gray-900 tracking-tight mb-4">
-            Let's talk <br/> <span className="text-brand-red">UONotes.</span>
+            Let&apos;s talk <br/> <span className="text-brand-red">UONotes.</span>
           </h1>
           <p className="text-gray-600 text-sm sm:text-base leading-relaxed mb-10 font-sans max-w-md">
-            Have a question about submitting notes, earning volunteer hours, joining our campus team, or sponsorships? Reach out and we'll get back to you promptly.
+            Have a question about submitting notes, earning volunteer hours, joining our campus team, or sponsorships? Reach out and we&apos;ll get back to you promptly.
           </p>
 
           <div className="flex flex-col gap-4 w-full">
             
             <div className="bg-white/80 backdrop-blur-xl rounded-2xl p-5 shadow-[0_8px_30px_rgb(0,0,0,0.03)] border border-brand-red/15 transition-all hover:border-brand-red/30">
               <span className="text-[10px] font-mono uppercase tracking-[0.2em] text-gray-400 font-bold block mb-3">
-                // OFFICIAL CHANNELS
+                {"// OFFICIAL CHANNELS"}
               </span>
               <div className="flex flex-col gap-3">
                 <div className="flex items-center gap-3 text-sm font-bold font-logo uppercase tracking-wider text-gray-800 p-1.5 -mx-1.5">
@@ -60,7 +60,7 @@ export function ContactSection() {
 
             <div className="bg-white/80 backdrop-blur-xl rounded-2xl p-5 shadow-[0_8px_30px_rgb(0,0,0,0.03)] border border-brand-red/15 transition-all hover:border-brand-red/30">
               <span className="text-[10px] font-mono uppercase tracking-[0.2em] text-gray-400 font-bold block mb-2">
-                // EXECUTIVE LEADERSHIP
+                {"// EXECUTIVE LEADERSHIP"}
               </span>
               <p className="text-[11px] font-mono text-brand-red font-bold uppercase tracking-wider mb-1">President</p>
               <p className="text-base font-black text-gray-900 mb-3 font-sans">Kiana Gholizadeh Vazvani</p>

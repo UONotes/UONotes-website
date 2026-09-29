@@ -7,6 +7,17 @@ import { ArrowLeft, ChevronRight, Download, Bookmark, Flag, Loader2, Languages, 
 import { SaveNoteButton } from "@/components/notes/SaveNoteButton";
 import { formatDate } from "@/lib/dateFormat";
 
+type ViewerNote = {
+  id: string;
+  title: string;
+  course_code: string;
+  course_name?: string | null;
+  author_name?: string | null;
+  created_at: string;
+  file_size?: number | null;
+  file_type?: string | null;
+};
+
 const notebookStyle = {
   backgroundImage: `
     linear-gradient(90deg, transparent 64px, rgba(168, 49, 66, 0.15) 64px, rgba(168, 49, 66, 0.15) 66px, transparent 66px),
@@ -15,7 +26,7 @@ const notebookStyle = {
   backgroundSize: "100% 100%, 100% 32px",
 };
 
-function formatBytes(bytes: number) {
+function formatBytes(bytes: number | null | undefined) {
   if (!bytes || bytes === 0) return "0 Bytes";
   const k = 1024;
   const sizes = ["Bytes", "KB", "MB", "GB"];
@@ -28,7 +39,7 @@ export function NoteViewer({
   fileUrl,
   translationPair,
 }: {
-  note: any;
+  note: ViewerNote;
   fileUrl: string;
   translationPair: { id: string; title: string; language: string } | null;
 }) {
@@ -109,7 +120,7 @@ export function NoteViewer({
             <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-6 mb-8 pb-6 border-b border-gray-200/80">
               <div className="min-w-0">
                 <span className="text-[10px] sm:text-xs font-mono uppercase tracking-[0.3em] text-brand-red font-bold block">
-                  {note.course_code} // {note.course_name || "Course Notes"}
+                  {note.course_code} {"//"} {note.course_name || "Course Notes"}
                 </span>
                 <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black tracking-tight font-sans text-gray-900 mt-1.5 leading-tight">
                   {note.title}

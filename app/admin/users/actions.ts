@@ -5,6 +5,17 @@ import { createClient as createServerClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { formatMonthYear } from "@/lib/dateFormat";
 
+type UserRow = {
+  id: string;
+  full_name: string | null;
+  email: string | null;
+  is_admin: boolean | null;
+  is_super_admin: boolean | null;
+  status: "ACTIVE" | "BANNED" | null;
+  created_at: string;
+  notes?: { count: number }[];
+};
+
 // Initialize the Admin client. This BYPASSES RLS. 
 // It must never be exposed to the browser.
 const supabaseAdmin = createAdminClient(
@@ -56,10 +67,10 @@ export async function fetchMoreUsersAction(
     throw new Error("Failed to load more users.");
   }
 
-  return (usersData || []).map((user: any) => ({
+  return ((usersData || []) as UserRow[]).map((user) => ({
     id: user.id,
     name: user.full_name || "Unknown",
-    email: user.email,
+    email: user.email || "",
     role: (user.is_super_admin ? "SUPER_ADMIN" : user.is_admin ? "ADMIN" : "STUDENT") as "SUPER_ADMIN" | "ADMIN" | "STUDENT",    status: user.status || "ACTIVE",
     joinedAt: formatMonthYear(user.created_at),
     submissionCount: user.notes?.[0]?.count || 0,

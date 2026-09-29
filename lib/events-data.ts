@@ -6,12 +6,8 @@ export type EventItem = {
   location: string;
   image: string; // Main display image
   images?: Array<string>; // Additional images for the inline slideshow view
-  registrationUrl?: string;
+  description?: string; // One or two sentences on what happened, shown under the title
 };
-
-export const upcomingEvents: EventItem[] = [
-  // Add upcoming events here if any
-];
 
 export const pastEvents: EventItem[] = [
   {
