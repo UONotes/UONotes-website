@@ -2,21 +2,31 @@
 
 import Image from "next/image";
 import { AnimatePresence, motion, Variants } from "framer-motion";
-import { Caveat } from "next/font/google";
-import { useState } from "react";
+import { Caveat, Kalam } from "next/font/google";
+import { useState, type CSSProperties } from "react";
 import { TEAM_DATA } from "@/lib/team-data";
 
 // Handwriting font for the notebook-style founder cards
 const caveat = Caveat({ subsets: ["latin"], weight: ["500", "700"] });
+// Rounder, clearer handwriting for roles and the longer notes
+const kalam = Kalam({ subsets: ["latin"], weight: ["400", "700"] });
 
 const presidentialTeamData = TEAM_DATA.find(
   (team) => team.teamName === "Presidential Team"
 );
 
-const founderImageConfig = [
-  { aspect: "aspect-[4/3] sm:aspect-[4/3]", scale: "scale-[1.4]", hoverScale: "group-hover:scale-[1.45]", position: "object-[center_60%]" },
-  { aspect: "aspect-[4/3] sm:aspect-[4/3]", scale: "scale-100", hoverScale: "group-hover:scale-[1.05]", position: "object-center" },
-];
+type PhotoSettings = { zoom: number; focusX: number; focusY: number; aspect: number };
+
+const DEFAULT_PHOTO: PhotoSettings = { zoom: 1, focusX: 50, focusY: 50, aspect: 4 / 3 };
+
+const FOUNDER_PHOTOS: Record<string, PhotoSettings> = {
+  Kiana: { zoom: 1.5, focusX: 50, focusY: 67, aspect: 4 / 3 },
+  Talar: { zoom: 1, focusX: 50, focusY: 50, aspect: 4 / 3 },
+};
+
+// How much extra the photo zooms when you hover the card (1.05 = 5%)
+const HOVER_ZOOM = 1.05;
+// ─────────────────────────────────────────────────────────────────────────────
 
 // Notebook paper: blue ruled lines every 28px
 const RULED_LINES = "repeating-linear-gradient(to bottom, transparent 0 27px, #dfe6ee 27px 28px)";
@@ -70,8 +80,8 @@ export function FoundersSection() {
 
       <div className="grid items-start gap-8 lg:grid-cols-2">
         {presidentialTeamData.members.map((member, idx) => {
-          const imageConfig = founderImageConfig[idx] || founderImageConfig[1];
           const firstName = member.name.split(" ")[0];
+          const photo = FOUNDER_PHOTOS[firstName] ?? DEFAULT_PHOTO;
           const tilt = idx % 2 === 0 ? "-rotate-2" : "rotate-2";
 
           return (
@@ -98,13 +108,21 @@ export function FoundersSection() {
               {/* Taped polaroid photo */}
               <div className={`relative mx-auto mb-7 w-[92%] bg-white p-2.5 pb-11 shadow-[0_10px_20px_-10px_rgba(0,0,0,0.4)] ${tilt}`}>
                 <span aria-hidden="true" className="absolute -top-3 left-1/2 z-10 h-6 w-24 -translate-x-1/2 rotate-3 bg-brand-red/25" />
-                <div className={`relative ${imageConfig.aspect} overflow-hidden bg-brand-pink`}>
+                <div className="relative overflow-hidden bg-brand-pink" style={{ aspectRatio: photo.aspect }}>
                   <Image
                     src={member.imageUrl || "/placeholder.jpg"}
                     alt={`${member.name}, ${member.role}`}
                     fill
                     sizes="(max-width: 768px) 100vw, 50vw"
-                    className={`object-cover ${imageConfig.position} ${imageConfig.scale} ${imageConfig.hoverScale} transition-transform duration-700`}
+                    className="object-cover transition-transform duration-700 scale-[var(--zoom)] group-hover:scale-[var(--hover-zoom)]"
+                    style={
+                      {
+                        objectPosition: `${photo.focusX}% ${photo.focusY}%`,
+                        transformOrigin: `${photo.focusX}% ${photo.focusY}%`,
+                        "--zoom": photo.zoom,
+                        "--hover-zoom": photo.zoom * HOVER_ZOOM,
+                      } as CSSProperties
+                    }
                   />
                 </div>
                 <p className={`${caveat.className} absolute inset-x-0 bottom-1.5 text-center text-2xl font-bold text-[#1f2a44]`}>
@@ -117,7 +135,10 @@ export function FoundersSection() {
                 className="relative -ml-14 -mr-5 pl-14 pr-5 sm:-ml-16 sm:-mr-7 sm:pl-16 sm:pr-7"
                 style={{ backgroundColor: PAPER, backgroundImage: RULED_LINES }}
               >
-                <p className="font-mono text-[10px] font-bold uppercase leading-7 tracking-[0.18em] text-brand-red">{member.role}</p>
+                <p className={`${kalam.className} text-[22px] font-bold leading-7 text-brand-red sm:text-[26px]`}>
+                  {/* Role written in red pen with a yellow highlighter behind it */}
+                  <span className="bg-[linear-gradient(transparent_55%,rgba(245,200,60,0.55)_55%)] px-1 [box-decoration-break:clone]">{member.role}</span>
+                </p>
                 <h3 className={`${caveat.className} text-[34px] font-bold leading-[56px] text-[#1f2a44] sm:text-4xl`}>
                   <span className="bg-[linear-gradient(transparent_62%,rgba(138,28,36,0.18)_62%)] [box-decoration-break:clone]">
                     {member.name}
@@ -169,7 +190,7 @@ export function FoundersSection() {
                                 className="pt-7"
                               >
                                 {storyPages[activePage].map((paragraph: string, paragraphIndex: number) => (
-                                  <p key={paragraphIndex} className="mt-7 text-[21px] font-medium leading-7 text-[#2e3650] first:mt-0 sm:text-[22px]">
+                                  <p key={paragraphIndex} className={`${kalam.className} mt-7 text-[17px] font-normal leading-7 text-[#2b3350] first:mt-0 sm:text-[18px]`}>
                                     {paragraph}
                                   </p>
                                 ))}
