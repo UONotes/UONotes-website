@@ -6,13 +6,16 @@ import { ChangesRequestedNotice } from "@/components/notes/ChangesRequestedNotic
 import { Analytics } from "@vercel/analytics/next";
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://YOUR-DOMAIN.com"), // replace with your real site URL
+  metadataBase: new URL("https://www.uonotes.ca"),
   title: "UONotes",
   description: "Bilingual student notes and academic organization for uOttawa.",
   icons: {
-    icon: [{ url: "/logo2.png?v=2", type: "image/png" }],
-    shortcut: [{ url: "/logo2.png?v=2", type: "image/png" }],
-    apple: [{ url: "/logo2.png?v=2", type: "image/png" }],
+    icon: [
+      { url: "/favicon.ico?v=3", sizes: "any" },
+      { url: "/icon-512.png?v=3", type: "image/png", sizes: "512x512" },
+    ],
+    shortcut: "/favicon.ico?v=3",
+    apple: [{ url: "/apple-icon-180.png?v=3", sizes: "180x180" }],
   },
   openGraph: {
     title: "UONotes",
