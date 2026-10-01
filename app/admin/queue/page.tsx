@@ -1,4 +1,5 @@
-import { QueueView, QUEUE_FILTERS, type QueueFilter } from "./QueueView";
+import { QueueView } from "./QueueView";
+import { QUEUE_FILTERS, type QueueFilter } from "./filters";
 
 // Reads ?filter= so other pages (e.g. the analytics banner) can link
 // straight to a filtered queue: /admin/queue?filter=flagged
