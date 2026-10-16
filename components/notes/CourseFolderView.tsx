@@ -1,28 +1,25 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { Folder, FileText, Bookmark, ArrowLeft, Search, Flag } from "lucide-react";
-import { SaveNoteButton } from "@/components/notes/SaveNoteButton";
-import { PdfThumbnail } from "@/components/notes/PdfThumbnail";
+import { ArrowLeft, Search, X } from "lucide-react";
+import { NoteCard } from "@/components/ui/NoteCard";
 import { ReportModal } from "@/components/notes/ReportModal";
 
-const notebookStyle = {
-  backgroundImage: `
-    linear-gradient(90deg, transparent 64px, rgba(168, 49, 66, 0.15) 64px, rgba(168, 49, 66, 0.15) 66px, transparent 66px),
-    linear-gradient(transparent 31px, #e5e7eb 32px)
-  `,
-  backgroundSize: "100% 100%, 100% 32px",
-};
+// Same "rubber stamp" lettering as the navbar
+const STAMP_TEXT = "font-mono font-bold uppercase tracking-[0.16em]";
+const STAMP_INK = "bg-brand-red shadow-[inset_0_0_0_2px_rgba(255,240,240,0.35)]";
+const LABEL = `text-[11px] sm:text-xs text-brand-red ${STAMP_TEXT} tracking-[0.2em]`;
 
-// Define exact shape of a Note row matching your Supabase schema
+// Exact shape of a Note row matching the Supabase schema
 export interface NoteItem {
   id: string;
   title: string;
   course_code: string;
   file_key: string;
   created_at?: string;
+  author_name?: string | null;
   fileUrl?: string;
 }
 
@@ -34,179 +31,113 @@ interface CourseFolderViewProps {
 export function CourseFolderView({ courseCode, notes }: CourseFolderViewProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [reportNote, setReportNote] = useState<NoteItem | null>(null);
+  const code = courseCode.toUpperCase();
 
-  const filteredNotes = notes.filter((n) => 
-    n.title.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  // Newest first, then filtered by the search box
+  const filteredNotes = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase();
+    return [...notes]
+      .sort((a, b) => (b.created_at ?? "").localeCompare(a.created_at ?? ""))
+      .filter((n) => n.title.toLowerCase().includes(query));
+  }, [notes, searchQuery]);
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 10, filter: "blur(4px)" }}
-      animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
-      exit={{ opacity: 0, y: -10, filter: "blur(4px)" }}
-      transition={{ duration: 0.4, ease: "easeInOut" }}
-      className="w-full min-h-[calc(100vh-60px)] py-4 sm:py-12 px-3 sm:px-6 lg:px-12 flex flex-col items-center overflow-hidden"    >
-      <div className="w-full max-w-[1600px] mx-auto">
-        
-        {/* ==========================================
-            MASTER NOTEBOOK CONTAINER
-        ========================================== */}
-        <div 
-          className="w-full bg-white p-3 sm:p-10 lg:p-12 rounded-2xl sm:rounded-[2rem] shadow-xl border border-brand-red/15 relative overflow-hidden"
-          style={notebookStyle}
-        >
-          {/* Responsive Red Margin Line */}
-          <div className="absolute top-0 bottom-0 left-6 sm:left-16 lg:left-20 w-[2px] bg-[#a83142]/25 pointer-events-none z-0" />
-          
-          {/* Responsive Notebook Spine Shadow */}
-          <div className="absolute top-0 left-0 bottom-0 w-4 sm:w-12 lg:w-16 bg-gradient-to-r from-black/[0.04] to-transparent pointer-events-none z-10" />
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.3 }}
+      // Centred, with the same space on both sides; on wide screens that space also clears the binder edge and lines up with the navbar logo
+      className="w-full px-5 pb-20 pt-8 sm:px-8 sm:pt-12 lg:px-12 min-[1360px]:px-[var(--content-left)]"
+    >
+      <div className="mx-auto w-full max-w-[1440px]">
+        {/* Breadcrumb */}
+        <nav aria-label="Breadcrumb" className={`flex items-center gap-2 text-[11px] sm:text-xs ${STAMP_TEXT}`}>
+          <Link href="/notes" className="inline-flex items-center gap-1.5 text-gray-500 transition-colors hover:text-brand-red">
+            <ArrowLeft className="h-3.5 w-3.5" /> All notes
+          </Link>
+          <span className="text-gray-300">/</span>
+          <span className="text-brand-red">{code}</span>
+        </nav>
 
-          {/* Inner Layout Wrapper */}
-          <div className="relative z-20 pl-6 sm:pl-10 lg:pl-16 w-full flex flex-col gap-5 sm:gap-8">
-
-            {/* Back Button */}
-            <div>
-              <Link href="/notes" className="inline-flex items-center gap-1.5 sm:gap-2 text-[10px] sm:text-xs font-mono font-bold text-brand-red hover:underline bg-brand-red/5 sm:bg-transparent px-2 sm:px-0 py-1 sm:py-0 rounded-md sm:rounded-none w-fit transition-colors">
-                <ArrowLeft className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> Back to Global Database
-              </Link>
-            </div>
-
-            {/* ==========================================
-                HEADER & MOBILE-OPTIMIZED SEARCH
-            ========================================== */}
-            <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-5 sm:gap-6 border-b border-gray-200/80 pb-5 sm:pb-6">
-              
-              <div className="flex items-start sm:items-center gap-4 sm:gap-5">
-                <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-xl sm:rounded-2xl bg-brand-red/10 text-brand-red flex items-center justify-center shrink-0">
-                  <Folder className="w-6 h-6 sm:w-8 sm:h-8 fill-brand-red/20" />
-                </div>
-                <div>
-                  <span className="text-[10px] sm:text-xs font-mono uppercase tracking-[0.3em] text-brand-red font-bold block mb-1">
-                    Course Folder
-                  </span>
-                  <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black tracking-tight font-sans text-gray-900 leading-none">
-                    {courseCode}
-                  </h1>
-                  <p className="text-[10px] sm:text-xs text-gray-500 font-mono mt-1.5 sm:mt-2">
-                    {notes.length} verified documents
-                  </p>
-                </div>
-              </div>
-
-              {/* Search Bar */}
-              <div className="relative w-full lg:w-72 shrink-0">
-                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                <input
-                  type="text"
-                  placeholder="Search this folder..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2.5 sm:py-3 bg-white border border-gray-200 rounded-xl sm:rounded-2xl text-[11px] sm:text-xs font-sans focus:outline-none focus:border-brand-red/50 transition-colors shadow-xs"
-                />
-              </div>
-            </div>
-
-            {/* ==========================================
-                DOCUMENT GRID (Mobile Responsive Cards)
-            ========================================== */}
-            <div className="pb-8">
-              <motion.div 
-                initial={{ opacity: 0 }} 
-                animate={{ opacity: 1 }} 
-                transition={{ duration: 0.4 }}
-                className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6"
-              >
-                {filteredNotes.length > 0 ? (
-                  filteredNotes.map((note) => (
-                    <div key={note.id} className="bg-white border border-brand-red/20 rounded-xl sm:rounded-2xl p-4 sm:p-5 shadow-xs hover:shadow-md transition-shadow flex flex-col justify-between gap-5 sm:gap-6 group">
-                      
-                      {/* Thumbnail Placeholder */}
-                                           <Link href={`/notes/view/${note.id}`} className="h-32 sm:h-36 bg-gray-50 rounded-lg sm:rounded-xl border border-gray-100 flex flex-col items-center justify-center text-gray-400 relative overflow-hidden group-hover:bg-brand-red/[0.02] transition-colors cursor-pointer">
-                        {note.fileUrl ? (
-                          <PdfThumbnail
-                            fileUrl={note.fileUrl}
-                            className="w-full h-full"
-                            fallback={
-                              <div className="w-full h-full flex flex-col items-center justify-center">
-                                <FileText className="w-8 h-8 sm:w-10 sm:h-10 text-brand-red/40 mb-2 group-hover:scale-110 group-hover:text-brand-red transition-all" />
-                                <span className="text-[9px] sm:text-[10px] font-mono uppercase tracking-wider text-gray-400 group-hover:text-brand-red/80 transition-colors">
-                                  PDF Preview
-                                </span>
-                              </div>
-                            }
-                          />
-                        ) : (
-                          <>
-                            <FileText className="w-8 h-8 sm:w-10 sm:h-10 text-brand-red/40 mb-2 group-hover:scale-110 group-hover:text-brand-red transition-all" />
-                            <span className="text-[9px] sm:text-[10px] font-mono uppercase tracking-wider text-gray-400 group-hover:text-brand-red/80 transition-colors">
-                              PDF Preview
-                            </span>
-                          </>
-                        )}
-                      </Link>
-
-                      <div>
-                        <Link href={`/notes/view/${note.id}`}>
-                          <h3 className="font-bold text-gray-900 font-sans text-sm sm:text-base mb-1 line-clamp-1 group-hover:text-brand-red transition-colors cursor-pointer">
-                            {note.title}
-                          </h3>
-                        </Link>
-                        <p className="text-[10px] sm:text-xs font-mono text-brand-red font-semibold">{note.course_code}</p>
-                      </div>
-
-                      {/* Actions */}
-                      <div className="flex items-center justify-between gap-2 pt-3 border-t border-gray-100">
-                        <Link
-                          href={`/notes/view/${note.id}`}
-                          className="flex-1 py-2 sm:py-2.5 px-3 bg-brand-red text-white text-center text-[10px] sm:text-xs font-mono font-bold rounded-lg sm:rounded-xl hover:bg-brand-red-hover transition-colors shadow-xs"
-                        >
-                          View PDF
-                        </Link>
-                        <SaveNoteButton
-                          noteId={note.id}
-                          render={({ isSaved, isToggling, toggle }) => (
-                            <button
-                              onClick={toggle}
-                              disabled={isToggling}
-                              className={`shrink-0 p-2 sm:p-2.5 rounded-lg sm:rounded-xl border transition-colors cursor-pointer disabled:opacity-60 ${
-                                isSaved
-                                  ? "bg-brand-red/10 hover:bg-brand-red/20 text-brand-red border-brand-red/30"
-                                  : "bg-gray-50 hover:bg-gray-100 text-gray-700 border-gray-200"
-                              }`}
-                              title={isSaved ? "Remove from saved" : "Save note"}
-                            >
-                              <Bookmark
-                                className="w-3.5 h-3.5 sm:w-4 sm:h-4"
-                                style={{ fill: isSaved ? "currentColor" : "none" }}
-                              />
-                            </button>
-                          )}
-                        />
-                        <button
-                          onClick={() => setReportNote(note)}
-                          className="shrink-0 p-2 sm:p-2.5 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-lg sm:rounded-xl border border-rose-200 transition-colors cursor-pointer"
-                          title="Report document"
-                        >
-                          <Flag className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                        </button>
-                      </div>
-                    </div>
-                  ))
-                ) : (
-                  <div className="col-span-full py-12 text-center flex flex-col items-center justify-center border-2 border-dashed border-gray-200 rounded-2xl">
-                    <Search className="w-8 h-8 text-gray-300 mb-3" />
-                    <p className="text-sm text-gray-500 font-medium">No documents found matching &quot;{searchQuery}&quot;</p>
-                    <button onClick={() => setSearchQuery("")} className="mt-2 text-xs font-mono font-bold text-brand-red hover:underline">Clear search</button>
-                  </div>
-                )}
-              </motion.div>
-            </div>
-
+        {/* Heading + search */}
+        <header className="mt-6 flex flex-col gap-6 border-b-2 border-[#1f2a44] pb-6 lg:flex-row lg:items-end lg:justify-between">
+          <div>
+            <p className={LABEL}>{"// Course folder"}</p>
+            <h1 className="mt-3 text-5xl font-black leading-none tracking-[-0.045em] text-gray-900 sm:text-6xl lg:text-[4.5rem]">{code}</h1>
+            <p className={`mt-3 text-[10px] text-gray-500 sm:text-[11px] ${STAMP_TEXT}`}>
+              {notes.length} reviewed {notes.length === 1 ? "note" : "notes"}
+            </p>
           </div>
+
+          <div className="flex w-full flex-col gap-3 lg:w-[22rem] lg:items-end">
+            <label className="flex w-full items-center gap-3 border-2 border-brand-red bg-white px-4 transition-shadow focus-within:shadow-[0_0_0_4px_rgba(143,0,24,0.12)]">
+              <Search className="h-4 w-4 shrink-0 text-brand-red" />
+              <span className="sr-only">Search this folder</span>
+              <input
+                type="text"
+                inputMode="search"
+                placeholder="Search this folder..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full min-w-0 bg-transparent py-3 text-[15px] text-gray-900 placeholder:text-gray-400 focus:outline-none"
+              />
+              {searchQuery && (
+                <button type="button" onClick={() => setSearchQuery("")} className="text-gray-400 hover:text-brand-red" aria-label="Clear search">
+                  <X className="h-4 w-4" />
+                </button>
+              )}
+            </label>
+            <Link href="/submit" className={`text-[10px] text-brand-red hover:underline sm:text-[11px] ${STAMP_TEXT}`}>
+              Took {code}? Share your notes &rarr;
+            </Link>
+          </div>
+        </header>
+
+        {/* Notes */}
+        <div className="mt-8 grid grid-cols-2 gap-3.5 sm:gap-6 lg:grid-cols-3 xl:grid-cols-4 min-[1700px]:grid-cols-5">
+          {filteredNotes.length > 0 ? (
+            filteredNotes.map((note) => (
+              <NoteCard
+                key={note.id}
+                id={String(note.id)}
+                title={note.title}
+                course={note.course_code}
+                fileUrl={note.fileUrl}
+                author={note.author_name}
+                date={note.created_at}
+                onReport={() => setReportNote(note)}
+              />
+            ))
+          ) : (
+            <div className="col-span-full border-2 border-dashed border-brand-red/30 bg-white/60 px-6 py-14 text-center">
+              <p className="text-lg font-black tracking-tight text-gray-900">
+                {notes.length === 0 ? `No notes for ${code} yet.` : "Nothing matches that."}
+              </p>
+              <p className="mx-auto mt-1.5 max-w-sm text-sm text-gray-500">
+                {notes.length === 0
+                  ? "Be the first to share yours and help the next class out."
+                  : `No notes in this folder match “${searchQuery.trim()}”.`}
+              </p>
+              <div className="mt-5 flex justify-center">
+                {notes.length === 0 ? (
+                  <Link href="/submit" className={`px-5 py-3 text-[11px] text-white ${STAMP_TEXT} ${STAMP_INK}`}>
+                    Upload a note &uarr;
+                  </Link>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setSearchQuery("")}
+                    className={`border-2 border-dashed border-brand-red px-4 py-2.5 text-[11px] text-brand-red transition-colors hover:border-solid hover:bg-brand-red hover:text-white ${STAMP_TEXT}`}
+                  >
+                    Clear search
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
-      {/* Report Modal Integration */}
       {reportNote && (
         <ReportModal
           isOpen={!!reportNote}
