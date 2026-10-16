@@ -6,14 +6,23 @@ import { createR2Client, R2_BUCKET_NAME } from "@/lib/r2";
 
 export const revalidate = 60; // Revalidate every minute
 
-export default async function NotesPage() {
+type NotesPageProps = {
+  searchParams: Promise<{ faculty?: string | string[]; q?: string | string[] }>;
+};
+
+export default async function NotesPage({ searchParams }: NotesPageProps) {
+  const params = await searchParams;
+  // ?faculty=Engineering&q=csi opens the library on that tab/search (the explorer keeps these in the URL)
+  const initialFaculty = typeof params.faculty === "string" ? params.faculty : undefined;
+  const initialQuery = typeof params.q === "string" ? params.q : undefined;
+
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   
   // Fetch the entire approved library to pass down for client-side filtering
-    const { data: notes, error } = await supabase
+  const { data: notes, error } = await supabase
     .from("notes")
-    .select("id, title, course_code, file_key")
+    .select("id, title, course_code, file_key, author_name, created_at")
     .eq("status", "approved")
     .order("created_at", { ascending: false });
 
@@ -29,4 +38,5 @@ export default async function NotesPage() {
     }))
   );
 
-  return <NotesExplorer isLoggedIn={!!user} notes={notesWithUrls} />; }
+  return <NotesExplorer isLoggedIn={!!user} notes={notesWithUrls} initialFaculty={initialFaculty} initialQuery={initialQuery} />;
+}

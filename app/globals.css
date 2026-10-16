@@ -2,15 +2,40 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  /* Binder-paper page edge (left side of every page):
+     --margin-x  where the red margin line sits
+     (only shown on screens 1360px and wider, where there's room beside the content; plain pink below that) */
+  --margin-x: 64px;
+  /* Left padding for full-width bars (navbar, footer) so they start right of the margin line */
+  --content-left: 1.5rem;
+}
+@media (min-width: 1360px) {
+  :root { --content-left: calc(var(--margin-x) + 32px); }
+}
+@media (min-width: 1700px) {
+  /* Very wide screens: move the margin in to leave room for the homepage's red margin notes */
+  :root { --margin-x: 150px; }
+}
+
 @layer base {
   body {
     @apply text-brand-body antialiased min-h-screen overflow-x-hidden;
     background-color: #FFF0F0;
-    background-image: 
-      linear-gradient(rgba(168, 49, 66, 0.05) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(168, 49, 66, 0.05) 1px, transparent 1px);
-    background-size: 32px 32px;
-    animation: slowDrift 25s linear infinite;
+  }
+  /* The binder-paper edge only appears on wide screens, where it won't run behind content */
+  @media (min-width: 1360px) {
+    body {
+      background-image:
+        /* red margin line */
+        linear-gradient(90deg, transparent var(--margin-x), rgba(220, 120, 130, 0.45) var(--margin-x), rgba(220, 120, 130, 0.45) calc(var(--margin-x) + 2px), transparent calc(var(--margin-x) + 2px)),
+        /* covers the ruled lines everywhere right of the margin line, so they stop exactly at it */
+        linear-gradient(90deg, transparent var(--margin-x), #fff0f0 var(--margin-x)),
+        /* faint blue ruled lines */
+        repeating-linear-gradient(transparent 0 35px, rgba(120, 150, 200, 0.16) 35px 36px);
+      background-size: 100% 100px, 100% 100px, 100% 36px;
+      background-repeat: repeat-y;
+    }
   }
 }
 
@@ -65,7 +90,9 @@ body.lock-scroll {
   }
 }
 
-/* --- MOVING GRID BACKGROUND ANIMATION --- */
+/* --- MOVING GRID BACKGROUND (optional) ---
+   No longer on the whole page. Add the class `animated-grid-bg` to any element that should still have the drifting grid
+   (e.g. the hero's <section> in components/home/Hero.tsx). */
 @keyframes slowDrift {
   0% {
     background-position: 0px 0px;
@@ -76,9 +103,15 @@ body.lock-scroll {
 }
 
 .animated-grid-bg {
-  background-image: 
+  background-image:
     linear-gradient(rgba(168, 49, 66, 0.05) 1px, transparent 1px),
     linear-gradient(90deg, rgba(168, 49, 66, 0.05) 1px, transparent 1px);
   background-size: 32px 32px;
   animation: slowDrift 25s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animated-grid-bg {
+    animation: none;
+  }
 }

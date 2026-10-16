@@ -1,119 +1,154 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef } from "react";
-import { motion, useInView, useMotionValue, animate, Variants } from "framer-motion";
-import { TrendingUp, Users, BookOpen, ArrowRight } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { motion, useInView, animate, Variants } from "framer-motion";
+import { Caveat } from "next/font/google";
+import { ArrowRight } from "lucide-react";
+import { CommunityScraps } from "./SideScraps";
 
-function AnimatedCounter({ to, suffix = "" }: { to: number; suffix?: string }) {
-  const ref = useRef<HTMLSpanElement>(null);
-  const inView = useInView(ref, { once: true, margin: "-50px" });
-  const count = useMotionValue(0);
+const caveat = Caveat({ subsets: ["latin"], weight: ["500", "700"] });
+
+// ─── Settings ────────────────────────────────────────────────────────────────
+// One sticker per uOttawa faculty (colours cycle through the site's term colours)
+const FACULTIES = [
+  "Arts",
+  "Education",
+  "Engineering",
+  "Health Sciences",
+  "Law",
+  "Medicine",
+  "Science",
+  "Social Sciences",
+  "Telfer",
+];
+const STICKER_COLOURS = ["#f7d3d8", "#d6e4f8", "#d4ebd8", "#fff3c9", "#ecdff5"];
+const STICKER_TILTS = [-4, 3, -2, 5, -3, 2, -5, 4, -1, 3];
+
+// The numbers under the stickers
+const STATS = [
+  { to: 100000, suffix: "+", label: "total interactions" },
+  { to: 100, suffix: "+", label: "active contributors" },
+];
+// ─────────────────────────────────────────────────────────────────────────────
+
+// Counts up from 0 once `start` becomes true
+function AnimatedCounter({ to, suffix = "", start }: { to: number; suffix?: string; start: boolean }) {
+  const [value, setValue] = useState(0);
 
   useEffect(() => {
-    if (inView) {
-      animate(count, to, { duration: 2, ease: "easeOut" });
-    }
-  }, [inView, count, to]);
+    if (!start) return;
+    const controls = animate(0, to, { duration: 2, ease: "easeOut", onUpdate: (v) => setValue(Math.round(v)) });
+    return () => controls.stop();
+  }, [start, to]);
 
-  useEffect(() => {
-    return count.on("change", (latest) => {
-      if (ref.current) {
-        ref.current.textContent = Math.round(latest).toLocaleString() + suffix;
-      }
-    });
-  }, [count, suffix]);
-
-  return <span ref={ref}>0{suffix}</span>;
+  return (
+    <span>
+      {value.toLocaleString()}
+      {suffix}
+    </span>
+  );
 }
 
 const fadeUp: Variants = {
   hidden: { opacity: 0, y: 20 },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.6, ease: [0.16, 1, 0.3, 1] } }
+  visible: { opacity: 1, y: 0, transition: { duration: 0.6, ease: [0.16, 1, 0.3, 1] } },
 };
 
 const staggerContainer: Variants = {
-  hidden: { opacity: 0 },
-  visible: { opacity: 1, transition: { staggerChildren: 0.15 } }
+  hidden: {},
+  visible: { transition: { staggerChildren: 0.12 } },
+};
+
+const stickerGroup: Variants = {
+  hidden: {},
+  visible: { transition: { staggerChildren: 0.06, delayChildren: 0.1 } },
+};
+
+// Each sticker gets slapped on at its own angle
+const sticker: Variants = {
+  hidden: { opacity: 0, scale: 0.6, rotate: 0 },
+  visible: (tilt: number) => ({ opacity: 1, scale: 1, rotate: tilt, transition: { type: "spring", stiffness: 320, damping: 16 } }),
 };
 
 export function Community() {
+  const statsRef = useRef<HTMLDivElement>(null);
+  const statsInView = useInView(statsRef, { once: true, margin: "-60px" });
+
   return (
-    <motion.section 
-      initial="hidden" whileInView="visible" viewport={{ once: true, margin: "-100px" }} variants={staggerContainer}
-      className="py-12 sm:py-16 max-w-6xl mx-auto px-4 sm:px-6 flex flex-col md:flex-row items-center gap-10 lg:gap-16 relative z-10"
+    <motion.section
+      initial="hidden"
+      whileInView="visible"
+      viewport={{ once: true, margin: "-100px" }}
+      variants={staggerContainer}
+      className="relative z-10 mx-auto max-w-5xl px-4 py-12 text-center sm:px-6 sm:py-16"
     >
-      <motion.div variants={fadeUp} className="w-full md:w-1/2 bg-white/90 backdrop-blur-2xl rounded-3xl p-6 sm:p-8 shadow-[0_12px_32px_rgba(185,28,28,0.06)] border border-white/80 flex flex-col gap-6">
-        
-        <div className="flex items-center gap-5 p-4 rounded-2xl bg-[#fdfafb]/80 border border-brand-red/10 transition-all hover:border-brand-red/30 group">
-          <div className="w-12 h-12 sm:w-14 sm:h-14 bg-brand-red/10 rounded-2xl flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform text-brand-red shadow-xs">
-            <TrendingUp className="w-6 h-6" />
-          </div>
-          <div>
-            <h4 className="text-2xl sm:text-3xl font-black text-gray-900 tracking-tight font-sans">
-              <AnimatedCounter to={100000} suffix="+" />
-            </h4>
-            <span className="text-[10px] font-mono uppercase tracking-[0.2em] text-gray-400 font-bold mt-0.5 block">
-              {"// TOTAL INTERACTIONS"}
-            </span>
-          </div>
-        </div>
+      <CommunityScraps />
 
-        <div className="flex items-center gap-5 p-4 rounded-2xl bg-[#fdfafb]/80 border border-brand-red/10 transition-all hover:border-brand-red/30 group">
-          <div className="w-12 h-12 sm:w-14 sm:h-14 bg-brand-red/10 rounded-2xl flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform text-brand-red shadow-xs">
-            <Users className="w-6 h-6" />
-          </div>
-          <div>
-            <h4 className="text-2xl sm:text-3xl font-black text-gray-900 tracking-tight font-sans">
-              <AnimatedCounter to={100} suffix="+" />
-            </h4>
-            <span className="text-[10px] font-mono uppercase tracking-[0.2em] text-gray-400 font-bold mt-0.5 block">
-              {"// ACTIVE CONTRIBUTORS"}
-            </span>
-          </div>
-        </div>
+      <motion.p variants={fadeUp} className="mb-3 font-mono text-[11px] font-bold uppercase tracking-[0.2em] text-brand-red">
+        Join the community
+      </motion.p>
+      <motion.h2
+        variants={fadeUp}
+        className="mx-auto max-w-3xl font-logo text-3xl font-black leading-[1.1] tracking-tight text-gray-900 sm:text-4xl lg:text-5xl"
+      >
+        Notes from <span className="text-brand-red">every faculty</span> at uOttawa.
+      </motion.h2>
+      <motion.p variants={fadeUp} className="mx-auto mt-4 max-w-xl font-sans text-sm leading-relaxed text-gray-600 sm:text-base">
+        Whether you need to prep for midterms or want to share your pristine lecture notes, UONotes is engineered to help everyone succeed.
+      </motion.p>
 
-        <div className="flex items-center gap-5 p-4 rounded-2xl bg-[#fdfafb]/80 border border-brand-red/10 transition-all hover:border-brand-red/30 group">
-          <div className="w-12 h-12 sm:w-14 sm:h-14 bg-brand-red/10 rounded-2xl flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform text-brand-red shadow-xs">
-            <BookOpen className="w-6 h-6" />
-          </div>
-          <div>
-            <h4 className="text-2xl sm:text-3xl font-black text-gray-900 tracking-tight font-sans">
-              <AnimatedCounter to={10} suffix="" />
-            </h4>
-            <span className="text-[10px] font-mono uppercase tracking-[0.2em] text-gray-400 font-bold mt-0.5 block">
-              {"// FACULTIES COVERED"}
-            </span>
-          </div>
-        </div>
+      {/* Faculty stickers */}
+      <motion.ul variants={stickerGroup} className="mx-auto mt-8 flex max-w-[50rem] flex-wrap justify-center gap-2.5 sm:mt-10 sm:gap-3.5">
+        {FACULTIES.map((faculty, i) => (
+          <motion.li
+            key={faculty}
+            custom={STICKER_TILTS[i % STICKER_TILTS.length]}
+            variants={sticker}
+            whileHover={{ rotate: 0, scale: 1.08, y: -3 }}
+            className="rounded-full border-[3px] border-white px-4 py-2 font-sans text-sm font-extrabold text-[#1f2a44] shadow-[0_8px_12px_-8px_rgba(0,0,0,0.35)] sm:px-5 sm:py-2.5 sm:text-base"
+            style={{ backgroundColor: STICKER_COLOURS[i % STICKER_COLOURS.length] }}
+          >
+            {faculty}
+          </motion.li>
+        ))}
+      </motion.ul>
 
+      {/* Stats */}
+      <motion.div
+        ref={statsRef}
+        variants={fadeUp}
+        className="mt-8 flex flex-col items-center justify-center gap-3 sm:mt-10 sm:flex-row sm:gap-12"
+      >
+        {STATS.map((stat) => (
+          <p key={stat.label} className="flex items-baseline gap-2">
+            <span className="font-logo text-4xl font-black tracking-tight text-gray-900 sm:text-5xl">
+              <AnimatedCounter to={stat.to} suffix={stat.suffix} start={statsInView} />
+            </span>
+            <span className="font-mono text-xs font-bold uppercase tracking-[0.18em] text-brand-red sm:text-sm">{stat.label}</span>
+          </p>
+        ))}
       </motion.div>
 
-      <motion.div variants={fadeUp} className="w-full md:w-1/2 flex flex-col items-center md:items-start text-center md:text-left">
-        <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black font-logo text-gray-900 leading-[1.1] tracking-tight mb-4">
-          Join a growing community of students supporting each other academically.
-        </h2>
-        
-        <p className="text-sm sm:text-base text-gray-600 mb-8 leading-relaxed font-sans max-w-lg">
-          Whether you need to prep for midterms or want to share your pristine lecture notes, UONotes is engineered to help everyone succeed.
-        </p>
-
-        <div className="flex flex-col sm:flex-row gap-3.5 w-full sm:w-auto">
-          <Link 
-            href="/contact" 
-            className="px-6 py-3.5 rounded-xl bg-brand-red text-white text-xs font-mono font-bold uppercase tracking-widest hover:bg-brand-red-hover transition-all shadow-md active:scale-95 flex items-center justify-center gap-2 group text-center"
-          >
-            <span>Contact us</span>
-            <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-          </Link>
-          <Link 
-            href="/about" 
-            className="px-6 py-3.5 rounded-xl bg-white/80 backdrop-blur-md text-gray-800 text-xs font-mono font-bold uppercase tracking-widest border border-gray-200 hover:border-brand-red/30 hover:bg-brand-red/5 hover:text-brand-red transition-all shadow-xs active:scale-95 text-center flex items-center justify-center"
-          >
-            Meet the team
-          </Link>
-        </div>
+      {/* Buttons */}
+      <motion.div variants={fadeUp} className="mt-8 flex flex-col items-center justify-center gap-3.5 sm:mt-10 sm:flex-row">
+        <Link
+          href="/contact"
+          className="group flex w-full items-center justify-center gap-2 rounded-xl bg-brand-red px-6 py-3.5 font-mono text-xs font-bold uppercase tracking-widest text-white shadow-md transition-all hover:bg-brand-red-hover active:scale-95 sm:w-auto"
+        >
+          <span>Contact us</span>
+          <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+        </Link>
+        <Link
+          href="/about"
+          className="flex w-full items-center justify-center rounded-xl border border-gray-200 bg-white/80 px-6 py-3.5 font-mono text-xs font-bold uppercase tracking-widest text-gray-800 shadow-xs backdrop-blur-md transition-all hover:border-brand-red/30 hover:bg-brand-red/5 hover:text-brand-red active:scale-95 sm:w-auto"
+        >
+          Meet the team
+        </Link>
       </motion.div>
+      <motion.p variants={fadeUp} className={`${caveat.className} mt-4 text-2xl font-bold text-brand-red`}>
+        &uarr; we&apos;d love to hear from you!
+      </motion.p>
     </motion.section>
   );
 }
