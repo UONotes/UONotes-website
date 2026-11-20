@@ -11,6 +11,25 @@ export type EventItem = {
 
 export const pastEvents: EventItem[] = [
   {
+    id: "academic-success-night",
+    title: "Academic Success Night",
+    date: "October 8, 2026",
+    time: "7:30 PM",
+    location: "CRX 407",
+    image: "/events/academic-success/1.jpg",
+    images: [
+      "/events/academic-success/1.jpg",
+      "/events/academic-success/2.jpg",
+      "/events/academic-success/3.jpg",
+      "/events/academic-success/4.jpg",
+      "/events/academic-success/5.jpg",
+      "/events/academic-success/6.jpg",
+      "/events/academic-success/7.jpg",
+      "/events/academic-success/8.jpg",
+      "/events/academic-success/9.jpg"
+    ]
+  },
+  {
     id: "pathways-dentistry-medicine-law",
     title: "Pathways to Dentistry, Medicine and Law",
     date: "June 25, 2026",

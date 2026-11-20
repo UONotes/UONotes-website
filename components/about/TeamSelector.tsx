@@ -245,7 +245,8 @@ function TeamSheet({
         <span className="text-[56px] font-bold leading-none text-brand-red">{memberCount}</span>
         <span className="text-xl font-bold">members</span>
         <span className="whitespace-nowrap text-[17px] font-medium">
-          {leadCount} {leadCount === 1 ? "lead" : "leads"} · {directorCount} {directorCount === 1 ? "director" : "directors"}
+          {leadCount > 0 && <>{leadCount} {leadCount === 1 ? "lead" : "leads"} · </>}
+          {directorCount} {directorCount === 1 ? "director" : "directors"}
         </span>
       </div>
     </>

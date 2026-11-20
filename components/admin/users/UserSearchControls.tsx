@@ -65,12 +65,13 @@ export function UserSearchControls({ initialQuery, initialRole }: { initialQuery
   const roles = [
     { label: "All", value: "ALL" },
     { label: "Super admins", value: "SUPER_ADMIN" },
-    { label: "Admins", value: "ADMIN" },
+    { label: "VP Notes", value: "VP_NOTES" },
+    { label: "Notes Directors", value: "ADMIN" },
     { label: "Students", value: "STUDENT" },
   ];
 
   return (
-    <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-white p-2.5 rounded-2xl border border-black/5">
+    <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-white p-2.5 rounded-lg border border-brand-border-light">
       <div className="relative flex-1 max-w-xl">
         <div className="absolute inset-y-0 left-3.5 flex items-center pointer-events-none">
           <Search className="w-4 h-4 text-gray-400" />
@@ -80,7 +81,7 @@ export function UserSearchControls({ initialQuery, initialRole }: { initialQuery
           value={text}
           onChange={(e) => setText(e.target.value)}
           placeholder="Search by name or email" 
-          className="w-full pl-10 pr-9 py-2 bg-gray-50 hover:bg-gray-100/70 focus:bg-white border border-transparent rounded-xl text-sm text-gray-900 focus:outline-none focus:border-gray-300 transition-all placeholder:text-gray-400"
+          className="w-full pl-10 pr-9 py-2 bg-gray-50 hover:bg-gray-100/70 focus:bg-white border border-transparent rounded-lg text-base sm:text-sm text-gray-900 focus:outline-none focus:border-gray-300 transition-all placeholder:text-gray-400"
         />
         <div className="absolute inset-y-0 right-3.5 flex items-center">
           {isPending ? (
@@ -97,7 +98,7 @@ export function UserSearchControls({ initialQuery, initialRole }: { initialQuery
         </div>
       </div>
       
-      <div className="flex items-center gap-1 bg-gray-50 p-1 rounded-xl overflow-x-auto">
+      <div className="flex items-center gap-1 bg-gray-50 p-1 rounded-lg overflow-x-auto">
         {roles.map((r) => {
           const isActive = initialRole === r.value;
           return (

@@ -40,7 +40,7 @@ type Props = {
 
 const KIND_META: Record<HistoryEntry["kind"], { label: string; icon: typeof Check; color: string; bg: string }> = {
   approved: { label: "Approved", icon: Check, color: "text-emerald-700", bg: "bg-emerald-50" },
-  changes: { label: "Requested fixes", icon: MessageSquareText, color: "text-amber-700", bg: "bg-amber-50" },
+  changes: { label: "Fixed & approved", icon: MessageSquareText, color: "text-amber-700", bg: "bg-amber-50" },
   rejected: { label: "Rejected", icon: XCircle, color: "text-rose-700", bg: "bg-rose-50" },
   ban: { label: "Banned", icon: Ban, color: "text-rose-700", bg: "bg-rose-50" },
   unban: { label: "Restored access", icon: Unlock, color: "text-emerald-700", bg: "bg-emerald-50" },
@@ -117,12 +117,12 @@ export function AdminProfileView({ admin, stats, chart, heat, history, historyTr
         <span className="relative w-14 h-14 rounded-full bg-brand-pink text-brand-red flex items-center justify-center font-bold text-xl shrink-0">
           {admin.name.charAt(0).toUpperCase()}
           {presence && (
-            <span className={`absolute bottom-0 right-0 w-4 h-4 rounded-full border-[3px] border-[#FBF8F3] ${presence.status === "active" ? "bg-emerald-500" : "bg-amber-400"}`} />
+            <span className={`absolute bottom-0 right-0 w-4 h-4 rounded-full border-[3px] border-brand-surface ${presence.status === "active" ? "bg-emerald-500" : "bg-amber-400"}`} />
           )}
         </span>
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
-            <h1 className="font-logo text-2xl sm:text-3xl font-bold text-[#23201D] tracking-tight">{admin.name}</h1>
+            <h1 className="font-logo text-2xl sm:text-3xl font-bold text-brand-dark tracking-tight">{admin.name}</h1>
             <span className="text-[11px] font-semibold text-gray-500 bg-black/5 rounded-md px-2 py-0.5">{admin.role}</span>
           </div>
           <p className="text-sm text-gray-500 truncate">{admin.email}</p>
@@ -159,13 +159,13 @@ export function AdminProfileView({ admin, stats, chart, heat, history, historyTr
       <div className="grid grid-cols-1 lg:grid-cols-[1.6fr_1fr] gap-4">
         <Card>
           <div className="flex items-baseline justify-between gap-3 mb-3">
-            <h2 className="font-logo text-lg font-bold text-[#23201D]">Last 30 days</h2>
+            <h2 className="font-logo text-lg font-bold text-brand-dark">Last 30 days</h2>
             <span className="text-xs text-gray-400">Decisions per day</span>
           </div>
           <div className="flex flex-wrap gap-x-4 gap-y-1 mb-4 text-xs text-gray-600">
             {[
               { label: "Approved", color: STATUS.approved },
-              { label: "Fixes requested", color: STATUS.changes },
+              { label: "Fixed & approved", color: STATUS.changes },
               { label: "Rejected", color: STATUS.rejected },
             ].map((l) => (
               <span key={l.label} className="flex items-center gap-1.5">
@@ -181,17 +181,17 @@ export function AdminProfileView({ admin, stats, chart, heat, history, historyTr
             unit="decisions"
             series={[
               { label: "Approved", color: STATUS.approved, values: chart.approved },
-              { label: "Fixes requested", color: STATUS.changes, values: chart.changes },
+              { label: "Fixed & approved", color: STATUS.changes, values: chart.changes },
               { label: "Rejected", color: STATUS.rejected, values: chart.rejected },
             ]}
           />
         </Card>
         <Card>
           <div className="flex items-baseline justify-between gap-3 mb-4">
-            <h2 className="font-logo text-lg font-bold text-[#23201D]">All time</h2>
+            <h2 className="font-logo text-lg font-bold text-brand-dark">All time</h2>
             {stats.firstDecision && <span className="text-xs text-gray-400">Since {formatShortDate(stats.firstDecision)}</span>}
           </div>
-          <p className="font-logo text-4xl font-bold text-[#23201D] tabular-nums">{fmt(decisions)}</p>
+          <p className="font-logo text-4xl font-bold text-brand-dark tabular-nums">{fmt(decisions)}</p>
           <p className="text-xs text-gray-500 mb-4">note decisions</p>
           <StackedBar
             segments={[
@@ -203,7 +203,7 @@ export function AdminProfileView({ admin, stats, chart, heat, history, historyTr
           <ul className="mt-4 space-y-2 text-sm">
             {[
               { label: "Approved", value: stats.approved, color: STATUS.approved },
-              { label: "Fixes requested", value: stats.changes, color: STATUS.changes },
+              { label: "Fixed & approved", value: stats.changes, color: STATUS.changes },
               { label: "Rejected", value: stats.rejected, color: STATUS.rejected },
             ].map((r) => (
               <li key={r.label} className="flex items-center gap-2">
@@ -225,7 +225,7 @@ export function AdminProfileView({ admin, stats, chart, heat, history, historyTr
 
       <Card>
         <div className="mb-5">
-          <h2 className="font-logo text-lg font-bold text-[#23201D]">When they review</h2>
+          <h2 className="font-logo text-lg font-bold text-brand-dark">When they review</h2>
           <p className="text-xs text-gray-400 mt-0.5">All their decisions, by day and 3-hour block (Eastern).</p>
         </div>
         <Heatmap grid={heat} unit="decisions" />
@@ -235,7 +235,7 @@ export function AdminProfileView({ admin, stats, chart, heat, history, historyTr
       <Card padded={false}>
         <div className="px-5 sm:px-6 pt-5 pb-4 border-b border-black/5 space-y-4">
           <div className="flex flex-wrap items-baseline justify-between gap-2">
-            <h2 className="font-logo text-lg font-bold text-[#23201D]">Activity history</h2>
+            <h2 className="font-logo text-lg font-bold text-brand-dark">Activity history</h2>
             <span className="text-xs text-gray-400">
               {historyTruncated ? `Most recent ${history.length}` : `${history.length} ${history.length === 1 ? "action" : "actions"}`}
             </span>
@@ -250,7 +250,7 @@ export function AdminProfileView({ admin, stats, chart, heat, history, historyTr
                   aria-selected={filter === f.key}
                   onClick={() => setFilter(f.key)}
                   className={`shrink-0 h-8 px-3 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
-                    filter === f.key ? "bg-[#23201D] text-white" : "text-gray-500 hover:text-gray-900 hover:bg-gray-100"
+                    filter === f.key ? "bg-brand-red text-white" : "text-gray-500 hover:text-gray-900 hover:bg-gray-100"
                   }`}
                 >
                   {f.label}
@@ -345,7 +345,7 @@ function Stat({ label, value, sub, extra }: { label: string; value: string; sub?
         <p className="text-xs text-gray-500">{label}</p>
         {extra}
       </div>
-      <p className="font-logo text-2xl sm:text-3xl font-bold text-[#23201D] tabular-nums mt-1">{value}</p>
+      <p className="font-logo text-2xl sm:text-3xl font-bold text-brand-dark tabular-nums mt-1">{value}</p>
       {sub && <p className="text-[11px] text-gray-400 mt-1 leading-snug">{sub}</p>}
     </div>
   );

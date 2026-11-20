@@ -5,6 +5,7 @@ import { GetObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { createR2Client, R2_BUCKET_NAME } from "@/lib/r2";
 import { bucketSeries, easternDayHour } from "@/lib/analytics";
+import { DECISION_ACTIONS } from "@/lib/review";
 import { getAnalytics, isSuperAdmin } from "@/lib/analytics-loader";
 import { AdminProfileView, type HistoryEntry } from "@/components/admin/analytics/AdminProfileView";
 
@@ -13,6 +14,7 @@ type AuditDetails = {
   course_code?: string | null;
   reason?: string | null;
   attachment_key?: string | null;
+  original_file_key?: string | null;
   reasons?: string[];
   custom_note?: string | null;
 };
@@ -38,7 +40,7 @@ export default async function AdminAnalyticsDetailPage({ params }: { params: Pro
 
   const db = createAdminClient();
   const [{ data: target }, analytics, rows] = await Promise.all([
-    db.from("profiles").select("full_name, email, last_admin_active_at, is_admin, is_super_admin").eq("id", adminId).single(),
+    db.from("profiles").select("full_name, email, last_admin_active_at, is_admin, is_super_admin, is_vp_notes").eq("id", adminId).single(),
     getAnalytics("30d"),
     (async () => {
       const all: AuditRow[] = [];
@@ -47,7 +49,7 @@ export default async function AdminAnalyticsDetailPage({ params }: { params: Pro
           .from("admin_audit_log")
           .select("id, action_type, target_type, target_id, created_at, details")
           .eq("admin_id", adminId)
-          .in("action_type", ["NOTE_APPROVED", "NOTE_REJECTED", "NOTE_CHANGES_REQUESTED", "BAN", "UNBAN"])
+          .in("action_type", [...DECISION_ACTIONS, "BAN", "UNBAN"])
           .order("created_at", { ascending: false })
           .range(from, from + 999);
         all.push(...((data as AuditRow[]) || []));
@@ -65,9 +67,10 @@ export default async function AdminAnalyticsDetailPage({ params }: { params: Pro
     const age = now.getTime() - new Date(r.created_at).getTime();
     return age >= offset * DAY_MS && age < (offset + days) * DAY_MS;
   };
-  const series = (type: string) =>
+  const isFixDecision = (type: string) => type === "NOTE_APPROVED_WITH_FIXES" || type === "NOTE_CHANGES_REQUESTED";
+  const series = (match: (type: string) => boolean) =>
     bucketSeries(
-      decisions.filter((r) => r.action_type === type && inLast(30)(r)).map((r) => ({ at: r.created_at })),
+      decisions.filter((r) => match(r.action_type) && inLast(30)(r)).map((r) => ({ at: r.created_at })),
       30,
       1,
       now
@@ -108,6 +111,7 @@ export default async function AdminAnalyticsDetailPage({ params }: { params: Pro
         };
       }
       const fallback = r.target_id ? noteLookup.get(r.target_id) : undefined;
+      const fileKey = r.details?.attachment_key || r.details?.original_file_key;
       return {
         id: r.id,
         kind: r.action_type === "NOTE_APPROVED" ? "approved" : r.action_type === "NOTE_REJECTED" ? "rejected" : "changes",
@@ -115,8 +119,8 @@ export default async function AdminAnalyticsDetailPage({ params }: { params: Pro
         title: r.details?.note_title || fallback?.title || "Note no longer available",
         subtitle: r.details?.course_code || fallback?.course_code || "—",
         reason: r.details?.reason || null,
-        attachmentUrl: r.details?.attachment_key
-          ? await getSignedUrl(r2, new GetObjectCommand({ Bucket: R2_BUCKET_NAME, Key: r.details.attachment_key }), { expiresIn: 3600 })
+        attachmentUrl: fileKey
+          ? await getSignedUrl(r2, new GetObjectCommand({ Bucket: R2_BUCKET_NAME, Key: fileKey }), { expiresIn: 3600 })
           : null,
       };
     })
@@ -129,16 +133,16 @@ export default async function AdminAnalyticsDetailPage({ params }: { params: Pro
     <AdminProfileView
       admin={{
         id: adminId,
-        name: target.full_name || target.email?.split("@")[0] || "Admin",
+        name: target.full_name || target.email?.split("@")[0] || "Notes Director",
         email: target.email || "",
-        role: target.is_super_admin ? "Super admin" : target.is_admin ? "Admin" : "Former admin",
+        role: target.is_super_admin ? "Super admin" : target.is_vp_notes ? "VP Notes" : target.is_admin ? "Notes Director" : "Former Notes Director",
         lastActive: target.last_admin_active_at,
       }}
       stats={{
         last30: decisions.filter(inLast(30)).length,
         prev30: decisions.filter(inLast(30, 30)).length,
         approved: count("NOTE_APPROVED"),
-        changes: count("NOTE_CHANGES_REQUESTED"),
+        changes: decisions.filter((r) => isFixDecision(r.action_type)).length,
         rejected: count("NOTE_REJECTED"),
         bans: rows.filter((r) => r.action_type === "BAN").length,
         unbans: rows.filter((r) => r.action_type === "UNBAN").length,
@@ -149,9 +153,9 @@ export default async function AdminAnalyticsDetailPage({ params }: { params: Pro
       }}
       chart={{
         labels: analytics.buckets,
-        approved: series("NOTE_APPROVED"),
-        changes: series("NOTE_CHANGES_REQUESTED"),
-        rejected: series("NOTE_REJECTED"),
+        approved: series((t) => t === "NOTE_APPROVED"),
+        changes: series(isFixDecision),
+        rejected: series((t) => t === "NOTE_REJECTED"),
       }}
       heat={heat}
       history={history}

@@ -88,7 +88,7 @@ export function SettingsForm({
     <div className="w-full max-w-6xl mx-auto space-y-6">
 
       {savedToast && (
-        <div className="fixed bottom-6 right-6 z-50 flex items-center gap-3 bg-[#23201D] text-white px-4 py-3 rounded-xl shadow-xl animate-in slide-in-from-bottom-4 duration-300">
+        <div className="fixed bottom-6 right-6 z-50 flex items-center gap-3 bg-brand-red text-white px-4 py-3 rounded-lg shadow-xl animate-in slide-in-from-bottom-4 duration-300">
           <div className="w-5 h-5 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0">
             <Check className="w-3 h-3 stroke-[3]" />
           </div>
@@ -98,7 +98,7 @@ export function SettingsForm({
 
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="font-logo text-3xl font-bold text-[#23201D] tracking-tight">Settings</h1>
+          <h1 className="font-logo text-3xl font-bold text-brand-dark tracking-tight">Settings</h1>
           <p className="text-sm text-gray-500 mt-1">
             Platform-wide controls. Changes here affect everyone.
           </p>
@@ -107,7 +107,7 @@ export function SettingsForm({
         <button
           onClick={handleSaveSettings}
           disabled={saving}
-          className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#23201D] hover:bg-black text-white text-sm font-semibold rounded-xl transition-all disabled:opacity-50 cursor-pointer"
+          className="inline-flex items-center gap-2 px-5 py-2.5 bg-brand-red hover:bg-brand-red-hover text-white text-sm font-semibold rounded-lg transition-all disabled:opacity-50 cursor-pointer"
         >
           {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
           Save changes
@@ -115,7 +115,7 @@ export function SettingsForm({
       </div>
 
       {errorMessage && (
-        <div className="p-4 bg-rose-50 border border-rose-100 rounded-xl flex items-center gap-3 text-rose-700 text-sm">
+        <div className="p-4 bg-rose-50 border border-rose-100 rounded-lg flex items-center gap-3 text-rose-700 text-sm">
           <AlertTriangle className="w-4 h-4 shrink-0" />
           <span>{errorMessage}</span>
         </div>
@@ -126,8 +126,8 @@ export function SettingsForm({
 
           <div className="lg:col-span-2 space-y-4">
 
-            <div className="bg-white border border-black/5 rounded-2xl p-6 space-y-5">
-              <h2 className="font-logo text-lg font-bold text-[#23201D]">Site availability</h2>
+            <div className="bg-white border border-brand-border-light rounded-lg p-6 space-y-5">
+              <h2 className="font-logo text-lg font-bold text-brand-dark">Site availability</h2>
 
               <div className="flex items-start justify-between gap-4">
                 <div>
@@ -176,13 +176,13 @@ export function SettingsForm({
               </div>
             </div>
 
-            <div className="bg-white border border-black/5 rounded-2xl p-6 space-y-4">
+            <div className="bg-white border border-brand-border-light rounded-lg p-6 space-y-4">
               <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">
+                <div className="w-9 h-9 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">
                   <Bell className="w-4 h-4" />
                 </div>
                 <div>
-                  <h2 className="font-logo text-lg font-bold text-[#23201D]">Announcement</h2>
+                  <h2 className="font-logo text-lg font-bold text-brand-dark">Announcement</h2>
                   <p className="text-xs text-gray-400">Shows on the admin overview page for other reviewers.</p>
                 </div>
               </div>
@@ -191,20 +191,20 @@ export function SettingsForm({
                 rows={2}
                 value={announcementText}
                 onChange={(e) => setAnnouncementText(e.target.value)}
-                placeholder="A short note for other admins…"
-                className="w-full p-3.5 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-900 focus:outline-none focus:border-gray-400 focus:bg-white transition-all resize-none placeholder:text-gray-400"
+                placeholder="A short note for the review team…"
+                className="w-full p-3.5 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-900 focus:outline-none focus:border-gray-400 focus:bg-white transition-all resize-none placeholder:text-gray-400"
               />
             </div>
 
           </div>
 
           <div className="space-y-4">
-            <div className="bg-white border border-black/5 rounded-2xl p-6 space-y-3">
+            <div className="bg-white border border-brand-border-light rounded-lg p-6 space-y-3">
               <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center shrink-0">
+                <div className="w-9 h-9 rounded-lg bg-brand-pink text-brand-red flex items-center justify-center shrink-0">
                   <HardDrive className="w-4 h-4" />
                 </div>
-                <h2 className="font-logo text-lg font-bold text-[#23201D]">Max file size</h2>
+                <h2 className="font-logo text-lg font-bold text-brand-dark">Max file size</h2>
               </div>
 
               <div className="flex items-center gap-2">
@@ -212,7 +212,7 @@ export function SettingsForm({
                   type="number"
                   value={maxFileSize}
                   onChange={(e) => setMaxFileSize(e.target.value)}
-                  className="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-medium text-gray-900 focus:outline-none focus:border-gray-400 focus:bg-white transition-all"
+                  className="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm font-medium text-gray-900 focus:outline-none focus:border-gray-400 focus:bg-white transition-all"
                 />
                 <span className="text-sm text-gray-400 shrink-0">MB</span>
               </div>

@@ -6,11 +6,11 @@ import { createR2Client, R2_BUCKET_NAME } from "@/lib/r2";
 import { isAllowedFileType, isAllowedFileSize } from "@/lib/fileValidation";
 import { randomUUID } from "crypto";
 
-// Admin-only presign for the optional document an admin can attach to
-// "changes requested" feedback (e.g. an annotated PDF showing what to
-// fix). Deliberately separate from /api/notes/upload-url — that route
-// is for students uploading their own notes and doesn't check
-// is_admin, so it's the wrong place to reuse for reviewer attachments.
+// Admin-only presign for the corrected file a director uploads after
+// fixing a note themselves. It lands under notes/ because it replaces
+// the submitter's file as the published version. Deliberately separate
+// from /api/notes/upload-url — that route is for students uploading
+// their own notes and doesn't check is_admin.
 export async function POST(request: Request) {
   const supabase = await createClient();
   const { data: { user }, error: authError } = await supabase.auth.getUser();
@@ -44,7 +44,7 @@ export async function POST(request: Request) {
   }
 
   const safeExtension = fileName.split(".").pop()?.replace(/[^a-zA-Z0-9]/g, "") || "pdf";
-  const fileKey = `feedback/${randomUUID()}.${safeExtension}`;
+  const fileKey = `notes/${randomUUID()}.${safeExtension}`;
 
   const r2 = createR2Client();
   const command = new PutObjectCommand({
