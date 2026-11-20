@@ -12,8 +12,9 @@ export function RoleBadge({ role }: { role: AdminRole }) {
   if (role === "STUDENT") return <span className="text-xs text-brand-muted">{ROLE_LABEL.STUDENT}</span>;
   const { className, icon: Icon } = STYLE[role];
   return (
-    <span className={`inline-flex items-center gap-1 rounded px-2 py-0.5 text-[11px] font-semibold whitespace-nowrap ${className}`}>
-      <Icon className="w-3 h-3" /> {ROLE_LABEL[role]}
+    <span className={`inline-flex items-center justify-center gap-1 rounded px-2 py-1 text-[11px] font-semibold leading-none whitespace-nowrap ${className}`}>
+      <Icon className="w-3 h-3 shrink-0" />
+      <span>{ROLE_LABEL[role]}</span>
     </span>
   );
 }

@@ -161,7 +161,7 @@ export function UserListTable({
       ) : (
         <div className="rounded-lg border border-brand-border-light bg-white overflow-hidden">
           {/* Column headings (tablet and up) */}
-          <div className="hidden md:grid grid-cols-[minmax(0,2.2fr)_minmax(0,1fr)_minmax(0,1fr)_auto] gap-4 px-5 py-2.5 border-b border-brand-border-light bg-brand-surface/60 text-xs font-medium text-brand-muted">
+          <div className="hidden md:grid grid-cols-[minmax(0,2.2fr)_minmax(0,1fr)_minmax(0,1fr)_15rem] gap-4 px-5 py-2.5 border-b border-brand-border-light bg-brand-surface/60 text-xs font-medium text-brand-muted">
             <span>Person</span>
             <span>Role</span>
             <span>Submissions</span>
@@ -215,7 +215,7 @@ export function UserListTable({
               return (
                 <li
                   key={user.id}
-                  className="relative grid grid-cols-[auto_minmax(0,1fr)_auto] md:grid-cols-[minmax(0,2.2fr)_minmax(0,1fr)_minmax(0,1fr)_auto] items-center gap-x-3 md:gap-4 px-4 md:px-5 py-3 hover:bg-brand-surface/50 transition-colors"
+                  className="relative grid grid-cols-[auto_minmax(0,1fr)_auto] md:grid-cols-[minmax(0,2.2fr)_minmax(0,1fr)_minmax(0,1fr)_15rem] items-center gap-x-3 md:gap-4 px-4 md:px-5 py-3 hover:bg-brand-surface/50 transition-colors"
                 >
                   {/* Person — the link stretches over the whole row */}
                   <div className="contents md:flex md:items-center md:gap-3 md:min-w-0">

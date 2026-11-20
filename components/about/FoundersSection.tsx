@@ -125,9 +125,6 @@ export function FoundersSection() {
                     }
                   />
                 </div>
-                <p className={`${caveat.className} absolute inset-x-0 bottom-1.5 text-center text-2xl font-bold text-[#1f2a44]`}>
-                  {firstName} ♡
-                </p>
               </div>
 
               {/* Written section: re-draws the ruled lines from its own top so the text sits on them */}
@@ -136,8 +133,8 @@ export function FoundersSection() {
                 style={{ backgroundColor: PAPER, backgroundImage: RULED_LINES }}
               >
                 <p className={`${kalam.className} text-[22px] font-bold leading-7 text-brand-red sm:text-[26px]`}>
-                  {/* Role written in red pen with a yellow highlighter behind it */}
-                  <span className="bg-[linear-gradient(transparent_55%,rgba(245,200,60,0.55)_55%)] px-1 [box-decoration-break:clone]">{member.role}</span>
+                  {/* Role written in red pen */}
+                  {member.role}
                 </p>
                 <h3 className={`${caveat.className} text-[34px] font-bold leading-[56px] text-[#1f2a44] sm:text-4xl`}>
                   <span className="bg-[linear-gradient(transparent_62%,rgba(138,28,36,0.18)_62%)] [box-decoration-break:clone]">
@@ -164,7 +161,7 @@ export function FoundersSection() {
                         className="group/story mt-7 inline-flex items-center gap-2 text-2xl font-bold leading-7 text-brand-red"
                       >
                         <span className="underline decoration-brand-red/30 decoration-2 underline-offset-4 transition-colors group-hover/story:decoration-brand-red">
-                          {isOpen ? `close ${firstName}'s note` : `read ${firstName}'s note`}
+                          {isOpen ? `Close ${firstName}'s note` : `Read ${firstName}'s note`}
                         </span>
                         <span aria-hidden="true" className={`transition-transform duration-300 ${isOpen ? "rotate-90" : "group-hover/story:translate-x-1"}`}>
                           &rarr;
