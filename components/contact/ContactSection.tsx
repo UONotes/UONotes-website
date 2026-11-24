@@ -107,9 +107,9 @@ export function ContactSection() {
       variants={staggerContainer}
       className="mx-auto flex min-h-[calc(100dvh-100px)] w-full max-w-site flex-col justify-center px-6 py-12 lg:px-8 lg:py-20"
     >
-      <div className="flex w-full flex-col items-start justify-between gap-12 lg:flex-row lg:gap-10">
+      <div className="grid w-full grid-cols-1 gap-12 lg:grid-cols-2 lg:items-stretch lg:gap-12">
         {/* Left: intro + contact cards */}
-        <motion.div variants={fadeUp} className="flex w-full max-w-lg flex-col lg:w-[45%]">
+        <motion.div variants={fadeUp} className="flex w-full flex-col">
           <p className={`${LABEL} mb-3 text-brand-red`}>Contact</p>
           <h1 className="mb-4 font-logo text-4xl font-black tracking-tight text-gray-900 sm:text-5xl lg:text-6xl">
             Let&apos;s talk <br /> <span className="text-brand-red">UONotes.</span>
@@ -159,8 +159,8 @@ export function ContactSection() {
         </motion.div>
 
         {/* Right: the form */}
-        <motion.div variants={fadeUp} className="flex w-full justify-end lg:w-[50%]">
-          <div className="w-full max-w-xl">
+        <motion.div variants={fadeUp} className="flex w-full">
+          <div className="flex w-full">
             <ContactForm />
           </div>
         </motion.div>

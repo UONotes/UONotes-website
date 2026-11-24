@@ -716,13 +716,13 @@ function EventDetail({ item, onOpen }: { item: DatedEvent; onOpen: (index: numbe
             {event.description}
           </p>
         )}
-        {photos.length > 0 && (
+        {photos.length > 1 && (
           <button
             type="button"
             onClick={() => onOpen(0)}
             className={`${caveat.className} mt-4 text-[22px] font-bold text-brand-red transition-transform hover:translate-x-1`}
           >
-            {photos.length === 1 ? "see it up close →" : "open full screen →"}
+            open full screen &rarr;
           </button>
         )}
       </div>
@@ -829,7 +829,7 @@ export function EventsSection() {
               got up to.
             </h1>
             <p className="mt-5 max-w-xl text-base leading-relaxed text-brand-body sm:text-lg">
-              Talks, socials and late study nights. A year of UONotes events, photos and all.
+              Talks, socials, and late-night study sessions. A year of UONotes events, photos and all.
             </p>
             {latest && (
               <button

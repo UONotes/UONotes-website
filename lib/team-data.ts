@@ -62,8 +62,6 @@ export const TEAM_DATA: TeamSection[] = [
     members: [
       { name: "Rojvan Adbullah", role: "VP Finance", imageUrl: "/about/Rojvan-Headshot.png" },
       { name: "Mai Ha", role: "VP Finance", imageUrl: "/about/Mai-Headshot.jpg" },
-      { name: "Halann Tanflotien", role: "Director", imageUrl: "/about/Halann-Headshot.png" },
-      { name: "Adnan Nehme", role: "Director", imageUrl: "/about/Placeholder.png" },
     ],
   },
   {

@@ -51,7 +51,7 @@ export function ContactForm() {
 
   return (
     // Taped index card with a red rule under the header
-    <div className="relative w-full bg-white px-6 pb-8 shadow-[0_26px_40px_-24px_rgba(0,0,0,0.4)] sm:px-9 sm:pb-10">
+    <div className="relative flex w-full flex-col bg-white px-6 pb-8 shadow-[0_26px_40px_-24px_rgba(0,0,0,0.4)] sm:px-9 sm:pb-10">
       <span aria-hidden="true" className="absolute -top-3 left-1/2 h-6 w-24 -translate-x-1/2 bg-brand-red/20" />
 
       {/* Header */}
@@ -66,7 +66,7 @@ export function ContactForm() {
             key="sent"
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="flex flex-col items-center gap-4 py-10 text-center"
+            className="flex flex-1 flex-col items-center justify-center gap-4 py-10 text-center"
           >
             {/* "Sent" rubber stamp */}
             <motion.span
@@ -92,7 +92,7 @@ export function ContactForm() {
             </button>
           </motion.div>
         ) : (
-          <motion.form key="form" initial={{ opacity: 0 }} animate={{ opacity: 1 }} onSubmit={handleSubmit} className="flex flex-col gap-5">
+          <motion.form key="form" initial={{ opacity: 0 }} animate={{ opacity: 1 }} onSubmit={handleSubmit} className="flex flex-1 flex-col gap-5">
             <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
               <div>
                 <label htmlFor="firstName" className={LABEL}>First name</label>
@@ -109,7 +109,7 @@ export function ContactForm() {
               <input id="email" type="email" value={form.email} onChange={handleChange("email")} placeholder="example@uottawa.ca" className={inputClass} required />
             </div>
 
-            <div>
+            <div className="flex flex-1 flex-col">
               <label htmlFor="message" className={LABEL}>Your message</label>
               <textarea
                 id="message"
@@ -117,7 +117,7 @@ export function ContactForm() {
                 onChange={handleChange("message")}
                 placeholder="How can we help you today?"
                 rows={6}
-                className={`${inputClass} resize-none`}
+                className={`${inputClass} min-h-[9rem] flex-1 resize-none`}
                 required
               />
             </div>

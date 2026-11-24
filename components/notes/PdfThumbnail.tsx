@@ -1,6 +1,11 @@
 "use client";
 
+import type { PDFDocumentLoadingTask } from "pdfjs-dist";
 import { useEffect, useRef, useState } from "react";
+
+// Copied from node_modules/pdfjs-dist into public/pdfjs. Copy them again when
+// pdfjs-dist is upgraded.
+const PDFJS_ASSETS = "/pdfjs";
 
 interface PdfThumbnailProps {
   fileUrl: string;
@@ -18,6 +23,7 @@ export function PdfThumbnail({ fileUrl, className, fallback }: PdfThumbnailProps
 
   useEffect(() => {
     let cancelled = false;
+    let loadingTask: PDFDocumentLoadingTask | undefined;
 
     async function renderThumbnail() {
       try {
@@ -27,7 +33,15 @@ export function PdfThumbnail({ fileUrl, className, fallback }: PdfThumbnailProps
           import.meta.url
         ).toString();
 
-        const pdf = await pdfjsLib.getDocument({ url: fileUrl }).promise;
+        if (cancelled) return;
+        loadingTask = pdfjsLib.getDocument({
+          url: fileUrl,
+          cMapUrl: `${PDFJS_ASSETS}/cmaps/`,
+          cMapPacked: true,
+          standardFontDataUrl: `${PDFJS_ASSETS}/standard_fonts/`,
+          wasmUrl: `${PDFJS_ASSETS}/wasm/`,
+        });
+        const pdf = await loadingTask.promise;
         const page = await pdf.getPage(1);
         const viewport = page.getViewport({ scale: 1.2 });
 
@@ -43,13 +57,22 @@ export function PdfThumbnail({ fileUrl, className, fallback }: PdfThumbnailProps
 
         if (!cancelled) setStatus("ready");
       } catch (err) {
-        console.error("PDF thumbnail render failed:", err);
-        if (!cancelled) setStatus("error");
+        if (cancelled) return;
+        // A file missing from storage just shows the fallback. Anything else
+        // is logged without the signed part of the URL.
+        if ((err as { status?: number })?.status !== 404) {
+          const message = err instanceof Error ? err.message : String(err);
+          console.error("PDF thumbnail render failed:", message.replace(/[?]X-Amz-[^" ]*/g, ""));
+        }
+        setStatus("error");
       }
     }
 
     renderThumbnail();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+      void loadingTask?.destroy();
+    };
   }, [fileUrl]);
 
   if (status === "error") {
