@@ -1,38 +1,25 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, useTransition } from "react";
+import { useMemo, useState, useSyncExternalStore, useTransition, type ReactNode } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowRight, CheckCircle2, ChevronDown, ChevronUp, Download, Inbox, Loader2, Table2, LineChart as LineIcon } from "lucide-react";
-import type { AnalyticsData, Leader, MetricKey, TeamMember } from "@/lib/analytics-data";
-import { createClient } from "@/lib/supabase/client";
-import { useAdminPresence, type OnlineAdmin } from "@/components/admin/AdminPresence";
+import { AlertTriangle, ArrowRight, CheckCircle2, ChevronDown, ChevronUp, Download, Info, Loader2, TrendingDown, TrendingUp } from "lucide-react";
+import type { Leader, MetricKey } from "@/lib/analytics-data";
+import type { FullAnalytics } from "@/lib/analytics-loader";
+import type { Person, Timing } from "@/lib/analytics-workflow";
 import { RANGES, type RangeKey } from "@/lib/analytics";
-import {
-  ColumnChart,
-  Delta,
-  Funnel,
-  Heatmap,
-  INK,
-  LineChart,
-  MUTED,
-  RED,
-  RankedBars,
-  STATUS,
-  Sparkline,
-  StackedBar,
-  fmt,
-  fmtDuration,
-} from "./charts";
+import { useAdminPresence } from "@/components/admin/AdminPresence";
+import { ColumnChart, Delta, Funnel, Heatmap, LineChart, MUTED, RED, RankedBars, STATUS, StackedBar, fmt, fmtDuration } from "./charts";
+import { Avatar, LiveIndicator, OnlineNow, OnlineStack, PresenceText, cap, downloadCsv, useLiveRefresh } from "./parts";
 
-const SECTIONS = [
+const TABS = [
   { id: "overview", label: "Overview" },
-  { id: "growth", label: "Growth" },
-  { id: "reviews", label: "Reviews" },
+  { id: "review", label: "Review flow" },
   { id: "library", label: "Library" },
-  { id: "community", label: "Community" },
+  { id: "students", label: "Students" },
   { id: "team", label: "Team" },
 ] as const;
+type TabId = (typeof TABS)[number]["id"];
 
 const RANGE_TABS: { key: RangeKey; label: string }[] = [
   { key: "7d", label: "7D" },
@@ -41,751 +28,622 @@ const RANGE_TABS: { key: RangeKey; label: string }[] = [
   { key: "1y", label: "1Y" },
 ];
 
-export function AnalyticsDashboard({ initialData }: { initialData: AnalyticsData }) {
+const BLUE = STATUS.pending;
+
+// The open tab lives in the URL hash, so it survives a refresh and can be linked to.
+const onHash = (cb: () => void) => {
+  window.addEventListener("hashchange", cb);
+  return () => window.removeEventListener("hashchange", cb);
+};
+function useTab(): [TabId, (t: TabId) => void] {
+  const hash = useSyncExternalStore(onHash, () => window.location.hash.slice(1), () => "");
+  const tab = TABS.find((t) => t.id === hash)?.id ?? "overview";
+  return [tab, (t) => { window.location.hash = t; }];
+}
+
+export function AnalyticsDashboard({ initialData }: { initialData: FullAnalytics }) {
   const router = useRouter();
   // Live updates replace the server-rendered data, but only for the range
   // currently shown and only if they're newer (a range switch brings fresh props).
-  const [liveData, setLiveData] = useState<AnalyticsData | null>(null);
+  const [liveData, setLiveData] = useState<FullAnalytics | null>(null);
   const data =
-    liveData && liveData.range.key === initialData.range.key && liveData.generatedAt > initialData.generatedAt
-      ? liveData
-      : initialData;
+    liveData && liveData.range.key === initialData.range.key && liveData.generatedAt > initialData.generatedAt ? liveData : initialData;
   const [isPending, startTransition] = useTransition();
   const [pendingRange, setPendingRange] = useState<RangeKey | null>(null);
-  const [metric, setMetric] = useState<MetricKey>("submissions");
-  const active = useScrollSpy(SECTIONS.map((s) => s.id));
+  const [tab, setTab] = useTab();
   const live = useLiveRefresh(initialData.range.key, setLiveData);
   const { range } = data;
 
   const changeRange = (key: RangeKey) => {
     if (key === range.key) return;
     setPendingRange(key);
-    startTransition(() => router.push(`/admin/analytics?range=${key}`, { scroll: false }));
-  };
-
-  const focusMetric = (key: MetricKey) => {
-    setMetric(key);
-    document.getElementById("growth")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    startTransition(() => router.push(`/admin/analytics?range=${key}#${tab}`, { scroll: false }));
   };
 
   return (
-    <div className="w-full pb-16">
-      {/* ── Sticky toolbar ─────────────────────────────────── */}
-      <div className="sticky top-0 z-30 -mx-6 sm:-mx-10 -mt-6 sm:-mt-10 px-6 sm:px-10 pt-6 sm:pt-8 pb-0 bg-brand-surface/90 backdrop-blur-md border-b border-black/5">
-        <div className="flex flex-wrap items-center justify-between gap-3">
+    <div className="w-full pb-12">
+      <div className="sticky top-0 z-30 -mx-6 -mt-6 border-b border-brand-border-light bg-brand-surface px-6 pt-6 sm:-mx-10 sm:-mt-10 sm:px-10 sm:pt-8">
+        <div className="flex flex-wrap items-end justify-between gap-3">
           <div className="min-w-0">
-            <h1 className="font-logo text-2xl sm:text-3xl font-bold text-brand-dark tracking-tight flex items-center gap-2.5">
+            <h1 className="flex items-center gap-2.5 font-logo text-3xl font-bold tracking-tight text-brand-dark">
               Analytics
-              {isPending && <Loader2 className="w-4 h-4 animate-spin text-gray-400" aria-label="Loading" />}
+              {isPending && <Loader2 className="h-4 w-4 animate-spin text-brand-muted" aria-label="Loading" />}
             </h1>
-            <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs sm:text-sm text-gray-500 mt-0.5">
+            <p className="mt-1 flex flex-wrap items-center gap-x-2 text-xs text-brand-muted sm:text-sm">
+              Last {range.label}, compared with the {range.prevLabel}
               <LiveIndicator generatedAt={data.generatedAt} realtime={live.realtime} refreshing={live.refreshing} />
-              <span className="text-gray-300">·</span>
-              Last {range.label} vs the {range.prevLabel}
             </p>
           </div>
           <div className="flex items-center gap-2">
-            <OnlineStack />
+            <OnlineStack onOpen={() => setTab("team")} />
             <button
               type="button"
               onClick={() => downloadCsv(data)}
-              className="hidden sm:inline-flex items-center gap-1.5 h-9 px-3 rounded-lg border border-black/10 bg-white text-xs font-semibold text-gray-700 hover:border-black/20 hover:text-gray-900 transition-colors cursor-pointer"
+              className="hidden h-9 items-center gap-1.5 rounded-md border border-brand-border-light bg-white px-3 text-xs font-semibold text-brand-body transition-colors hover:border-brand-red/40 hover:text-brand-red sm:inline-flex"
             >
-              <Download className="w-3.5 h-3.5" /> Export CSV
+              <Download className="h-3.5 w-3.5" /> Export CSV
             </button>
-            <div role="tablist" aria-label="Time range" className="inline-flex bg-white border border-black/10 rounded-lg p-0.5">
-              {RANGE_TABS.map((t) => {
-                const selected = (pendingRange && isPending ? pendingRange : range.key) === t.key;
-                return (
-                  <button
-                    key={t.key}
-                    type="button"
-                    role="tab"
-                    aria-selected={selected}
-                    title={`Last ${RANGES[t.key].label}`}
-                    onClick={() => changeRange(t.key)}
-                    className={`h-8 px-3 rounded-md text-xs font-bold tabular-nums transition-colors cursor-pointer ${
-                      selected ? "bg-brand-red text-white" : "text-gray-500 hover:text-gray-900"
-                    }`}
-                  >
-                    {t.label}
-                  </button>
-                );
-              })}
-            </div>
+            <Segmented
+              label="Time range"
+              options={RANGE_TABS.map((t) => ({ value: t.key, label: t.label, title: `Last ${RANGES[t.key].label}` }))}
+              value={pendingRange && isPending ? pendingRange : range.key}
+              onChange={changeRange}
+            />
           </div>
         </div>
-
-        <nav aria-label="Sections" className="flex gap-1 mt-3 -mb-px overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          {SECTIONS.map((s) => (
-            <a
-              key={s.id}
-              href={`#${s.id}`}
-              onClick={(e) => {
-                e.preventDefault();
-                document.getElementById(s.id)?.scrollIntoView({ behavior: "smooth", block: "start" });
-              }}
-              className={`shrink-0 px-3 py-2.5 text-[13px] font-semibold border-b-2 transition-colors ${
-                active === s.id ? "border-brand-red text-brand-dark" : "border-transparent text-gray-400 hover:text-gray-700"
+        <div role="tablist" aria-label="Sections" className="-mb-px mt-4 flex gap-5 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          {TABS.map((t) => (
+            <button
+              key={t.id}
+              type="button"
+              role="tab"
+              aria-selected={tab === t.id}
+              onClick={() => setTab(t.id)}
+              className={`shrink-0 border-b-2 pb-3 text-sm font-semibold transition-colors ${
+                tab === t.id ? "border-brand-red text-brand-red" : "border-transparent text-brand-muted hover:text-brand-dark"
               }`}
             >
-              {s.label}
-            </a>
+              {t.label}
+            </button>
           ))}
-        </nav>
+        </div>
       </div>
 
-      <div className={`space-y-14 mt-8 transition-opacity duration-200 ${isPending ? "opacity-50 pointer-events-none" : ""}`}>
-        <Overview data={data} onMetric={focusMetric} />
-        <Growth data={data} metric={metric} setMetric={setMetric} />
-        <Reviews data={data} />
-        <Library data={data} />
-        <Community data={data} />
-        <Team data={data} />
+      <div role="tabpanel" className={`mt-6 space-y-5 transition-opacity ${isPending ? "pointer-events-none opacity-50" : ""}`}>
+        {tab === "overview" && <Overview data={data} goTo={setTab} />}
+        {tab === "review" && <ReviewFlow data={data} />}
+        {tab === "library" && <Library data={data} />}
+        {tab === "students" && <Students data={data} />}
+        {tab === "team" && <Team data={data} />}
       </div>
-
-      <p className="text-[11px] text-gray-400 mt-14 text-center">
-        Generated {new Date(data.generatedAt).toLocaleString("en-US", { timeZone: "America/Toronto", dateStyle: "medium", timeStyle: "short" })}
-        {" · "}
-        Grouped by {range.unit}
-      </p>
     </div>
   );
 }
 
 // ─── Overview ────────────────────────────────────────────────────────
 
-function Overview({ data, onMetric }: { data: AnalyticsData; onMetric: (m: MetricKey) => void }) {
-  const { metrics, contributors, speed, buckets } = data;
-  const tiles: {
-    label: string;
-    value: string;
-    current: number | null;
-    previous: number | null;
-    series: number[];
-    goodWhen?: "up" | "down";
-    color?: string;
-    metric?: MetricKey;
-    format?: (v: number) => string;
-  }[] = [
-    { label: "Submissions", value: fmt(metrics.submissions.total), current: metrics.submissions.total, previous: metrics.submissions.prevTotal, series: metrics.submissions.current, metric: "submissions" },
-    { label: "New users", value: fmt(metrics.signups.total), current: metrics.signups.total, previous: metrics.signups.prevTotal, series: metrics.signups.current, color: INK, metric: "signups" },
-    { label: "Approvals", value: fmt(metrics.approvals.total), current: metrics.approvals.total, previous: metrics.approvals.prevTotal, series: metrics.approvals.current, color: STATUS.approved, metric: "approvals" },
-    { label: "Hours awarded", value: fmt(metrics.hours.total, 1), current: metrics.hours.total, previous: metrics.hours.prevTotal, series: metrics.hours.current, metric: "hours" },
-    { label: "Active contributors", value: fmt(contributors.current), current: contributors.current, previous: contributors.prev, series: contributors.series, color: INK },
-    {
-      label: "Median review time",
-      value: fmtDuration(speed.median),
-      current: speed.median,
-      previous: speed.medianPrev,
-      series: speed.series.map((v) => v ?? 0),
-      goodWhen: "down",
-      color: STATUS.pending,
-      format: (v) => fmtDuration(v),
-    },
-  ];
+function Overview({ data, goTo }: { data: FullAnalytics; goTo: (t: TabId) => void }) {
+  const { metrics, speed, buckets, range } = data;
+  const [metric, setMetric] = useState<MetricKey>("submissions");
+  const m = metrics[metric];
+  const digits = metric === "hours" ? 1 : 0;
 
   return (
-    <section id="overview" className="scroll-mt-40 space-y-4">
-      <AttentionBanner {...data.attention} aging={data.queueAging} />
-      <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
-        {tiles.map((t) => {
-          const Wrapper = t.metric ? "button" : "div";
-          return (
-            <Wrapper
-              key={t.label}
-              {...(t.metric ? { type: "button" as const, onClick: () => onMetric(t.metric as MetricKey) } : {})}
-              className={`group text-left bg-white border border-black/5 rounded-2xl p-4 sm:p-5 flex flex-col transition-all ${
-                t.metric ? "cursor-pointer hover:border-black/15 hover:shadow-[0_8px_24px_-12px_rgba(35,32,29,0.25)]" : ""
-              }`}
-            >
-              <div className="flex items-start justify-between gap-2">
-                <p className="text-xs sm:text-sm text-gray-500">{t.label}</p>
-                <Delta current={t.current} previous={t.previous} goodWhen={t.goodWhen} />
-              </div>
-              <p className="font-logo text-3xl sm:text-4xl font-bold text-brand-dark tracking-tight mt-1.5 tabular-nums">{t.value}</p>
-              <div className="mt-3 -mx-1">
-                <Sparkline values={t.series} labels={buckets} color={t.color ?? RED} format={t.format} />
-              </div>
-              {t.metric && (
-                <span className="mt-2 text-[11px] font-semibold text-gray-400 group-hover:text-brand-red transition-colors inline-flex items-center gap-1">
-                  See trend <ArrowRight className="w-3 h-3" />
-                </span>
-              )}
-            </Wrapper>
-          );
-        })}
+    <>
+      <Pipeline data={data} />
+
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <Stat label="Notes submitted" value={fmt(metrics.submissions.total)} now={metrics.submissions.total} prev={metrics.submissions.prevTotal} />
+        <Stat label="Approvals" value={fmt(metrics.approvals.total)} now={metrics.approvals.total} prev={metrics.approvals.prevTotal} />
+        <Stat label="New students" value={fmt(metrics.signups.total)} now={metrics.signups.total} prev={metrics.signups.prevTotal} />
+        <Stat
+          label="Typical time to a decision"
+          value={fmtDuration(speed.median)}
+          now={speed.median}
+          prev={speed.medianPrev}
+          goodWhen="down"
+          format={fmtDuration}
+        />
       </div>
-    </section>
+
+      <div className="grid grid-cols-1 gap-5 xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+        <Card
+          title="Trend"
+          action={
+            <Segmented
+              label="Metric"
+              options={(["submissions", "approvals", "signups", "hours"] as MetricKey[]).map((k) => ({ value: k, label: metrics[k].label }))}
+              value={metric}
+              onChange={setMetric}
+            />
+          }
+        >
+          <Legend
+            items={[
+              { label: `Last ${range.label}`, color: RED, value: fmt(m.total, digits) },
+              { label: cap(range.prevLabel), color: MUTED, value: fmt(m.prevTotal, digits) },
+            ]}
+          />
+          <LineChart
+            ariaLabel={`${m.label} per ${range.unit}, last ${range.label} compared with the ${range.prevLabel}`}
+            labels={buckets}
+            height={260}
+            format={(v) => fmt(v, digits)}
+            series={[
+              { label: "This period", color: RED, values: m.current, area: true },
+              { label: "Previous", color: MUTED, values: m.previous },
+            ]}
+          />
+          <DataTable
+            columns={[cap(range.unit), "This period", "Previous"]}
+            rows={buckets.map((b, i) => [b.tooltip, fmt(m.current[i], digits), fmt(m.previous[i], digits)])}
+          />
+        </Card>
+        <Card title="What stands out">
+          <Insights data={data} goTo={goTo} />
+        </Card>
+      </div>
+    </>
   );
 }
 
-// Fresh → stale, so the eye goes to the red end. Always labelled.
-const AGE_TONES = ["#9FC4EE", "#5B9BE3", STATUS.changes, STATUS.rejected];
-
-/** "3 hours", "4 days", "2 weeks": how a person would say it. */
-function humanWait(hours: number | null) {
-  if (hours === null) return "—";
-  if (hours < 1) return "under an hour";
-  if (hours < 24) return `${Math.round(hours)} ${Math.round(hours) === 1 ? "hour" : "hours"}`;
-  const days = Math.round(hours / 24);
-  if (days < 14) return `${days} ${days === 1 ? "day" : "days"}`;
-  if (days < 60) return `${Math.round(days / 7)} weeks`;
-  return `${Math.round(days / 30)} months`;
+// Every open note, by the step it's waiting on
+function Pipeline({ data }: { data: FullAnalytics }) {
+  const { stages } = data.workflow;
+  const open = stages.reduce((s, x) => s + x.count, 0);
+  const late = stages.reduce((s, x) => s + x.overdue, 0);
+  return (
+    <Card
+      title="Where notes are right now"
+      meta={open === 0 ? "Nothing open" : `${open} open${late ? `, ${late} running late` : ", none running late"}`}
+      flush
+    >
+      <ol className="grid grid-cols-2 gap-px bg-brand-border-light lg:grid-cols-4">
+        {stages.map((s) => (
+          <li key={s.key} className="bg-white">
+            <Link href={`/admin/queue?filter=${s.key}`} className="group block h-full px-5 py-4 transition-colors hover:bg-brand-surface/60">
+              <span className="flex items-center justify-between gap-2 text-sm text-brand-body group-hover:text-brand-red">
+                {s.label}
+                <ArrowRight className="h-3.5 w-3.5 opacity-0 transition-opacity group-hover:opacity-100" />
+              </span>
+              <span className="mt-1 block text-3xl font-semibold tabular-nums text-brand-dark">{s.count}</span>
+              <span className="mt-1 block text-xs text-brand-muted">
+                {s.count === 0 ? "All clear" : s.oldestHours === null ? "Wait not tracked" : `Oldest: ${humanWait(s.oldestHours)}`}
+              </span>
+              {s.overdue > 0 && (
+                <span className="mt-2 inline-flex items-center gap-1 rounded bg-rose-50 px-1.5 py-0.5 text-xs font-semibold text-rose-700">
+                  <AlertTriangle className="h-3 w-3" /> {s.overdue} over {s.limitHours / 24} days
+                </span>
+              )}
+            </Link>
+          </li>
+        ))}
+      </ol>
+    </Card>
+  );
 }
 
-function AttentionBanner({
-  pending,
-  flagged,
-  awaitingFixes,
-  oldestHours,
-  over48h,
-  aging,
-}: AnalyticsData["attention"] & { aging: AnalyticsData["queueAging"] }) {
-  const total = pending + flagged;
+type Insight = { tone: "bad" | "good" | "info"; text: ReactNode; tab: TabId };
 
-  if (total === 0) {
-    return (
-      <div className="flex items-center gap-4 bg-white border border-black/5 rounded-2xl px-5 py-4">
-        <span className="w-10 h-10 rounded-xl bg-emerald-50 flex items-center justify-center shrink-0">
-          <CheckCircle2 className="w-5 h-5 text-emerald-600" />
-        </span>
-        <div className="flex-1 min-w-0">
-          <p className="text-sm font-semibold text-gray-900">You&apos;re all caught up</p>
-          <p className="text-xs text-gray-500 mt-0.5">
-            Nothing pending or flagged
-            {awaitingFixes > 0 ? `. ${awaitingFixes} ${awaitingFixes === 1 ? "note is" : "notes are"} being fixed by a director.` : "."}
-          </p>
-        </div>
-      </div>
-    );
+function getInsights(data: FullAnalytics): Insight[] {
+  const { workflow: w, metrics, library, range } = data;
+  const out: Insight[] = [];
+  const sum = (a: number[]) => a.reduce((s, v) => s + v, 0);
+
+  for (const s of w.stages) {
+    if (s.overdue > 0)
+      out.push({
+        tone: "bad",
+        tab: "review",
+        text: <><b>{s.overdue}</b> {s.overdue === 1 ? "note has" : "notes have"} been in “{s.label}” for more than {s.limitHours / 24} days.</>,
+      });
   }
 
-  const urgent = over48h > 0 || flagged > 0;
-  const linkCls = "underline decoration-black/15 underline-offset-2 hover:text-brand-red hover:decoration-brand-red/40 transition-colors";
-  const summary = [
-    pending > 0 && (
-      <Link key="p" href="/admin/queue?filter=pending" className={linkCls}>
-        {pending} new {pending === 1 ? "submission" : "submissions"}
-      </Link>
-    ),
-    flagged > 0 && (
-      <Link key="f" href="/admin/queue?filter=flagged" className={linkCls}>
-        {flagged} flagged by students
-      </Link>
-    ),
-    oldestHours !== null && <span key="o">oldest waiting {humanWait(oldestHours)}</span>,
-  ].filter(Boolean) as React.ReactNode[];
+  const submitted = sum(w.submitted);
+  const decided = sum(w.decided);
+  if (submitted + decided >= 5 && submitted > decided * 1.2)
+    out.push({ tone: "bad", tab: "review", text: <>More notes are coming in (<b>{submitted}</b>) than getting a first decision (<b>{decided}</b>), so the queue is growing.</> });
 
+  // The same step, shared across everyone who does it
+  const finals = [...w.people].sort((a, b) => b.finals - a.finals);
+  const allFinals = sum(finals.map((p) => p.finals));
+  if (allFinals >= 8 && finals[0].finals / allFinals >= 0.6)
+    out.push({ tone: "info", tab: "team", text: <><b>{finals[0].name}</b> did {Math.round((finals[0].finals / allFinals) * 100)}% of final checks in the last {range.label}.</> });
+
+  const { total, prevTotal } = metrics.submissions;
+  if (prevTotal >= 5 && Math.abs(total - prevTotal) / prevTotal >= 0.2)
+    out.push({
+      tone: total > prevTotal ? "good" : "bad",
+      tab: "students",
+      text: <>Submissions are {total > prevTotal ? "up" : "down"} <b>{Math.round((Math.abs(total - prevTotal) / prevTotal) * 100)}%</b> ({prevTotal} to {total}).</>,
+    });
+
+  if (w.sentBack.rate !== null && w.sentBack.rate >= 25 && w.sentBack.count >= 3)
+    out.push({ tone: "info", tab: "review", text: <><b>{w.sentBack.rate}%</b> of final checks were sent back to be redone.</> });
+
+  const empty = w.faculties.filter((f) => f.published === 0).map((f) => f.label);
+  if (empty.length > 0 && library.published > 0)
+    out.push({ tone: "info", tab: "library", text: <>No published notes yet for <b>{empty.join(", ")}</b>.</> });
+
+  const fr = library.english + library.french ? Math.round((library.french / (library.english + library.french)) * 100) : null;
+  if (fr !== null && library.published >= 10 && fr < 15)
+    out.push({ tone: "info", tab: "library", text: <>Only <b>{fr}%</b> of the library is in French.</> });
+
+  return out.slice(0, 5);
+}
+
+const TONE = {
+  bad: { icon: AlertTriangle, className: "text-rose-600" },
+  good: { icon: TrendingUp, className: "text-emerald-600" },
+  info: { icon: Info, className: "text-brand-muted" },
+};
+
+function Insights({ data, goTo }: { data: FullAnalytics; goTo: (t: TabId) => void }) {
+  const items = getInsights(data);
+  if (items.length === 0)
+    return (
+      <p className="flex items-start gap-2 text-sm text-brand-body">
+        <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" /> Nothing unusual in the last {data.range.label}.
+      </p>
+    );
   return (
-    <div className="bg-white border border-black/5 rounded-2xl overflow-hidden">
-      <div className="flex flex-col sm:flex-row sm:items-center gap-4 p-5">
-        <div className="flex items-start sm:items-center gap-4 flex-1 min-w-0">
-          <span className={`relative w-11 h-11 rounded-xl flex items-center justify-center shrink-0 ${urgent ? "bg-rose-50 text-rose-600" : "bg-blue-50 text-blue-600"}`}>
-            <Inbox className="w-5 h-5" />
-            {urgent && (
-              <span className="absolute -top-0.5 -right-0.5 flex w-3 h-3">
-                <span className="absolute inline-flex w-full h-full rounded-full bg-rose-400 opacity-60 motion-safe:animate-ping" />
-                <span className="relative inline-flex w-3 h-3 rounded-full bg-rose-500 border-2 border-white" />
-              </span>
-            )}
-          </span>
-          <div className="min-w-0">
-            <p className="text-base sm:text-lg font-semibold text-gray-900 leading-snug">
-              <span className="tabular-nums">{total}</span> {total === 1 ? "note is" : "notes are"} waiting for review
-            </p>
-            <p className="text-sm text-gray-500 mt-0.5">
-              {summary.map((part, i) => (
-                <span key={i}>
-                  {i > 0 && <span className="text-gray-300"> · </span>}
-                  {part}
-                </span>
-              ))}
-            </p>
-          </div>
-        </div>
-        <Link
-          href="/admin/queue"
-          className="inline-flex items-center justify-center gap-2 h-10 px-4 rounded-xl bg-brand-red text-white text-sm font-semibold hover:bg-brand-red-hover transition-colors shrink-0"
-        >
-          Open queue <ArrowRight className="w-4 h-4" />
-        </Link>
+    <ul className="-my-3 divide-y divide-brand-border-light">
+      {items.map((it, i) => {
+        const Icon = it.tone === "bad" && it.tab === "students" ? TrendingDown : TONE[it.tone].icon;
+        return (
+          <li key={i}>
+            <button type="button" onClick={() => goTo(it.tab)} className="group flex w-full items-start gap-3 py-3 text-left text-sm leading-relaxed text-brand-body">
+              <Icon className={`mt-1 h-4 w-4 shrink-0 ${TONE[it.tone].className}`} />
+              <span className="flex-1 group-hover:text-brand-red [&_b]:font-semibold [&_b]:text-brand-dark">{it.text}</span>
+            </button>
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
+
+// ─── Review flow ─────────────────────────────────────────────────────
+
+function ReviewFlow({ data }: { data: FullAnalytics }) {
+  const { workflow: w, speed, rates, decisions, buckets, range, status } = data;
+  return (
+    <>
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+        <TimingStat label="First check" hint="Submitted until a director acts" t={w.firstCheck} />
+        <TimingStat label="Final check" hint="Sent to VP until they decide" t={w.finalCheck} />
+        <TimingStat label="Start to finish" hint="Submitted until the first decision" t={{ median: speed.median, prev: speed.medianPrev, count: speed.count }} />
       </div>
 
-      {pending > 0 && (
-        <div className="flex flex-col md:flex-row md:items-center gap-3 md:gap-5 px-5 py-3.5 bg-gray-50/70 border-t border-black/5">
-          <p className="text-xs font-medium text-gray-500 shrink-0 md:w-28">
-            {over48h > 0 ? (
-              <span className="text-rose-600">{over48h} waiting 2+ days</span>
-            ) : (
-              "All within 2 days"
-            )}
-          </p>
-          <div className="flex-1 min-w-0">
-            <StackedBar height="h-2" segments={aging.map((a, i) => ({ ...a, color: AGE_TONES[i] }))} />
-          </div>
-          <ul className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-500 shrink-0">
-            {aging.map((a, i) => (
-              <li key={a.label} className={`flex items-center gap-1.5 ${a.value === 0 ? "opacity-40" : ""}`}>
-                <span className="w-2 h-2 rounded-full" style={{ backgroundColor: AGE_TONES[i] }} />
-                {a.label}
-                <b className="font-semibold text-gray-900 tabular-nums">{a.value}</b>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
+      <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
+        <Card title="Are we keeping up?" meta={`Per ${range.unit}`}>
+          <Legend
+            items={[
+              { label: "Submitted", color: RED, value: fmt(w.submitted.reduce((s, v) => s + v, 0)) },
+              { label: "First decision made", color: BLUE, value: fmt(w.decided.reduce((s, v) => s + v, 0)) },
+            ]}
+          />
+          <LineChart
+            ariaLabel={`Notes submitted and first decisions made per ${range.unit}`}
+            labels={buckets}
+            height={220}
+            format={(v) => fmt(v)}
+            series={[
+              { label: "Submitted", color: RED, values: w.submitted },
+              { label: "First decision", color: BLUE, values: w.decided },
+            ]}
+          />
+          <DataTable columns={[cap(range.unit), "Submitted", "Decided"]} rows={buckets.map((b, i) => [b.tooltip, fmt(w.submitted[i]), fmt(w.decided[i])])} />
+        </Card>
+        <Card title="Final decisions" meta={`Per ${range.unit}`}>
+          <Legend
+            items={[
+              { label: "Approved", color: STATUS.approved, value: fmt(decisions.approved.reduce((s, v) => s + v, 0)) },
+              { label: "Fixed and approved", color: STATUS.changes, value: fmt(decisions.changes.reduce((s, v) => s + v, 0)) },
+              { label: "Denied", color: STATUS.rejected, value: fmt(decisions.rejected.reduce((s, v) => s + v, 0)) },
+            ]}
+          />
+          <ColumnChart
+            ariaLabel="Final decisions over time, stacked by outcome"
+            labels={buckets}
+            height={220}
+            unit="decisions"
+            series={[
+              { label: "Approved", color: STATUS.approved, values: decisions.approved },
+              { label: "Fixed and approved", color: STATUS.changes, values: decisions.changes },
+              { label: "Denied", color: STATUS.rejected, values: decisions.rejected },
+            ]}
+          />
+          <DataTable
+            columns={[cap(range.unit), "Approved", "Fixed", "Denied"]}
+            rows={buckets.map((b, i) => [b.tooltip, fmt(decisions.approved[i]), fmt(decisions.changes[i]), fmt(decisions.rejected[i])])}
+          />
+        </Card>
+      </div>
+
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <Stat
+          label="Approval rate"
+          value={rates.approval === null ? "—" : `${rates.approval}%`}
+          now={rates.approval}
+          prev={rates.approvalPrev}
+          mode="points"
+          format={(v) => `${v}%`}
+        />
+        <Stat
+          label="Sent back at final check"
+          value={fmt(w.sentBack.count)}
+          now={w.sentBack.count}
+          prev={w.sentBack.prev}
+          goodWhen="down"
+          sub={w.sentBack.rate === null ? undefined : `${w.sentBack.rate}% of final checks`}
+        />
+        <Stat label="Student reports" value={fmt(w.reports.inRange)} now={w.reports.inRange} prev={w.reports.prev} goodWhen="down" />
+        <Stat label="Decided within 24 hours" value={speed.within24 === null ? "—" : `${speed.within24}%`} sub={`of ${fmt(speed.count)} notes`} />
+      </div>
+
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
+        <Card title="How long decisions take" meta={`${fmt(speed.count)} notes`}>
+          <RankedBars rows={speed.bands} color={BLUE} total={speed.count} limit={5} />
+        </Card>
+        <Card title="Every note, by status" meta={`${fmt(status.total)} all time`}>
+          <StatusList status={status} />
+        </Card>
+        <Card title="Why students report notes" meta={`Last ${range.label}`}>
+          <RankedBars rows={w.reports.reasons} limit={5} emptyText="No reports in this period." />
+        </Card>
+      </div>
+    </>
+  );
+}
+
+function TimingStat({ label, hint, t }: { label: string; hint: string; t: Timing }) {
+  return (
+    <div className="rounded-lg border border-brand-border-light bg-white p-5">
+      <div className="flex items-start justify-between gap-2">
+        <p className="text-sm font-semibold text-brand-dark">{label}</p>
+        <Delta current={t.median} previous={t.prev} goodWhen="down" />
+      </div>
+      <p className="text-xs text-brand-muted">{hint}</p>
+      <p className="mt-3 text-3xl font-semibold tabular-nums text-brand-dark">{fmtDuration(t.median)}</p>
+      <p className="mt-1 text-xs text-brand-muted">
+        {t.count === 0 ? "None in this period" : `Median of ${fmt(t.count)}${t.prev === null ? "" : `, was ${fmtDuration(t.prev)}`}`}
+      </p>
     </div>
   );
 }
 
-// ─── Growth ──────────────────────────────────────────────────────────
-
-const METRIC_TABS: MetricKey[] = ["submissions", "signups", "approvals", "hours"];
-
-function Growth({ data, metric, setMetric }: { data: AnalyticsData; metric: MetricKey; setMetric: (m: MetricKey) => void }) {
-  const [cumulative, setCumulative] = useState(false);
-  const [asTable, setAsTable] = useState(false);
-  const m = data.metrics[metric];
-  const { range, buckets, activity } = data;
-  const running = (vals: number[]) => {
-    let s = 0;
-    return vals.map((v) => (s += v));
-  };
-  const current = cumulative ? running(m.current) : m.current;
-  const previous = cumulative ? running(m.previous) : m.previous;
-  const digits = metric === "hours" ? 1 : 0;
-  const perDay = m.total / range.days;
-
-  return (
-    <Section id="growth" title="Growth" description={`Tap a metric to switch. The grey line is the ${range.prevLabel}, lined up for comparison.`}>
-      <Card>
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-          <div role="tablist" aria-label="Metric" className="flex gap-1 overflow-x-auto -mx-1 px-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-            {METRIC_TABS.map((key) => {
-              const mm = data.metrics[key];
-              const selected = key === metric;
-              return (
-                <button
-                  key={key}
-                  type="button"
-                  role="tab"
-                  aria-selected={selected}
-                  onClick={() => setMetric(key)}
-                  className={`shrink-0 text-left rounded-xl px-4 py-3 border transition-all cursor-pointer ${
-                    selected ? "border-brand-red bg-brand-red text-white" : "border-black/5 bg-gray-50/60 hover:bg-gray-100/80 text-gray-900"
-                  }`}
-                >
-                  <span className={`block text-xs ${selected ? "text-white/60" : "text-gray-500"}`}>{mm.label}</span>
-                  <span className="flex items-center gap-2 mt-0.5">
-                    <span className="font-logo text-xl font-bold tabular-nums">{fmt(mm.total, key === "hours" ? 1 : 0)}</span>
-                    {!selected && <Delta current={mm.total} previous={mm.prevTotal} />}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-          <div className="flex items-center gap-2 self-start">
-            <Toggle
-              options={[
-                { value: false, label: `Per ${range.unit}` },
-                { value: true, label: "Running total" },
-              ]}
-              value={cumulative}
-              onChange={setCumulative}
-            />
-            <button
-              type="button"
-              onClick={() => setAsTable(!asTable)}
-              aria-pressed={asTable}
-              title={asTable ? "Show chart" : "Show table"}
-              className="h-8 w-8 inline-flex items-center justify-center rounded-lg border border-black/10 text-gray-500 hover:text-gray-900 cursor-pointer"
-            >
-              {asTable ? <LineIcon className="w-4 h-4" /> : <Table2 className="w-4 h-4" />}
-            </button>
-          </div>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-x-5 gap-y-2 mt-6 mb-3 text-xs">
-          <span className="flex items-center gap-2 text-gray-700">
-            <span className="w-3 h-[3px] rounded-full" style={{ backgroundColor: RED }} /> Last {range.label}
-            <b className="font-semibold tabular-nums">{fmt(m.total, digits)}</b>
-          </span>
-          <span className="flex items-center gap-2 text-gray-500">
-            <span className="w-3 h-[3px] rounded-full" style={{ backgroundColor: MUTED }} /> {cap(range.prevLabel)}
-            <b className="font-semibold tabular-nums">{fmt(m.prevTotal, digits)}</b>
-          </span>
-          <span className="text-gray-400 sm:ml-auto">{fmt(perDay, 1)} {m.unit} a day on average</span>
-        </div>
-
-        {asTable ? (
-          <div className="max-h-72 overflow-y-auto rounded-lg border border-black/5">
-            <table className="w-full text-sm">
-              <thead className="sticky top-0 bg-gray-50 text-xs text-gray-500">
-                <tr>
-                  <th className="text-left font-medium px-3 py-2">{cap(range.unit)}</th>
-                  <th className="text-right font-medium px-3 py-2">This period</th>
-                  <th className="text-right font-medium px-3 py-2">Previous</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-black/5 tabular-nums">
-                {buckets.map((b, i) => (
-                  <tr key={b.key}>
-                    <td className="px-3 py-1.5 text-gray-600">{b.tooltip}</td>
-                    <td className="px-3 py-1.5 text-right font-semibold text-gray-900">{fmt(current[i], digits)}</td>
-                    <td className="px-3 py-1.5 text-right text-gray-500">{fmt(previous[i], digits)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        ) : (
-          <LineChart
-            ariaLabel={`${m.label} per ${range.unit}, last ${range.label} compared with the ${range.prevLabel}`}
-            labels={buckets}
-            height={280}
-            format={(v) => fmt(v, digits)}
-            series={[
-              { label: "This period", color: RED, values: current, area: true },
-              { label: "Previous", color: MUTED, values: previous },
-            ]}
-          />
-        )}
-      </Card>
-
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
-        <StatCard
-          label={`Busiest ${range.unit}`}
-          value={activity.best ? fmt(activity.best.value) : "—"}
-          sub={activity.best ? `${activity.best.label} · submissions` : "No submissions yet"}
-        />
-        <StatCard label="Submission streak" value={`${activity.streak} ${activity.streak === 1 ? "day" : "days"}`} sub="In a row with at least one submission" />
-        <StatCard
-          label="Active days"
-          value={`${activity.activeDays}/${activity.totalDays}`}
-          sub={`${Math.round((activity.activeDays / activity.totalDays) * 100)}% of days had a submission`}
-        >
-          <div className="h-1.5 mt-3 bg-gray-100 rounded-full overflow-hidden">
-            <div className="h-full bg-brand-red rounded-full" style={{ width: `${(activity.activeDays / activity.totalDays) * 100}%` }} />
-          </div>
-        </StatCard>
-      </div>
-    </Section>
-  );
-}
-
-// ─── Reviews ─────────────────────────────────────────────────────────
-
-function Reviews({ data }: { data: AnalyticsData }) {
-  const { status, funnel, rates, speed, decisions, buckets, range, queueAging } = data;
-  const statusRows = [
-    { label: "Approved", value: status.approved, color: STATUS.approved },
-    { label: "Pending", value: status.pending, color: STATUS.pending },
-    { label: "Being fixed", value: status.changes, color: STATUS.changes },
-    { label: "Flagged", value: status.flagged, color: STATUS.flagged },
-    { label: "Rejected", value: status.rejected, color: STATUS.rejected },
+function StatusList({ status }: { status: FullAnalytics["status"] }) {
+  const rows = [
+    { label: "Published", value: status.approved, color: STATUS.approved },
+    { label: "Waiting for a check", value: status.pending, color: STATUS.pending },
+    { label: "Being fixed or in final check", value: status.changes, color: STATUS.changes },
+    { label: "Reported", value: status.flagged, color: STATUS.flagged },
+    { label: "Denied", value: status.rejected, color: STATUS.rejected },
   ];
-
   return (
-    <Section id="reviews" title="Reviews" description="Where submissions stand, what reviewers decide, and how fast.">
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <Card>
-          <CardTitle title="Every submission, by status" meta={`${fmt(status.total)} total`} />
-          <StackedBar segments={statusRows} height="h-4" />
-          <ul className="mt-5 divide-y divide-black/5">
-            {statusRows.map((s) => (
-              <li key={s.label} className="flex items-center gap-3 py-2 text-sm">
-                <span className="w-2.5 h-2.5 rounded-[3px] shrink-0" style={{ backgroundColor: s.color }} />
-                <span className="flex-1 text-gray-600">{s.label}</span>
-                <span className="font-semibold text-gray-900 tabular-nums">{fmt(s.value)}</span>
-                <span className="w-10 text-right text-xs text-gray-400 tabular-nums">{status.total ? Math.round((s.value / status.total) * 100) : 0}%</span>
-              </li>
-            ))}
-          </ul>
-        </Card>
-        <Card>
-          <CardTitle title="Submission funnel" meta="All time" />
-          <Funnel steps={funnel} />
-          <p className="text-[11px] text-gray-400 mt-4">&ldquo;Still live&rdquo; excludes approved notes that were later flagged.</p>
-        </Card>
-      </div>
-
-      <Card>
-        <div className="flex flex-col lg:flex-row gap-6 lg:gap-10">
-          <div className="flex-1 min-w-0">
-            <CardTitle title="Decisions over time" meta={`Per ${range.unit}`} />
-            <Legend
-              items={[
-                { label: "Approved", color: STATUS.approved },
-                { label: "Fixed & approved", color: STATUS.changes },
-                { label: "Rejected", color: STATUS.rejected },
-              ]}
-            />
-            <ColumnChart
-              ariaLabel="Review decisions over time, stacked by outcome"
-              labels={buckets}
-              height={220}
-              unit="decisions"
-              series={[
-                { label: "Approved", color: STATUS.approved, values: decisions.approved },
-                { label: "Fixed & approved", color: STATUS.changes, values: decisions.changes },
-                { label: "Rejected", color: STATUS.rejected, values: decisions.rejected },
-              ]}
-            />
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-1 gap-4 pt-5 border-t border-black/5 lg:pt-0 lg:border-t-0 lg:w-52 lg:border-l lg:pl-8 content-start">
-            <RateStat
-              label="Approval rate"
-              value={rates.approval}
-              extra={<Delta current={rates.approval} previous={rates.approvalPrev} mode="points" />}
-              sub={`of decisions, last ${range.label}`}
-            />
-            <RateStat label="Flag rate" value={rates.flag} sub="of approved notes got reported" />
-            <RateStat
-              label="Fixed & approved"
-              value={rates.resub}
-              sub={rates.resubTotal ? `${rates.resubApproved} of ${rates.resubTotal} sent back` : "None sent back yet"}
-            />
-          </div>
-        </div>
-      </Card>
-
-      <div className="grid grid-cols-1 lg:grid-cols-[1.6fr_1fr] gap-4">
-        <Card>
-          <CardTitle title="Review speed" meta={`Submission → first decision`} />
-          <div className="grid grid-cols-3 gap-4 mb-6">
-            <BigStat label="Median" value={fmtDuration(speed.median)} extra={<Delta current={speed.median} previous={speed.medianPrev} goodWhen="down" />} />
-            <BigStat label="Slowest 10%" value={fmtDuration(speed.p90)} />
-            <BigStat label="Within 24h" value={speed.within24 === null ? "—" : `${speed.within24}%`} />
-          </div>
-          {speed.count === 0 ? (
-            <p className="text-sm text-gray-400 py-8 text-center">No decisions in the last {range.label}.</p>
-          ) : (
-            <>
-              <LineChart
-                ariaLabel={`Median review time per ${range.unit}`}
-                labels={buckets}
-                height={170}
-                format={(v) => fmtDuration(v)}
-                series={[{ label: "Median", color: STATUS.pending, values: speed.series, area: true }]}
-              />
-              <div className="mt-6 pt-5 border-t border-black/5">
-                <p className="text-xs font-semibold text-gray-500 mb-2">How long {fmt(speed.count)} decisions took</p>
-                <RankedBars rows={speed.bands} color={STATUS.pending} total={speed.count} limit={5} />
-              </div>
-            </>
-          )}
-        </Card>
-        <Card>
-          <CardTitle title="Queue age" meta={`${fmt(status.pending)} pending`} />
-          {status.pending === 0 ? (
-            <div className="py-10 text-center">
-              <CheckCircle2 className="w-8 h-8 text-emerald-500 mx-auto" />
-              <p className="text-sm text-gray-500 mt-2">Nothing waiting.</p>
-            </div>
-          ) : (
-            <ul className="space-y-3">
-              {queueAging.map((q, i) => {
-                const tone = AGE_TONES[i];
-                return (
-                  <li key={q.label}>
-                    <div className="flex justify-between text-sm mb-1">
-                      <span className="text-gray-600">{q.label}</span>
-                      <span className="font-semibold text-gray-900 tabular-nums">{q.value}</span>
-                    </div>
-                    <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
-                      <div className="h-full rounded-full" style={{ width: `${(q.value / Math.max(1, status.pending)) * 100}%`, backgroundColor: tone }} />
-                    </div>
-                  </li>
-                );
-              })}
-            </ul>
-          )}
-          <Link href="/admin/queue" className="mt-6 inline-flex items-center gap-1 text-xs font-semibold text-brand-red hover:text-brand-red-hover">
-            Open review queue <ArrowRight className="w-3 h-3" />
-          </Link>
-        </Card>
-      </div>
-    </Section>
+    <>
+      <StackedBar segments={rows} height="h-3" />
+      <ul className="mt-4 space-y-2.5">
+        {rows.map((s) => (
+          <li key={s.label} className="flex items-center gap-2.5 text-sm">
+            <span className="h-2.5 w-2.5 shrink-0 rounded-[3px]" style={{ backgroundColor: s.color }} />
+            <span className="flex-1 text-brand-body">{s.label}</span>
+            <span className="font-semibold tabular-nums text-brand-dark">{fmt(s.value)}</span>
+          </li>
+        ))}
+      </ul>
+    </>
   );
 }
 
 // ─── Library ─────────────────────────────────────────────────────────
 
-function Library({ data }: { data: AnalyticsData }) {
-  const { library: lib, buckets, range } = data;
+function Library({ data }: { data: FullAnalytics }) {
+  const { library: lib, workflow: w, buckets, range } = data;
   const [view, setView] = useState<"courses" | "subjects">("courses");
   const [query, setQuery] = useState("");
-  const langTotal = lib.english + lib.french;
   const rows = (view === "courses" ? lib.courseRows : lib.subjectRows).filter((r) => r.label.toLowerCase().includes(query.trim().toLowerCase()));
+  const langTotal = lib.english + lib.french;
+  const max = Math.max(1, ...w.faculties.map((f) => f.published));
 
   return (
-    <Section id="library" title="Library" description="Everything approved and published.">
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-        <StatCard label="Published notes" value={fmt(lib.published)} sub={`+${fmt(lib.publishedInRange)} in the last ${range.label}`} />
-        <StatCard label="Courses covered" value={fmt(lib.courses)} sub={`${fmt(lib.newCourses.length)} new in the last ${range.label}`} />
-        <StatCard label="Subjects" value={fmt(lib.subjects)} sub={`${fmt(lib.singleNoteCourses)} ${lib.singleNoteCourses === 1 ? "course has" : "courses have"} just 1 note`} />
-        <StatCard label="Avg. hours per note" value={fmt(lib.avgHours, 1)} sub="Volunteer hours awarded" />
+    <>
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <Stat label="Published notes" value={fmt(lib.published)} sub={`${fmt(lib.publishedInRange)} added in the last ${range.label}`} />
+        <Stat label="Courses covered" value={fmt(lib.courses)} sub={`${fmt(lib.newCourses.length)} new in the last ${range.label}`} />
+        <Stat label="Courses with only 1 note" value={fmt(lib.singleNoteCourses)} sub="Good targets for more notes" />
+        <Stat label="Notes saved by students" value={fmt(w.saves.inRange)} now={w.saves.inRange} prev={w.saves.prev} sub={`${fmt(w.saves.total)} all time`} />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-[1.4fr_1fr] gap-4">
-        <Card>
-          <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
-            <Toggle
-              options={[
-                { value: "courses" as const, label: "Courses" },
-                { value: "subjects" as const, label: "Subjects" },
-              ]}
+      <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
+        <Card title="Coverage by faculty" meta="Published notes">
+          <ul className="space-y-3">
+            {w.faculties.map((f) => (
+              <li key={f.label} className="grid grid-cols-[8.5rem_minmax(0,1fr)_5.5rem] items-center gap-3 text-sm">
+                <span className="truncate text-brand-body">{f.label}</span>
+                <span className="h-2.5 rounded-r bg-brand-surface" title={`${f.label}: ${f.published} published, ${f.added} added in the last ${range.label}`}>
+                  <span className="block h-full rounded-r" style={{ width: `${(f.published / max) * 100}%`, backgroundColor: RED }} />
+                </span>
+                <span className="text-right tabular-nums">
+                  {f.published === 0 ? (
+                    <span className="text-xs font-semibold text-rose-700">No notes yet</span>
+                  ) : (
+                    <>
+                      <span className="font-semibold text-brand-dark">{fmt(f.published)}</span>
+                      {f.added > 0 && <span className="ml-1.5 text-xs text-brand-muted">+{f.added}</span>}
+                    </>
+                  )}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </Card>
+        <Card title="Most saved by students" meta="All time">
+          {w.saves.top.length === 0 ? (
+            <p className="text-sm text-brand-muted">No saved notes yet.</p>
+          ) : (
+            <ol className="-my-2.5 divide-y divide-brand-border-light">
+              {w.saves.top.map((s) => (
+                <li key={s.id} className="flex items-center gap-3 py-2.5 text-sm">
+                  <span className="w-20 shrink-0 font-mono text-xs font-semibold text-brand-red">{s.course}</span>
+                  <span className="min-w-0 flex-1 truncate font-medium text-brand-dark">{s.title}</span>
+                  <span className="tabular-nums text-brand-muted">{s.value} {s.value === 1 ? "save" : "saves"}</span>
+                </li>
+              ))}
+            </ol>
+          )}
+        </Card>
+      </div>
+
+      <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
+        <Card
+          title="Notes per course"
+          action={
+            <Segmented
+              label="Group by"
+              options={[{ value: "courses" as const, label: "Courses" }, { value: "subjects" as const, label: "Subjects" }]}
               value={view}
               onChange={setView}
             />
-            <input
-              type="search"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder={`Search ${view}…`}
-              className="h-8 w-40 sm:w-48 px-3 rounded-lg border border-black/10 bg-white text-xs text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-brand-red/50"
-            />
-          </div>
-          <RankedBars rows={rows} total={lib.published} limit={10} emptyText={query ? "No matches." : "No published notes yet."} />
-          {lib.newCourses.length > 0 && (
-            <div className="mt-6 pt-5 border-t border-black/5">
-              <p className="text-xs font-semibold text-gray-500 mb-2">First notes in the last {range.label}</p>
-              <div className="flex flex-wrap gap-1.5">
-                {lib.newCourses.slice(0, 18).map((c) => (
-                  <span key={c} className="px-2 py-1 rounded-md bg-emerald-50 text-emerald-800 text-[11px] font-semibold tabular-nums">{c}</span>
-                ))}
-                {lib.newCourses.length > 18 && <span className="px-2 py-1 text-[11px] text-gray-400">+{lib.newCourses.length - 18} more</span>}
-              </div>
-            </div>
-          )}
+          }
+        >
+          <input
+            type="search"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder={`Search ${view}`}
+            aria-label={`Search ${view}`}
+            className="mb-3 h-9 w-full rounded-md border border-brand-border-light bg-white px-3 text-sm text-brand-dark placeholder:text-brand-muted focus:border-brand-red focus:outline-none"
+          />
+          <RankedBars rows={rows} total={lib.published} limit={8} emptyText={query ? "No matches." : "No published notes yet."} />
         </Card>
-
-        <div className="space-y-4">
-          <Card>
-            <CardTitle title="Library size" meta="Published notes over time" />
+        <div className="space-y-5">
+          <Card title="Library size" meta="Published notes over time">
             <LineChart
               ariaLabel={`Total published notes over the last ${range.label}`}
               labels={buckets}
               height={150}
               format={(v) => fmt(v)}
-              series={[{ label: "Published", color: STATUS.approved, values: lib.cumulative, area: true }]}
+              series={[{ label: "Published", color: RED, values: lib.cumulative, area: true }]}
             />
           </Card>
-          <Card>
-            <CardTitle title="Language" />
-            <StackedBar
-              height="h-3"
-              segments={[
-                { label: "English", value: lib.english, color: RED },
-                { label: "French", value: lib.french, color: INK },
-              ]}
-            />
-            <div className="flex justify-between mt-3 text-sm">
-              <LegendValue color={RED} label="English" value={lib.english} total={langTotal} />
-              <LegendValue color={INK} label="French" value={lib.french} total={langTotal} />
+          <Card title="Language" meta={`${fmt(langTotal)} notes`}>
+            <StackedBar segments={[{ label: "English", value: lib.english, color: RED }, { label: "French", value: lib.french, color: BLUE }]} />
+            <div className="mt-3">
+              <Legend
+                items={[
+                  { label: "English", color: RED, value: share(lib.english, langTotal) },
+                  { label: "French", color: BLUE, value: share(lib.french, langTotal) },
+                ]}
+              />
             </div>
           </Card>
-          <Card>
-            <CardTitle title="Note types" meta="Notes can have several" />
-            <RankedBars rows={lib.types} color={INK} total={lib.published} limit={6} emptyText="No published notes yet." />
+          <Card title="Note types" meta="Notes can have several">
+            <RankedBars rows={lib.types} total={lib.published} limit={5} emptyText="No published notes yet." />
           </Card>
         </div>
       </div>
-    </Section>
+    </>
   );
 }
 
-// ─── Community ───────────────────────────────────────────────────────
+// ─── Students ────────────────────────────────────────────────────────
 
-function Community({ data }: { data: AnalyticsData }) {
-  const { community: c, range } = data;
+function Students({ data }: { data: FullAnalytics }) {
+  const { community: c, contributors, workflow: w, metrics, range } = data;
   const [board, setBoard] = useState<"range" | "all">("range");
   const [heat, setHeat] = useState<"submissions" | "signups">("submissions");
-  const leaders = board === "range" ? c.leadersRange : c.leadersAll;
+  const { fresh, returning } = w.contributors;
 
   return (
-    <Section id="community" title="Community" description="Who's signing up, who's contributing, and when.">
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4">
-        <StatCard label="Users" value={fmt(c.totalUsers)} sub={`${fmt(c.admins)} admins · ${fmt(c.banned)} banned`} />
-        <StatCard label="Contributors" value={fmt(c.contributors)} sub={`${c.contributorRate}% of all users`} />
-        <StatCard label="First-time contributors" value={fmt(c.firstTimeInRange)} sub={`In the last ${range.label}`} />
-        <StatCard label="Came back" value={fmt(c.repeat)} sub="Submitted 2 or more notes" />
-        <StatCard
-          label="Signup → first note"
-          value={c.medianDaysToFirst === null ? "—" : c.medianDaysToFirst < 1 ? "<1 day" : `${fmt(c.medianDaysToFirst, 0)} days`}
-          sub="Median wait"
-          className="col-span-2 lg:col-span-1"
+    <>
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <Stat label="Students and staff" value={fmt(c.totalUsers)} sub={`${fmt(metrics.signups.total)} joined in the last ${range.label}`} />
+        <Stat label="Active contributors" value={fmt(contributors.current)} now={contributors.current} prev={contributors.prev} />
+        <Stat label="Volunteer hours awarded" value={fmt(metrics.hours.total, 1)} now={metrics.hours.total} prev={metrics.hours.prevTotal} format={(v) => fmt(v, 1)} />
+        <Stat
+          label="Signup to first note"
+          value={c.medianDaysToFirst === null ? "—" : c.medianDaysToFirst < 1 ? "Under a day" : `${fmt(c.medianDaysToFirst)} days`}
+          sub="Median, all time"
         />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <Card>
-          <CardTitle title="From signup to published" meta="All time" />
-          <Funnel steps={c.activation} color={INK} />
+      <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
+        <Card title="From signup to published" meta="All time">
+          <Funnel steps={c.activation} />
         </Card>
-        <Card>
-          <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
-            <h3 className="font-logo text-lg font-bold text-brand-dark">Top contributors</h3>
-            <Toggle
-              options={[
-                { value: "range" as const, label: `Last ${range.label}` },
-                { value: "all" as const, label: "All time" },
-              ]}
-              value={board}
-              onChange={setBoard}
-            />
-          </div>
-          <Leaderboard leaders={leaders} />
+        <Card title="New or coming back?" meta={`Contributors, last ${range.label}`}>
+          {fresh + returning === 0 ? (
+            <p className="text-sm text-brand-muted">No submissions in this period.</p>
+          ) : (
+            <>
+              <StackedBar height="h-4" segments={[{ label: "First time", value: fresh, color: RED }, { label: "Returning", value: returning, color: BLUE }]} />
+              <div className="mt-4">
+                <Legend
+                  items={[
+                    { label: "First time", color: RED, value: `${fresh} (${share(fresh, fresh + returning)})` },
+                    { label: "Returning", color: BLUE, value: `${returning} (${share(returning, fresh + returning)})` },
+                  ]}
+                />
+              </div>
+            </>
+          )}
+          <dl className="mt-2 grid grid-cols-2 gap-4 border-t border-brand-border-light pt-4 text-sm">
+            <div>
+              <dt className="text-xs text-brand-muted">Ever submitted a note</dt>
+              <dd className="mt-0.5 font-semibold text-brand-dark">{fmt(c.contributors)} people ({c.contributorRate}%)</dd>
+            </div>
+            <div>
+              <dt className="text-xs text-brand-muted">Submitted 2 or more</dt>
+              <dd className="mt-0.5 font-semibold text-brand-dark">{fmt(c.repeat)} people</dd>
+            </div>
+          </dl>
         </Card>
       </div>
 
-      <Card>
-        <div className="flex flex-wrap items-center justify-between gap-3 mb-5">
-          <div>
-            <h3 className="font-logo text-lg font-bold text-brand-dark">When it happens</h3>
-            <p className="text-xs text-gray-400 mt-0.5">All time, by day and 3-hour block. Hover or tap a square.</p>
-          </div>
-          <Toggle
-            options={[
-              { value: "submissions" as const, label: "Submissions" },
-              { value: "signups" as const, label: "Signups" },
-            ]}
+      <Card
+        title="Top contributors"
+        action={
+          <Segmented
+            label="Period"
+            options={[{ value: "range" as const, label: `Last ${range.label}` }, { value: "all" as const, label: "All time" }]}
+            value={board}
+            onChange={setBoard}
+          />
+        }
+      >
+        <Leaderboard leaders={board === "range" ? c.leadersRange : c.leadersAll} />
+      </Card>
+
+      <Card
+        title="Busiest times"
+        meta="All time, Ottawa time"
+        action={
+          <Segmented
+            label="Activity"
+            options={[{ value: "submissions" as const, label: "Submissions" }, { value: "signups" as const, label: "Signups" }]}
             value={heat}
             onChange={setHeat}
           />
-        </div>
+        }
+      >
         <Heatmap grid={heat === "submissions" ? c.heatSubmissions : c.heatSignups} unit={heat} />
       </Card>
-    </Section>
+    </>
   );
 }
 
 function Leaderboard({ leaders }: { leaders: Leader[] }) {
-  if (leaders.length === 0) return <p className="text-sm text-gray-400 py-10 text-center">No approved notes in this period.</p>;
-  const max = Math.max(1, ...leaders.map((l) => l.hours));
+  if (leaders.length === 0) return <p className="text-sm text-brand-muted">No approved notes in this period.</p>;
   return (
-    <ol className="space-y-1">
+    <ol className="grid grid-cols-1 gap-x-10 md:grid-cols-2">
       {leaders.map((l, i) => (
-        <li key={`${l.name}-${i}`} className="flex items-center gap-3 py-1.5">
-          <span
-            className={`w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-bold tabular-nums shrink-0 ${
-              i === 0 ? "bg-brand-red text-white" : i < 3 ? "bg-brand-red text-white" : "bg-gray-100 text-gray-500"
-            }`}
-          >
-            {i + 1}
-          </span>
-          <span className="flex-1 min-w-0">
-            <span className="flex items-baseline justify-between gap-2">
-              <span className="text-sm font-semibold text-gray-900 truncate">{l.name}</span>
-              <span className="text-xs tabular-nums text-gray-500 shrink-0">
-                <b className="text-gray-900 font-semibold">{fmt(l.hours, 1)}h</b> · {l.approved} {l.approved === 1 ? "note" : "notes"}
-              </span>
-            </span>
-            <span className="block h-1 mt-1.5 bg-gray-100 rounded-full overflow-hidden">
-              <span className="block h-full rounded-full bg-brand-red/70" style={{ width: `${(l.hours / max) * 100}%` }} />
-            </span>
-          </span>
+        <li key={`${l.name}-${i}`} className="flex items-center gap-3 border-b border-brand-border-light py-2.5 text-sm">
+          <span className="w-5 text-right tabular-nums text-brand-muted">{i + 1}</span>
+          <span className="min-w-0 flex-1 truncate font-medium text-brand-dark">{l.name}</span>
+          <span className="tabular-nums text-brand-muted">{l.approved} {l.approved === 1 ? "note" : "notes"}</span>
+          <span className="w-16 text-right font-semibold tabular-nums text-brand-dark">{fmt(l.hours, 1)} h</span>
         </li>
       ))}
     </ol>
@@ -794,130 +652,116 @@ function Leaderboard({ leaders }: { leaders: Leader[] }) {
 
 // ─── Team ────────────────────────────────────────────────────────────
 
-type SortKey = "inRange" | "approvalRate" | "medianHours" | "lastActive" | "name";
+type SortKey = "name" | "checks" | "fixes" | "finals" | "sentBack" | "total" | "lastActive";
+const PEOPLE_COLUMNS: { key: SortKey; label: string; title: string }[] = [
+  { key: "checks", label: "First checks", title: "Notes sent to final check" },
+  { key: "fixes", label: "Fixes", title: "Corrected files submitted" },
+  { key: "finals", label: "Final checks", title: "Approved, denied or sent back at final check" },
+  { key: "sentBack", label: "Came back", title: "Notes they checked that were sent back" },
+  { key: "total", label: "Total", title: "First checks, fixes and final checks" },
+];
 
-function Team({ data }: { data: AnalyticsData }) {
-  const { team, range } = data;
+function Team({ data }: { data: FullAnalytics }) {
+  const { workflow: w, range } = data;
   const { online, connected, selfId } = useAdminPresence();
-  const [sort, setSort] = useState<{ key: SortKey; dir: 1 | -1 }>({ key: "inRange", dir: -1 });
+  const [sort, setSort] = useState<{ key: SortKey; dir: 1 | -1 }>({ key: "total", dir: -1 });
 
   const rows = useMemo(() => {
-    const val = (r: TeamMember): number | string => {
-      switch (sort.key) {
-        case "name": return r.name.toLowerCase();
-        case "lastActive": return r.lastActive ? new Date(r.lastActive).getTime() : 0;
-        case "medianHours": return r.medianHours ?? (sort.dir === 1 ? Infinity : -Infinity);
-        case "approvalRate": return r.approvalRate ?? -1;
-        default: return r.inRange;
-      }
-    };
-    return [...team.rows].sort((a, b) => {
-      const va = val(a);
-      const vb = val(b);
-      return (va < vb ? -1 : va > vb ? 1 : 0) * sort.dir;
-    });
-  }, [team.rows, sort]);
+    const val = (p: Person) =>
+      sort.key === "name" ? p.name.toLowerCase() : sort.key === "lastActive" ? (p.lastActive ? new Date(p.lastActive).getTime() : 0) : p[sort.key];
+    return [...w.people].sort((a, b) => (val(a) < val(b) ? -1 : val(a) > val(b) ? 1 : 0) * sort.dir);
+  }, [w.people, sort]);
 
-  const header = (key: SortKey, label: string, align = "text-right") => (
-    <th className={`px-4 py-3 font-medium ${align}`} aria-sort={sort.key === key ? (sort.dir === 1 ? "ascending" : "descending") : "none"}>
+  const sum = (k: "checks" | "fixes" | "finals") => w.people.reduce((s, p) => s + p[k], 0);
+  const active = w.people.filter((p) => p.total > 0).length;
+
+  const header = (key: SortKey, label: string, title?: string, left = false) => (
+    <th key={key} className={`px-4 py-2.5 font-medium ${left ? "text-left" : "text-right"}`} aria-sort={sort.key === key ? (sort.dir === 1 ? "ascending" : "descending") : "none"}>
       <button
         type="button"
-        onClick={() => setSort((s) => ({ key, dir: s.key === key ? ((s.dir * -1) as 1 | -1) : key === "name" || key === "medianHours" ? 1 : -1 }))}
-        className={`inline-flex items-center gap-1 hover:text-gray-900 cursor-pointer ${sort.key === key ? "text-gray-900" : ""}`}
+        title={title}
+        onClick={() => setSort((s) => ({ key, dir: s.key === key ? (s.dir === 1 ? -1 : 1) : key === "name" ? 1 : -1 }))}
+        className={`inline-flex items-center gap-1 whitespace-nowrap hover:text-brand-dark ${sort.key === key ? "text-brand-dark" : ""}`}
       >
         {label}
-        {sort.key === key && (sort.dir === 1 ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />)}
+        {sort.key === key && (sort.dir === 1 ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />)}
       </button>
     </th>
   );
 
   return (
-    <Section id="team" title="Admin team" description="Who's on the desk right now, and how everyone's been reviewing. Click anyone for their full history.">
-      <OnlineNow online={online} connected={connected} selfId={selfId} team={team.rows} />
-      <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
-        <StatCard label="Active reviewers" value={`${team.activeReviewers}/${team.totalAdmins}`} sub={`Made a decision in the last ${range.label}`} />
-        <StatCard
-          label="Team decisions"
-          value={fmt(team.decisionsInRange)}
-          sub={`vs ${fmt(team.decisionsPrev)} in the ${range.prevLabel}`}
-          extra={<Delta current={team.decisionsInRange} previous={team.decisionsPrev} />}
-        />
-        <StatCard
-          label="Per active reviewer"
-          value={team.activeReviewers ? fmt(team.decisionsInRange / team.activeReviewers, 1) : "—"}
-          sub={`Decisions in the last ${range.label}`}
-          className="col-span-2 lg:col-span-1"
-        />
+    <>
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <Stat label="People who reviewed" value={`${active} of ${w.people.length}`} sub={`In the last ${range.label}`} />
+        <Stat label="First checks" value={fmt(sum("checks"))} sub="Notes sent to final check" />
+        <Stat label="Fixes submitted" value={fmt(sum("fixes"))} sub="Corrected files uploaded" />
+        <Stat label="Final checks" value={fmt(sum("finals"))} sub="Approved, denied or sent back" />
       </div>
 
-      <Card padded={false}>
+      <OnlineNow online={online} connected={connected} selfId={selfId} team={w.people} />
+
+      <Card title="Who did what" meta={`Last ${range.label}`} flush>
         {rows.length === 0 ? (
-          <p className="px-6 py-12 text-center text-sm text-gray-400">No admins found.</p>
+          <p className="px-5 py-10 text-center text-sm text-brand-muted">No one on the review team yet.</p>
         ) : (
           <>
-            {/* Desktop table */}
-            <table className="hidden md:table w-full text-sm">
-              <thead className="text-xs text-gray-400 border-b border-black/5 bg-gray-50/50">
-                <tr>
-                  {header("name", "Reviewer", "text-left")}
-                  <th className="px-4 py-3 font-medium text-left">All-time decisions</th>
-                  {header("inRange", `Last ${range.label}`)}
-                  {header("approvalRate", "Approval")}
-                  {header("medianHours", "Median speed")}
-                  {header("lastActive", "Last active")}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-black/5">
-                {rows.map((r) => (
-                  <tr key={r.id} className="group hover:bg-gray-50/60 transition-colors">
-                    <td className="px-4 py-3.5">
-                      <Link href={`/admin/analytics/${r.id}`} className="flex items-center gap-3">
-                        <Avatar name={r.name} presence={online.get(r.id)} />
-                        <span className="min-w-0">
-                          <span className="block font-semibold text-gray-900 group-hover:text-brand-red transition-colors truncate">{r.name}</span>
-                          <span className="block text-xs text-gray-400 truncate">{r.email}</span>
-                        </span>
-                      </Link>
-                    </td>
-                    <td className="px-4 py-3.5 w-[26%]">
-                      <DecisionMix r={r} />
-                    </td>
-                    <td className="px-4 py-3.5 text-right">
-                      <span className="font-semibold text-gray-900 tabular-nums">{r.inRange}</span>
-                      {r.share !== null && <span className="block text-[11px] text-gray-400">{r.share}% of team</span>}
-                    </td>
-                    <td className="px-4 py-3.5 text-right font-semibold text-gray-900 tabular-nums">{r.approvalRate === null ? "—" : `${r.approvalRate}%`}</td>
-                    <td className="px-4 py-3.5 text-right font-semibold text-gray-900 tabular-nums">{fmtDuration(r.medianHours)}</td>
-                    <td className="px-4 py-3.5 text-right">
-                      <Link href={`/admin/analytics/${r.id}`} className="inline-flex items-center gap-1 text-xs text-gray-500 group-hover:text-brand-red transition-colors">
-                        <PresenceText presence={online.get(r.id)} lastActive={r.lastActive} /> <ArrowRight className="w-3 h-3" />
-                      </Link>
-                    </td>
+            <div className="hidden overflow-x-auto md:block">
+              <table className="w-full text-sm">
+                <thead className="border-b border-brand-border-light bg-brand-surface/60 text-xs text-brand-muted">
+                  <tr>
+                    {header("name", "Person", undefined, true)}
+                    {PEOPLE_COLUMNS.map((c) => header(c.key, c.label, c.title))}
+                    {header("lastActive", "Last active")}
                   </tr>
-                ))}
-              </tbody>
-            </table>
-
-            {/* Mobile cards */}
-            <ul className="md:hidden divide-y divide-black/5">
-              {rows.map((r) => (
-                <li key={r.id}>
-                  <Link href={`/admin/analytics/${r.id}`} className="block px-4 py-4 active:bg-gray-50">
+                </thead>
+                <tbody className="divide-y divide-brand-border-light">
+                  {rows.map((p) => (
+                    <tr key={p.id} className="hover:bg-brand-surface/50">
+                      <td className="px-4 py-3">
+                        <Link href={`/admin/analytics/${p.id}`} className="group flex items-center gap-3">
+                          <Avatar name={p.name} presence={online.get(p.id)} />
+                          <span className="min-w-0">
+                            <span className="block truncate font-semibold text-brand-dark group-hover:text-brand-red">{p.name}</span>
+                            <span className="block text-xs text-brand-muted">{p.role}</span>
+                          </span>
+                        </Link>
+                      </td>
+                      {PEOPLE_COLUMNS.map((c) => {
+                        const v = p[c.key as "checks"];
+                        return (
+                          <td key={c.key} className={`px-4 py-3 text-right tabular-nums ${v === 0 ? "text-brand-muted" : c.key === "total" ? "font-semibold text-brand-dark" : "text-brand-body"}`}>
+                            {v}
+                          </td>
+                        );
+                      })}
+                      <td className="whitespace-nowrap px-4 py-3 text-right text-xs text-brand-muted">
+                        <PresenceText presence={online.get(p.id)} lastActive={p.lastActive} />
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <ul className="divide-y divide-brand-border-light md:hidden">
+              {rows.map((p) => (
+                <li key={p.id}>
+                  <Link href={`/admin/analytics/${p.id}`} className="block px-4 py-4">
                     <span className="flex items-center gap-3">
-                      <Avatar name={r.name} presence={online.get(r.id)} />
-                      <span className="flex-1 min-w-0">
-                        <span className="block text-sm font-semibold text-gray-900 truncate">{r.name}</span>
-                        <span className="block text-xs text-gray-400"><PresenceText presence={online.get(r.id)} lastActive={r.lastActive} prefix="Active " /></span>
+                      <Avatar name={p.name} presence={online.get(p.id)} />
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-sm font-semibold text-brand-dark">{p.name}</span>
+                        <span className="block text-xs text-brand-muted">
+                          {p.role}, <PresenceText presence={online.get(p.id)} lastActive={p.lastActive} prefix="active " />
+                        </span>
                       </span>
-                      <ArrowRight className="w-4 h-4 text-gray-300" />
                     </span>
-                    <span className="block mt-3">
-                      <DecisionMix r={r} />
-                    </span>
-                    <span className="grid grid-cols-3 gap-2 mt-3 text-center">
-                      <MiniMetric label={`Last ${range.label}`} value={String(r.inRange)} />
-                      <MiniMetric label="Approval" value={r.approvalRate === null ? "—" : `${r.approvalRate}%`} />
-                      <MiniMetric label="Median" value={fmtDuration(r.medianHours)} />
+                    <span className="mt-3 grid grid-cols-4 gap-2 text-center">
+                      {PEOPLE_COLUMNS.filter((c) => c.key !== "total").map((c) => (
+                        <span key={c.key}>
+                          <span className="block text-sm font-semibold tabular-nums text-brand-dark">{p[c.key as "checks"]}</span>
+                          <span className="block text-[11px] text-brand-muted">{c.label}</span>
+                        </span>
+                      ))}
                     </span>
                   </Link>
                 </li>
@@ -926,159 +770,124 @@ function Team({ data }: { data: AnalyticsData }) {
           </>
         )}
       </Card>
-    </Section>
-  );
-}
-
-function DecisionMix({ r }: { r: TeamMember }) {
-  return (
-    <span className="block">
-      <StackedBar
-        height="h-2"
-        segments={[
-          { label: "Approved", value: r.approved, color: STATUS.approved },
-          { label: "Fixes", value: r.changes, color: STATUS.changes },
-          { label: "Rejected", value: r.rejected, color: STATUS.rejected },
-        ]}
-      />
-      <span className="flex gap-3 mt-1.5 text-[11px] text-gray-500 tabular-nums">
-        <span><b className="font-semibold text-gray-800">{r.approved}</b> approved</span>
-        <span><b className="font-semibold text-gray-800">{r.changes}</b> fixes</span>
-        <span><b className="font-semibold text-gray-800">{r.rejected}</b> rejected</span>
-      </span>
-    </span>
+    </>
   );
 }
 
 // ─── Building blocks ─────────────────────────────────────────────────
 
-function Section({ id, title, description, children }: { id: string; title: string; description: string; children: React.ReactNode }) {
+function Card({ title, meta, action, flush, children }: { title: string; meta?: string; action?: ReactNode; flush?: boolean; children: ReactNode }) {
   return (
-    <section id={id} className="scroll-mt-40 space-y-4">
-      <div>
-        <h2 className="font-logo text-2xl sm:text-[1.75rem] font-bold text-brand-dark tracking-tight">{title}</h2>
-        <p className="text-sm text-gray-500 mt-0.5">{description}</p>
+    <section className="min-w-0 overflow-hidden rounded-lg border border-brand-border-light bg-white">
+      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-b border-brand-border-light px-5 py-3.5">
+        <h2 className="font-semibold text-brand-dark">
+          {title}
+          {meta && action && <span className="ml-2 text-xs font-normal text-brand-muted">{meta}</span>}
+        </h2>
+        {action ?? (meta && <span className="text-xs text-brand-muted">{meta}</span>)}
       </div>
-      {children}
+      <div className={flush ? "" : "p-5"}>{children}</div>
     </section>
   );
 }
 
-function Card({ children, padded = true }: { children: React.ReactNode; padded?: boolean }) {
-  return (
-    <div className={`bg-white border border-black/5 rounded-2xl shadow-[0_1px_2px_rgba(35,32,29,0.04)] ${padded ? "p-5 sm:p-6" : "overflow-hidden"}`}>
-      {children}
-    </div>
-  );
-}
-
-function CardTitle({ title, meta }: { title: string; meta?: string }) {
-  return (
-    <div className="flex items-baseline justify-between gap-3 mb-4">
-      <h3 className="font-logo text-lg font-bold text-brand-dark">{title}</h3>
-      {meta && <span className="text-xs text-gray-400 text-right">{meta}</span>}
-    </div>
-  );
-}
-
-function StatCard({
+function Stat({
   label,
   value,
+  now,
+  prev,
   sub,
-  extra,
-  children,
-  className = "",
+  goodWhen,
+  mode,
+  format = (v: number) => fmt(v),
 }: {
   label: string;
   value: string;
+  now?: number | null;
+  prev?: number | null;
   sub?: string;
-  extra?: React.ReactNode;
-  children?: React.ReactNode;
-  className?: string;
+  goodWhen?: "up" | "down";
+  mode?: "percent" | "points";
+  format?: (v: number) => string;
+}) {
+  const compared = now !== undefined && prev !== undefined;
+  return (
+    <div className="rounded-lg border border-brand-border-light bg-white p-4 sm:p-5">
+      <p className="text-xs font-medium text-brand-muted sm:text-sm">{label}</p>
+      <p className="mt-1.5 text-2xl font-semibold tabular-nums text-brand-dark sm:text-3xl">{value}</p>
+      <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-brand-muted">
+        {compared && <Delta current={now} previous={prev} goodWhen={goodWhen} mode={mode} />}
+        {sub ?? (compared && prev !== null ? `was ${format(prev)}` : null)}
+      </div>
+    </div>
+  );
+}
+
+function Legend({ items }: { items: { label: string; color: string; value?: string }[] }) {
+  return (
+    <ul className="mb-4 flex flex-wrap gap-x-5 gap-y-1 text-xs text-brand-body">
+      {items.map((i) => (
+        <li key={i.label} className="flex items-center gap-1.5">
+          <span className="h-2.5 w-2.5 rounded-[3px]" style={{ backgroundColor: i.color }} />
+          {i.label}
+          {i.value !== undefined && <b className="font-semibold tabular-nums text-brand-dark">{i.value}</b>}
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+// The same numbers as the chart above it, for anyone who'd rather read them
+function DataTable({ columns, rows }: { columns: string[]; rows: string[][] }) {
+  return (
+    <details className="mt-3 text-sm">
+      <summary className="cursor-pointer text-xs font-medium text-brand-muted hover:text-brand-red">Show as a table</summary>
+      <div className="mt-2 max-h-64 overflow-auto rounded-md border border-brand-border-light">
+        <table className="w-full tabular-nums">
+          <thead className="sticky top-0 bg-brand-surface text-xs text-brand-muted">
+            <tr>
+              {columns.map((c, i) => (
+                <th key={c} className={`px-3 py-2 font-medium ${i ? "text-right" : "text-left"}`}>{c}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-brand-border-light">
+            {rows.map((r, i) => (
+              <tr key={i}>
+                {r.map((v, j) => (
+                  <td key={j} className={`px-3 py-1.5 ${j ? "text-right text-brand-dark" : "text-brand-body"}`}>{v}</td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </details>
+  );
+}
+
+function Segmented<T extends string>({
+  label,
+  options,
+  value,
+  onChange,
+}: {
+  label: string;
+  options: { value: T; label: string; title?: string }[];
+  value: T;
+  onChange: (v: T) => void;
 }) {
   return (
-    <div className={`bg-white border border-black/5 rounded-2xl p-4 sm:p-5 ${className}`}>
-      <div className="flex items-start justify-between gap-2">
-        <p className="text-xs text-gray-500">{label}</p>
-        {extra}
-      </div>
-      <p className="font-logo text-2xl sm:text-3xl font-bold text-brand-dark tabular-nums mt-1">{value}</p>
-      {sub && <p className="text-[11px] text-gray-400 mt-1 leading-snug">{sub}</p>}
-      {children}
-    </div>
-  );
-}
-
-function BigStat({ label, value, extra }: { label: string; value: string; extra?: React.ReactNode }) {
-  return (
-    <div>
-      <p className="text-[11px] sm:text-xs text-gray-500">{label}</p>
-      <p className="flex flex-wrap items-center gap-2 mt-0.5">
-        <span className="font-logo text-2xl sm:text-3xl font-bold text-brand-dark tabular-nums">{value}</span>
-        {extra}
-      </p>
-    </div>
-  );
-}
-
-function RateStat({ label, value, sub, extra }: { label: string; value: number | null; sub: string; extra?: React.ReactNode }) {
-  return (
-    <div>
-      <p className="text-xs text-gray-500">{label}</p>
-      <p className="flex flex-wrap items-center gap-2 mt-0.5">
-        <span className="font-logo text-2xl font-bold text-brand-dark tabular-nums">{value === null ? "—" : `${value}%`}</span>
-        {extra}
-      </p>
-      <p className="text-[11px] text-gray-400 leading-snug">{sub}</p>
-    </div>
-  );
-}
-
-function MiniMetric({ label, value }: { label: string; value: string }) {
-  return (
-    <span className="rounded-lg bg-gray-50 py-2">
-      <span className="block text-sm font-semibold text-gray-900 tabular-nums">{value}</span>
-      <span className="block text-[10px] text-gray-400">{label}</span>
-    </span>
-  );
-}
-
-function Legend({ items }: { items: { label: string; color: string }[] }) {
-  return (
-    <div className="flex flex-wrap gap-x-4 gap-y-1 mb-4 text-xs text-gray-600">
-      {items.map((i) => (
-        <span key={i.label} className="flex items-center gap-1.5">
-          <span className="w-2.5 h-2.5 rounded-[3px]" style={{ backgroundColor: i.color }} />
-          {i.label}
-        </span>
-      ))}
-    </div>
-  );
-}
-
-function LegendValue({ color, label, value, total }: { color: string; label: string; value: number; total: number }) {
-  return (
-    <span className="flex items-center gap-2">
-      <span className="w-2.5 h-2.5 rounded-[3px]" style={{ backgroundColor: color }} />
-      <span className="text-gray-500">{label}</span>
-      <span className="font-semibold text-gray-900 tabular-nums">{fmt(value)}</span>
-      <span className="text-gray-400 text-xs tabular-nums">{total ? Math.round((value / total) * 100) : 0}%</span>
-    </span>
-  );
-}
-
-function Toggle<T extends string | boolean>({ options, value, onChange }: { options: { value: T; label: string }[]; value: T; onChange: (v: T) => void }) {
-  return (
-    <div role="tablist" className="inline-flex bg-gray-100 rounded-lg p-0.5">
+    <div role="group" aria-label={label} className="inline-flex max-w-full overflow-x-auto rounded-md border border-brand-border-light bg-white p-0.5 [scrollbar-width:none]">
       {options.map((o) => (
         <button
-          key={String(o.value)}
+          key={o.value}
           type="button"
-          role="tab"
-          aria-selected={o.value === value}
+          title={o.title}
+          aria-pressed={o.value === value}
           onClick={() => onChange(o.value)}
-          className={`h-7 px-3 rounded-md text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
-            o.value === value ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-800"
+          className={`h-8 whitespace-nowrap rounded px-3 text-xs font-semibold transition-colors ${
+            o.value === value ? "bg-brand-red text-white" : "text-brand-body hover:text-brand-red"
           }`}
         >
           {o.label}
@@ -1088,307 +897,14 @@ function Toggle<T extends string | boolean>({ options, value, onChange }: { opti
   );
 }
 
-function Avatar({ name, presence, size = "md" }: { name: string; presence?: OnlineAdmin; size?: "sm" | "md" }) {
-  return (
-    <span
-      className={`relative rounded-full bg-brand-pink text-brand-red flex items-center justify-center font-bold shrink-0 ${
-        size === "sm" ? "w-7 h-7 text-[11px]" : "w-9 h-9 text-sm"
-      }`}
-    >
-      {name.charAt(0).toUpperCase()}
-      {presence && (
-        <span
-          className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-white ${presence.status === "active" ? "bg-emerald-500" : "bg-amber-400"}`}
-          aria-label={presence.status === "active" ? "Online" : "Idle"}
-        />
-      )}
-    </span>
-  );
-}
+const share = (part: number, total: number) => `${total ? Math.round((part / total) * 100) : 0}%`;
 
-/** "Online · Review queue" when they're on the desk, otherwise when they were last seen. */
-function PresenceText({ presence, lastActive, prefix = "" }: { presence?: OnlineAdmin; lastActive: string | null; prefix?: string }) {
-  if (!presence) return <>{prefix}{relativeTime(lastActive)}</>;
-  return (
-    <span className={presence.status === "active" ? "text-emerald-700 font-medium" : "text-amber-700 font-medium"}>
-      {presence.status === "active" ? "Online" : "Idle"} · {presence.label}
-    </span>
-  );
-}
-
-/** Live list of admins on the desk, from Realtime Presence. */
-function OnlineNow({
-  online,
-  connected,
-  selfId,
-  team,
-}: {
-  online: Map<string, OnlineAdmin>;
-  connected: boolean;
-  selfId: string | null;
-  team: TeamMember[];
-}) {
-  const now = useNow(15_000);
-  const names = new Map(team.map((t) => [t.id, t.name]));
-  const nameOf = (p: OnlineAdmin) => names.get(p.userId) || p.name;
-  const people = [...online.values()].sort((a, b) =>
-    a.status !== b.status ? (a.status === "active" ? -1 : 1) : nameOf(a).localeCompare(nameOf(b))
-  );
-  const activeCount = people.filter((p) => p.status === "active").length;
-
-  return (
-    <Card>
-      <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
-        <h3 className="font-logo text-lg font-bold text-brand-dark flex items-center gap-2.5">
-          <span className="relative flex w-2.5 h-2.5">
-            {connected && activeCount > 0 && (
-              <span className="absolute inline-flex w-full h-full rounded-full bg-emerald-400 opacity-60 motion-safe:animate-ping" />
-            )}
-            <span className={`relative inline-flex w-2.5 h-2.5 rounded-full ${connected ? "bg-emerald-500" : "bg-gray-300"}`} />
-          </span>
-          On the desk now
-        </h3>
-        <span className="text-xs text-gray-400">
-          {connected ? `${activeCount} active · ${people.length - activeCount} idle` : "Connecting…"}
-        </span>
-      </div>
-
-      {!connected ? (
-        <p className="text-sm text-gray-500">
-          Can&apos;t see who&apos;s online yet. If this doesn&apos;t change in a few seconds, the Realtime presence policy probably isn&apos;t set up.
-        </p>
-      ) : people.length === 0 ? (
-        <p className="text-sm text-gray-400">No one is on the admin desk.</p>
-      ) : (
-        <ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
-          {people.map((p) => (
-            <li key={p.userId}>
-              <Link
-                href={`/admin/analytics/${p.userId}`}
-                className="flex items-center gap-3 rounded-xl border border-black/5 px-3 py-2.5 hover:border-black/15 hover:bg-gray-50/60 transition-colors"
-              >
-                <Avatar name={nameOf(p)} presence={p} />
-                <span className="min-w-0 flex-1">
-                  <span className="block text-sm font-semibold text-gray-900 truncate">
-                    {nameOf(p)}
-                    {p.userId === selfId && <span className="font-normal text-gray-400"> (you)</span>}
-                  </span>
-                  <span className="block text-xs text-gray-500 truncate">
-                    {p.status === "active" ? p.label : `Idle on ${p.label.toLowerCase()}`}
-                    <span className="text-gray-300"> · </span>
-                    {since(p.since, now)}
-                    {p.tabs > 1 && <span className="text-gray-400"> · {p.tabs} tabs</span>}
-                  </span>
-                </span>
-              </Link>
-            </li>
-          ))}
-        </ul>
-      )}
-    </Card>
-  );
-}
-
-/** Compact avatar stack of who's online, for the toolbar. */
-function OnlineStack() {
-  const { online, connected } = useAdminPresence();
-  if (!connected || online.size === 0) return null;
-  const people = [...online.values()].sort((a, b) => (a.status === b.status ? 0 : a.status === "active" ? -1 : 1));
-  const activeCount = people.filter((p) => p.status === "active").length;
-
-  return (
-    <a
-      href="#team"
-      onClick={(e) => {
-        e.preventDefault();
-        document.getElementById("team")?.scrollIntoView({ behavior: "smooth", block: "start" });
-      }}
-      title={people.map((p) => `${p.name}: ${p.status === "active" ? p.label : "idle"}`).join("\n")}
-      className="hidden md:inline-flex items-center gap-2 h-9 pl-1.5 pr-3 rounded-lg hover:bg-white transition-colors"
-    >
-      <span className="flex -space-x-2">
-        {people.slice(0, 4).map((p) => (
-          <span key={p.userId} className="ring-2 ring-brand-surface rounded-full">
-            <Avatar name={p.name} presence={p} size="sm" />
-          </span>
-        ))}
-      </span>
-      <span className="text-xs font-semibold text-gray-600 whitespace-nowrap">{activeCount} online</span>
-    </a>
-  );
-}
-
-function LiveIndicator({ generatedAt, realtime, refreshing }: { generatedAt: string; realtime: boolean; refreshing: boolean }) {
-  const now = useNow(5_000);
-  const secs = Math.max(0, Math.round((now - new Date(generatedAt).getTime()) / 1000));
-  const ago = secs < 10 ? "just now" : secs < 60 ? `${secs}s ago` : `${Math.floor(secs / 60)}m ago`;
-  return (
-    <span
-      className="inline-flex items-center gap-1.5 font-semibold text-emerald-700"
-      title={realtime ? "Updates the moment something changes" : "Refreshes every 30 seconds"}
-    >
-      <span className="relative flex w-2 h-2">
-        <span className={`absolute inline-flex w-full h-full rounded-full bg-emerald-400 opacity-70 ${refreshing ? "animate-ping" : "motion-safe:animate-pulse"}`} />
-        <span className="relative inline-flex w-2 h-2 rounded-full bg-emerald-500" />
-      </span>
-      Live
-      <span className="font-normal text-gray-400">updated {ago}</span>
-    </span>
-  );
-}
-
-// ─── Utilities ───────────────────────────────────────────────────────
-
-function cap(s: string) {
-  return s.charAt(0).toUpperCase() + s.slice(1);
-}
-
-function relativeTime(iso: string | null) {
-  if (!iso) return "never";
-  const s = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
-  if (s < 60) return "just now";
-  if (s < 3600) return `${Math.floor(s / 60)}m ago`;
-  if (s < 86400) return `${Math.floor(s / 3600)}h ago`;
-  return `${Math.floor(s / 86400)}d ago`;
-}
-
-/** Current time, re-read every `ms` so relative labels stay fresh. */
-function useNow(ms: number) {
-  const [now, setNow] = useState(() => Date.now());
-  useEffect(() => {
-    const id = setInterval(() => setNow(Date.now()), ms);
-    return () => clearInterval(id);
-  }, [ms]);
-  return now;
-}
-
-function since(iso: string, now: number) {
-  const mins = Math.floor((now - new Date(iso).getTime()) / 60000);
-  if (mins < 1) return "just now";
-  if (mins < 60) return `${mins}m`;
-  return `${Math.floor(mins / 60)}h ${mins % 60}m`;
-}
-
-const LIVE_TABLES = [
-  { table: "notes", event: "*" },
-  { table: "admin_audit_log", event: "INSERT" },
-  // INSERT only: every admin page load bumps last_admin_active_at, which would refresh constantly
-  { table: "profiles", event: "INSERT" },
-] as const;
-const MIN_REFRESH_GAP_MS = 4_000;
-const POLL_MS = 30_000;
-
-/**
- * Keeps the stats fresh without dimming the page or re-rendering the route:
- * - Realtime: shortly after any change to notes, decisions or signups (bypasses the server cache)
- * - Fallback: every 30s while the tab is visible, and on coming back to it
- * Fetches go to /api/admin/analytics, which doesn't count as admin activity.
- */
-function useLiveRefresh(range: RangeKey, onData: (d: AnalyticsData) => void) {
-  const [refreshing, setRefreshing] = useState(false);
-  const [realtime, setRealtime] = useState(false);
-  const lastRefresh = useRef(0);
-  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const wantFresh = useRef(false);
-
-  useEffect(() => {
-    lastRefresh.current = Date.now();
-    let cancelled = false;
-
-    const run = async () => {
-      const fresh = wantFresh.current;
-      wantFresh.current = false;
-      lastRefresh.current = Date.now();
-      setRefreshing(true);
-      try {
-        const res = await fetch(`/api/admin/analytics?range=${range}${fresh ? "&fresh=1" : ""}`, { cache: "no-store" });
-        if (res.ok && !cancelled) onData(await res.json());
-      } catch {
-        // Offline or a blip: the next poll will try again
-      } finally {
-        if (!cancelled) setRefreshing(false);
-      }
-    };
-
-    // Coalesce bursts (e.g. a batch of approvals) into one request
-    const schedule = (fresh: boolean) => {
-      wantFresh.current ||= fresh;
-      if (timer.current) clearTimeout(timer.current);
-      const wait = Math.max(800, MIN_REFRESH_GAP_MS - (Date.now() - lastRefresh.current));
-      timer.current = setTimeout(run, wait);
-    };
-
-    const supabase = createClient();
-    const channel = supabase.channel(`analytics-live-${range}`);
-    for (const { table, event } of LIVE_TABLES) {
-      channel.on("postgres_changes", { event, schema: "public", table }, () => schedule(true));
-    }
-    channel.subscribe((status) => setRealtime(status === "SUBSCRIBED"));
-
-    const poll = setInterval(() => {
-      if (document.visibilityState === "visible" && Date.now() - lastRefresh.current >= POLL_MS - 1000) schedule(false);
-    }, POLL_MS);
-    const onVisible = () => {
-      if (document.visibilityState === "visible") schedule(false);
-    };
-    document.addEventListener("visibilitychange", onVisible);
-
-    return () => {
-      cancelled = true;
-      if (timer.current) clearTimeout(timer.current);
-      clearInterval(poll);
-      document.removeEventListener("visibilitychange", onVisible);
-      supabase.removeChannel(channel);
-    };
-  }, [range, onData]);
-
-  return { realtime, refreshing };
-}
-
-/** Highlights the section currently in view in the sticky nav. */
-function useScrollSpy(ids: string[]) {
-  const [active, setActive] = useState(ids[0]);
-  useEffect(() => {
-    const visible = new Map<string, number>();
-    const observer = new IntersectionObserver(
-      (entries) => {
-        for (const e of entries) visible.set(e.target.id, e.isIntersecting ? e.intersectionRatio : 0);
-        const best = ids.find((id) => (visible.get(id) ?? 0) > 0);
-        if (best) setActive(best);
-      },
-      { rootMargin: "-160px 0px -55% 0px", threshold: [0, 0.01, 0.5] }
-    );
-    ids.forEach((id) => {
-      const el = document.getElementById(id);
-      if (el) observer.observe(el);
-    });
-    return () => observer.disconnect();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ids.join(",")]);
-  return active;
-}
-
-function downloadCsv(data: AnalyticsData) {
-  const { buckets, metrics, decisions, speed } = data;
-  const header = ["period", "submissions", "signups", "approvals", "hours_awarded", "approved", "fixes_requested", "rejected", "median_review_hours"];
-  const lines = buckets.map((b, i) =>
-    [
-      `"${b.tooltip}"`,
-      metrics.submissions.current[i],
-      metrics.signups.current[i],
-      metrics.approvals.current[i],
-      metrics.hours.current[i],
-      decisions.approved[i],
-      decisions.changes[i],
-      decisions.rejected[i],
-      speed.series[i] === null ? "" : (speed.series[i] as number).toFixed(2),
-    ].join(",")
-  );
-  const blob = new Blob([[header.join(","), ...lines].join("\n")], { type: "text/csv" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = `uonotes-analytics-${data.range.key}-${data.generatedAt.slice(0, 10)}.csv`;
-  a.click();
-  URL.revokeObjectURL(url);
+/** "3 hours", "4 days", "2 weeks": how a person would say it. */
+function humanWait(hours: number) {
+  if (hours < 1) return "under an hour";
+  if (hours < 24) return `${Math.round(hours)} ${Math.round(hours) === 1 ? "hour" : "hours"}`;
+  const days = Math.round(hours / 24);
+  if (days < 14) return `${days} ${days === 1 ? "day" : "days"}`;
+  if (days < 60) return `${Math.round(days / 7)} weeks`;
+  return `${Math.round(days / 30)} months`;
 }

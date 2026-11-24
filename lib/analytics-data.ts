@@ -13,6 +13,7 @@ const DAY_MS = 24 * HOUR_MS;
 
 export type NoteRow = {
   id: string;
+  title?: string | null;
   course_code: string | null;
   status: string;
   created_at: string;
