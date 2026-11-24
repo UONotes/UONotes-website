@@ -3,6 +3,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { RangeKey } from "@/lib/analytics";
+import { DECISION_ACTIONS } from "@/lib/review";
 import { computeAnalytics, type AnalyticsData, type AuditRow, type NoteRow, type ProfileRow } from "@/lib/analytics-data";
 
 const CACHE_TTL_MS = 10_000;
@@ -46,7 +47,7 @@ async function load(range: RangeKey): Promise<AnalyticsData> {
       db
         .from("admin_audit_log")
         .select("admin_id, action_type, target_type, target_id, created_at")
-        .in("action_type", ["NOTE_APPROVED", "NOTE_REJECTED", "NOTE_CHANGES_REQUESTED"])
+        .in("action_type", DECISION_ACTIONS)
         .order("created_at", { ascending: true })
         .range(from, to)
     ),

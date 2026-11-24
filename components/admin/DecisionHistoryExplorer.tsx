@@ -2,9 +2,11 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { Search, Check, XCircle, MessageSquareText, Paperclip, User, ArrowRight, FileX } from "lucide-react";
+import { Search, Check, XCircle, MessageSquareText, Paperclip, User, ArrowRight, FileX, CheckCheck } from "lucide-react";
 
-export type DecisionType = "NOTE_APPROVED" | "NOTE_REJECTED" | "NOTE_CHANGES_REQUESTED";
+import type { DecisionAction } from "@/lib/review";
+
+export type DecisionType = DecisionAction;
 
 export type DecisionEntry = {
   id: string;
@@ -31,7 +33,8 @@ const DECISION_META: Record<
 > = {
   NOTE_APPROVED: { label: "Approved", icon: Check, color: "text-emerald-700", bg: "bg-emerald-50", dot: "bg-emerald-500" },
   NOTE_REJECTED: { label: "Rejected", icon: XCircle, color: "text-rose-700", bg: "bg-rose-50", dot: "bg-rose-500" },
-  NOTE_CHANGES_REQUESTED: { label: "Fixes requested", icon: MessageSquareText, color: "text-orange-700", bg: "bg-orange-50", dot: "bg-orange-500" },
+  NOTE_APPROVED_WITH_FIXES: { label: "Approved with fixes", icon: CheckCheck, color: "text-stone-800", bg: "bg-stone-100", dot: "bg-stone-600" },
+  NOTE_CHANGES_REQUESTED: { label: "Fixes requested (old)", icon: MessageSquareText, color: "text-amber-700", bg: "bg-amber-50", dot: "bg-amber-500" },
 };
 
 function formatDateTime(dateString: string): string {
@@ -60,6 +63,7 @@ export function DecisionHistoryExplorer({
       all: entries.length,
       NOTE_APPROVED: 0,
       NOTE_REJECTED: 0,
+      NOTE_APPROVED_WITH_FIXES: 0,
       NOTE_CHANGES_REQUESTED: 0,
     };
     entries.forEach((e) => {
@@ -90,20 +94,23 @@ export function DecisionHistoryExplorer({
     { key: "all", label: "All", dot: "bg-gray-400", active: "text-gray-900 border-gray-900" },
     { key: "NOTE_APPROVED", label: "Approved", dot: "bg-emerald-500", active: "text-emerald-700 border-emerald-600" },
     { key: "NOTE_REJECTED", label: "Rejected", dot: "bg-rose-500", active: "text-rose-700 border-rose-600" },
-    { key: "NOTE_CHANGES_REQUESTED", label: "Fixes requested", dot: "bg-orange-500", active: "text-orange-700 border-orange-600" },
+    { key: "NOTE_APPROVED_WITH_FIXES", label: "Approved with fixes", dot: "bg-stone-600", active: "text-stone-800 border-stone-700" },
+    ...(counts.NOTE_CHANGES_REQUESTED > 0
+      ? [{ key: "NOTE_CHANGES_REQUESTED" as const, label: "Fixes requested (old)", dot: "bg-amber-500", active: "text-amber-700 border-amber-600" }]
+      : []),
   ];
 
   return (
     <div className="space-y-4">
       {/* Decision tabs */}
-      <div className="flex items-stretch gap-1 bg-white border border-black/5 rounded-2xl p-1.5 overflow-x-auto">
+      <div className="flex items-stretch gap-1 bg-white border border-brand-border-light rounded-lg p-1.5 overflow-x-auto">
         {tabs.map((tab) => {
           const isActive = decisionFilter === tab.key;
           return (
             <button
               key={tab.key}
               onClick={() => setDecisionFilter(tab.key)}
-              className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-sm whitespace-nowrap border-b-2 transition-colors ${
+              className={`flex items-center gap-2 px-3.5 py-2 rounded-lg text-sm whitespace-nowrap border-b-2 transition-colors ${
                 isActive ? `${tab.active} bg-gray-50/80 font-semibold` : "text-gray-500 border-transparent hover:bg-gray-50 hover:text-gray-700"
               }`}
             >
@@ -116,7 +123,7 @@ export function DecisionHistoryExplorer({
       </div>
 
       {/* Search + reviewer filter */}
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 bg-white p-2.5 rounded-2xl border border-black/5">
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 bg-white p-2.5 rounded-lg border border-brand-border-light">
         <div className="relative flex-1">
           <div className="absolute inset-y-0 left-3.5 flex items-center pointer-events-none">
             <Search className="w-4 h-4 text-gray-400" />
@@ -126,7 +133,7 @@ export function DecisionHistoryExplorer({
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search by title, course, reviewer, or reason"
-            className="w-full pl-10 pr-9 py-2 bg-gray-50 hover:bg-gray-100/70 focus:bg-white border border-transparent rounded-xl text-sm text-gray-900 focus:outline-none focus:border-gray-300 transition-all placeholder:text-gray-400"
+            className="w-full pl-10 pr-9 py-2 bg-gray-50 hover:bg-gray-100/70 focus:bg-white border border-transparent rounded-lg text-sm text-gray-900 focus:outline-none focus:border-gray-300 transition-all placeholder:text-gray-400"
           />
           {query && (
             <button
@@ -142,7 +149,7 @@ export function DecisionHistoryExplorer({
         <select
           value={reviewerFilter}
           onChange={(e) => setReviewerFilter(e.target.value)}
-          className="px-3.5 py-2.5 bg-gray-50 hover:bg-gray-100/70 border border-transparent rounded-xl text-sm text-gray-700 focus:outline-none focus:border-gray-300 transition-all sm:w-56 shrink-0"
+          className="px-3.5 py-2.5 bg-gray-50 hover:bg-gray-100/70 border border-transparent rounded-lg text-sm text-gray-700 focus:outline-none focus:border-gray-300 transition-all sm:w-56 shrink-0"
         >
           <option value="all">All reviewers</option>
           {reviewers.map((r) => (
@@ -154,8 +161,8 @@ export function DecisionHistoryExplorer({
       </div>
 
       {/* List */}
-      <div className="bg-white border border-black/5 rounded-2xl overflow-hidden">
-        <div className="px-6 py-4 border-b border-black/5">
+      <div className="bg-white border border-brand-border-light rounded-lg overflow-hidden">
+        <div className="px-6 py-4 border-b border-brand-border-light">
           <p className="text-xs text-gray-400">
             {filtered.length === 0
               ? "Nothing matches those filters."
@@ -166,7 +173,7 @@ export function DecisionHistoryExplorer({
         {filtered.length === 0 ? (
           <div className="py-16 text-center text-sm text-gray-400">Nothing to show yet.</div>
         ) : (
-          <ul className="divide-y divide-black/5">
+          <ul className="divide-y divide-brand-border-light">
             {filtered.map((entry) => {
               const meta = DECISION_META[entry.actionType];
               const Icon = meta.icon;
@@ -227,9 +234,9 @@ export function DecisionHistoryExplorer({
                           href={entry.attachmentUrl}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-orange-50 text-orange-700 text-xs font-semibold mt-2 hover:bg-orange-100 transition-colors"
+                          className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-amber-50 text-amber-700 text-xs font-semibold mt-2 hover:bg-amber-100 transition-colors"
                         >
-                          <Paperclip className="w-3 h-3" /> View attachment
+                          <Paperclip className="w-3 h-3" /> {entry.actionType === "NOTE_APPROVED_WITH_FIXES" ? "View original upload" : "View attachment"}
                         </a>
                       )}
                     </div>
@@ -238,7 +245,7 @@ export function DecisionHistoryExplorer({
                       <Link
                         href={`/admin/history/${entry.id}`}
                         title={`View "${entry.title}" (${entry.courseCode})`}
-                        className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-[#23201D] hover:bg-brand-red text-white text-xs font-semibold transition-colors whitespace-nowrap"
+                        className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-brand-red hover:bg-brand-red-hover text-white text-xs font-semibold transition-colors whitespace-nowrap"
                       >
                         View <ArrowRight className="w-3 h-3" />
                       </Link>

@@ -207,7 +207,6 @@ function TeamSheet({
   memberCount,
   leadCount,
   directorCount,
-  colour,
 }: {
   teamName: string;
   description?: string;
@@ -216,36 +215,31 @@ function TeamSheet({
   memberCount: number;
   leadCount: number;
   directorCount: number;
-  colour: TeamColour;
 }) {
   return (
     <>
-      <div className={`${caveat.className} relative sm:pr-56`}>
-        <p className="text-lg leading-8 text-[#1f2a44]/55">
+      <div className="relative font-sans sm:pr-56">
+        <p className="text-sm leading-8 text-[#1f2a44]/55">
           Team {teamNumber} / {teamTotal}
         </p>
-        <h3 className="mt-1 text-[42px] font-bold leading-[1.1] text-[#1f2a44] sm:text-[56px]">
-          <span
-            className="[box-decoration-break:clone]"
-            style={{ backgroundImage: `linear-gradient(transparent 62%, ${colour.marker} 62%)` }}
-          >
-            {teamName}
-          </span>
+        <h3 className="mt-1 text-3xl font-extrabold leading-[1.2] tracking-tight text-[#1f2a44] sm:text-[42px] sm:leading-[1.2]">
+          {teamName}
         </h3>
         {description && (
-          <p className="mt-3 max-w-xl text-[21px] font-medium leading-[1.35] text-[#2e3650] sm:text-[23px]">{description}</p>
+          <p className="mt-3 max-w-xl text-[15px] font-medium leading-relaxed text-[#2e3650] sm:text-base sm:leading-relaxed">{description}</p>
         )}
       </div>
 
       {/* Member count, circled in pen */}
       <div
-        className={`${caveat.className} relative ml-6 mt-7 inline-flex flex-col items-center px-8 py-3 text-center leading-[1.05] text-[#1f2a44] sm:absolute sm:right-14 sm:top-8 sm:ml-0 sm:mt-0`}
+        className="relative ml-6 mt-7 inline-flex flex-col items-center justify-center px-8 pb-[19px] pt-[5px] text-center font-sans text-[#1f2a44] sm:absolute sm:right-14 sm:top-1/2 sm:ml-0 sm:mt-0 sm:-translate-y-1/2"
       >
         <span aria-hidden="true" className="absolute -inset-x-3 -inset-y-2 -rotate-6 rounded-[50%] border-[3px] border-brand-red/50" />
-        <span className="text-[56px] font-bold leading-none text-brand-red">{memberCount}</span>
-        <span className="text-xl font-bold">members</span>
-        <span className="whitespace-nowrap text-[17px] font-medium">
-          {leadCount} {leadCount === 1 ? "lead" : "leads"} · {directorCount} {directorCount === 1 ? "director" : "directors"}
+        <span className={`${caveat.className} -ml-2.5 text-[56px] font-bold leading-none text-brand-red`}>{memberCount}</span>
+        <span className="text-sm font-bold leading-tight">members</span>
+        <span className="mt-0.5 whitespace-nowrap text-xs font-medium leading-tight">
+          {leadCount > 0 && <>{leadCount} {leadCount === 1 ? "lead" : "leads"} · </>}
+          {directorCount} {directorCount === 1 ? "director" : "directors"}
         </span>
       </div>
     </>
@@ -293,7 +287,7 @@ export function TeamSelector() {
 
       <div className="grid gap-10 lg:grid-cols-[230px_1fr] lg:items-start">
         {/* Handwritten team list: the chosen team gets a pink highlighter stroke */}
-        <nav aria-label="UONotes teams" className={`${caveat.className} min-w-0 lg:pr-5`}>
+        <nav aria-label="UONotes teams" className="min-w-0 font-sans lg:pr-5">
           <p className="mb-2 hidden font-mono text-[9px] font-bold uppercase tracking-[0.2em] text-brand-red lg:block">Pick a team</p>
           <div className="flex gap-6 overflow-x-auto border-b border-dashed border-[#e3cfd1] pb-2 lg:flex-col lg:gap-0 lg:overflow-visible lg:border-b-0 lg:pb-0">
             {nonFounderTeams.map((team, index) => {
@@ -309,16 +303,16 @@ export function TeamSelector() {
                   <span className="font-mono text-[9px] font-bold text-[#b9a3a5]">{String(index + 1).padStart(2, "0")}</span>
                   <span
                     style={{ backgroundImage: highlighter(colourFor(index).marker) }}
-                    className={`-mx-1.5 bg-no-repeat px-1.5 leading-9 transition-[background-size,color] duration-300 ${
+                    className={`-mx-1.5 bg-no-repeat px-1.5 !leading-9 transition-[background-size,color] duration-300 ${
                       isActive
-                        ? "bg-[length:100%_100%] text-2xl font-bold text-[#1f2a44]"
-                        : "bg-[length:0%_100%] text-[22px] font-medium text-[#4a5064] group-hover:text-brand-red"
+                        ? "bg-[length:100%_100%] text-base font-bold text-[#1f2a44]"
+                        : "bg-[length:0%_100%] text-[15px] font-medium text-[#4a5064] group-hover:text-brand-red"
                     }`}
                   >
                     {team.teamName.replace(" Team", "")}
                   </span>
                   {isActive && (
-                    <span aria-hidden="true" className="ml-auto hidden text-2xl font-bold text-brand-red lg:inline">
+                    <span aria-hidden="true" className="ml-auto hidden text-base font-bold text-brand-red lg:inline">
                       &#10003;
                     </span>
                   )}
@@ -356,7 +350,6 @@ export function TeamSelector() {
                       memberCount={currentTeamData.members.length}
                       leadCount={vps.length}
                       directorCount={directors.length}
-                      colour={colour}
                     />
                   </PeelingSheet>
                 </AnimatePresence>

@@ -2,17 +2,22 @@
 
 import Link from "next/link";
 import { ArrowLeft, FileX } from "lucide-react";
+import { DocumentPreview } from "@/components/admin/DocumentPreview";
 
 export function HistoryDocumentViewer({
   title,
   fileUrl,
+  fileType,
+  fileKey,
 }: {
   title: string;
   fileUrl: string | null;
+  fileType: string | null;
+  fileKey: string | null;
 }) {
   return (
-    <div className="flex flex-col h-full bg-[#3D3A36] text-white overflow-hidden select-none">
-      <div className="px-5 py-3.5 border-b border-white/10 flex items-center justify-between bg-[#2A2825]/90 backdrop-blur-md z-10">
+    <div className="flex flex-col h-full bg-[#262626] text-white overflow-hidden select-none">
+      <div className="px-5 py-3.5 border-b border-white/10 flex items-center justify-between bg-[#1C1C1C]/90 backdrop-blur-md z-10">
         <Link
           href="/admin/history"
           className="inline-flex items-center gap-2 text-xs font-medium text-gray-300 hover:text-white transition-colors group"
@@ -26,14 +31,9 @@ export function HistoryDocumentViewer({
         </span>
       </div>
 
-      <div className="flex-1 w-full h-full relative bg-[#3D3A36]">
+      <div className="flex-1 w-full h-full relative bg-[#262626]">
         {fileUrl ? (
-          <iframe
-            src={`${fileUrl}#view=FitH`}
-            className="w-full h-full border-0 absolute inset-0"
-            title={title}
-            allow="autoplay; fullscreen"
-          />
+          <DocumentPreview title={title} fileUrl={fileUrl} fileType={fileType} fileKey={fileKey} />
         ) : (
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 text-gray-400 px-6 text-center">
             <FileX className="w-8 h-8" />

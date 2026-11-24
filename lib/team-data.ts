@@ -37,8 +37,7 @@ export const TEAM_DATA: TeamSection[] = [
     description: "Curating, verifying, and organizing high-yield academic study materials and cheat sheets across all courses.",
     members: [
       { name: "Tabeeb Howlader", role: "VP Notes", imageUrl: "/about/Tabeeb-Headshot.png"},
-      { name: "Ghada Balaa", role: "VP Notes", imageUrl: "/about/Ghada-Headshot.png" },
-      { name: "Rosalie Ross", role: "Director", imageUrl: "/about/Rosalie-Headshot.png" },
+      { name: "Rosalie Ross", role: "VP Notes", imageUrl: "/about/Rosalie-Headshot.png" },
       { name: "Maraia Masud", role: "Director", imageUrl: "/about/Maraia-Headshot.png" },
       { name: "Abigail Jaeger", role: "Director", imageUrl: "/about/Abigail-Headshot.png" },
       { name: "Norhan Elzayat", role: "Director", imageUrl: "/about/Norhan-Headshot.png" },
@@ -51,9 +50,8 @@ export const TEAM_DATA: TeamSection[] = [
     members: [
       { name: "Manwela Tache", role: "Director", imageUrl: "/about/Manwela-Headshot.png" },
       { name: "Perla Abou-Tayeh", role: "Director", imageUrl: "/about/Perla-Headshot.png" },
-      { name: "Rayan Awada", role: "VP Bilingualism", imageUrl: "/about/Placeholder.png" },
-      { name: "Lara Issa", role: "Director", imageUrl: "/about/Placeholder.png" },
-      { name: "Heenna Jaffer", role: "Director", imageUrl: "/about/Placeholder.png" },
+      { name: "Lara Issa", role: "Director", imageUrl: "/about/LaraIssa-Headshot.jpg" },
+      { name: "Heenna Jaffer", role: "Director", imageUrl: "/about/Heenna-Headshot.jpg" },
 
 
     ],
@@ -64,8 +62,6 @@ export const TEAM_DATA: TeamSection[] = [
     members: [
       { name: "Rojvan Adbullah", role: "VP Finance", imageUrl: "/about/Rojvan-Headshot.png" },
       { name: "Mai Ha", role: "VP Finance", imageUrl: "/about/Mai-Headshot.jpg" },
-      { name: "Halann Tanflotien", role: "Director", imageUrl: "/about/Halann-Headshot.png" },
-      { name: "Adnan Nehme", role: "Director", imageUrl: "/about/Placeholder.png" },
     ],
   },
   {
@@ -76,10 +72,10 @@ export const TEAM_DATA: TeamSection[] = [
       { name: "Aanreen Reza", role: "VP Social Media", imageUrl: "/about/Aanreen-Headshot.png" },
       { name: "Umaymah Khandker", role: "Director", imageUrl: "/about/Umaymah-Headshot.png" },
       { name: "Batoul Samhat", role: "Director", imageUrl: "/about/Batoul-Headshot.png" },
-      { name: "Ruah Mari", role: "Director", imageUrl: "/about/Placeholder.png" },
-      { name: "Nouran Tayeb", role: "Director", imageUrl: "/about/Placeholder.png" },
-      { name: "Rayan Abrahem", role: "Director", imageUrl: "/about/Placeholder.png" },
-      { name: "Marta Storbeck", role: "Director", imageUrl: "/about/Placeholder.png" },
+      { name: "Ruah Mari", role: "Director", imageUrl: "/about/Ruah-Headshot.jpg" },
+      { name: "Nouran Tayeb", role: "Director", imageUrl: "/about/Nouran-Headshot.jpg" },
+      { name: "Rayan Abrahem", role: "Director", imageUrl: "/about/RayanAbrahem-Headshot.jpg" },
+      { name: "Marta Storbeck", role: "Director", imageUrl: "/about/Marta-Headshot.jpg" },
 
     ],
   },
@@ -92,17 +88,11 @@ export const TEAM_DATA: TeamSection[] = [
     ],
   },
   {
-    teamName: "Outreach Team",
-    description: "Building partnerships with university faculties, student associations, and external academic communities.",
-    members: [
-      { name: "Shan Stas", role: "VP Outreach", imageUrl: "/about/Placeholder.png" },
-    ],
-  },
-  {
     teamName: "Design Team",
     description: "Crafting clean visual brand assets, engaging graphics, and user-friendly visual layouts.",
     members: [
       { name: "Erica Laou", role: "VP Design", imageUrl: "/about/Erica-Headshot.png" },
+      { name: "Kimiya G. Vazvani", role: "Director", imageUrl: "/about/Placeholder.png" },
       { name: "Hadeel Srour", role: "Director", imageUrl: "/about/Hadeel-Headshot.png" },
     ],
   },
@@ -112,7 +102,7 @@ export const TEAM_DATA: TeamSection[] = [
     members: [
       { name: "Jack Mackenzie", role: "VP Web Dev", imageUrl: "/about/Jack-Headshot.jpg" },
       { name: "Kwabena Asante", role: "VP Web Dev", imageUrl: "/about/Placeholder.png" },
-      { name: "Elias Mikrojyan", role: "Director", imageUrl: "/about/Placeholder.png" },
+      { name: "Elias Mikrojyan", role: "Director", imageUrl: "/about/Elias-Headshot.jpg" },
       { name: "Roheen Ghafuri", role: "Director", imageUrl: "/about/Roheen-Headshot.jpg" },
     ],
   },
@@ -120,8 +110,7 @@ export const TEAM_DATA: TeamSection[] = [
     teamName: "Media Production Team",
     description: "Producing high-quality photography, video content, and multimedia media assets for events and platforms.",
     members: [
-      { name: "Omid Yeganeh", role: "VP Media", imageUrl: "/about/Omid-Headshot.png" },
-      { name: "Ayesha Ahmed", role: "Director", imageUrl: "/about/Placeholder.png" },
+      { name: "Ayesha Ahmed", role: "VP Media", imageUrl: "/about/Ayesha-Headshot.jpg" },
     ],
   }
 ];

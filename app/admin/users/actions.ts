@@ -4,6 +4,7 @@ import { createClient as createAdminClient } from "@supabase/supabase-js";
 import { createClient as createServerClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { formatMonthYear } from "@/lib/dateFormat";
+import { roleOf } from "@/lib/admin";
 
 type UserRow = {
   id: string;
@@ -11,6 +12,7 @@ type UserRow = {
   email: string | null;
   is_admin: boolean | null;
   is_super_admin: boolean | null;
+  is_vp_notes?: boolean | null;
   status: "ACTIVE" | "BANNED" | null;
   created_at: string;
   notes?: { count: number }[];
@@ -43,7 +45,7 @@ export async function fetchMoreUsersAction(
 
    let dbQuery = supabase
     .from("profiles")
-    .select("id, full_name, email, is_admin, is_super_admin, status, created_at, notes!notes_uploader_id_fkey(count)", { count: "exact" });
+    .select("id, full_name, email, is_admin, is_super_admin, is_vp_notes, status, created_at, notes!notes_uploader_id_fkey(count)", { count: "exact" });
 
   if (query) {
     dbQuery = dbQuery.or(`full_name.ilike.%${query}%,email.ilike.%${query}%`);
@@ -51,8 +53,10 @@ export async function fetchMoreUsersAction(
 
   if (roleFilter === "SUPER_ADMIN") {
     dbQuery = dbQuery.eq("is_super_admin", true);
+  } else if (roleFilter === "VP_NOTES") {
+    dbQuery = dbQuery.eq("is_vp_notes", true).eq("is_super_admin", false);
   } else if (roleFilter === "ADMIN") {
-    dbQuery = dbQuery.eq("is_admin", true).eq("is_super_admin", false);
+    dbQuery = dbQuery.eq("is_admin", true).eq("is_super_admin", false).eq("is_vp_notes", false);
   } else if (roleFilter === "STUDENT") {
     dbQuery = dbQuery.eq("is_admin", false);
   }
@@ -71,7 +75,8 @@ export async function fetchMoreUsersAction(
     id: user.id,
     name: user.full_name || "Unknown",
     email: user.email || "",
-    role: (user.is_super_admin ? "SUPER_ADMIN" : user.is_admin ? "ADMIN" : "STUDENT") as "SUPER_ADMIN" | "ADMIN" | "STUDENT",    status: user.status || "ACTIVE",
+    role: roleOf(user),
+    status: user.status || "ACTIVE",
     joinedAt: formatMonthYear(user.created_at),
     submissionCount: user.notes?.[0]?.count || 0,
   }));
@@ -119,7 +124,7 @@ export async function banUserAction(
     throw new Error("Super Admins cannot be banned.");
   }
   if (targetProfile?.is_admin && !callerProfile.is_super_admin) {
-    throw new Error("Only a Super Admin can ban an Admin.");
+    throw new Error("Only a Super Admin can ban a Notes Director or VP Notes member.");
   }
 
   // 3. The Hard Ban: Suspend the user at the Identity Provider level
@@ -231,5 +236,106 @@ export async function unbanUserAction(
   // 5. Invalidate the Next.js cache so the UI updates instantly
   revalidatePath("/admin/users");
   
+  return { success: true };
+}
+// Super admins grant or revoke VP Notes, which lets someone do the final
+// check that publishes or denies notes. VP Notes members are directors
+// too, so granting it also gives admin access; revoking leaves them a
+// regular director.
+export async function setVpNotesAction(targetUserId: string, enabled: boolean) {
+  const supabase = await createServerClient();
+  const { data: { user: caller }, error: authError } = await supabase.auth.getUser();
+  if (authError || !caller) throw new Error("Unauthorized execution attempt.");
+
+  const { data: callerProfile } = await supabase
+    .from("profiles")
+    .select("is_super_admin")
+    .eq("id", caller.id)
+    .single();
+  if (!callerProfile?.is_super_admin) throw new Error("Only a Super Admin can change the VP Notes role.");
+
+  const { data: targetProfile } = await supabaseAdmin
+    .from("profiles")
+    .select("is_super_admin, status")
+    .eq("id", targetUserId)
+    .single();
+  if (!targetProfile) throw new Error("That user no longer exists.");
+  if (targetProfile.is_super_admin) throw new Error("Super Admins can already do final checks.");
+  if (enabled && targetProfile.status === "BANNED") throw new Error("Unban this user before giving them a role.");
+
+  const { error } = await supabaseAdmin
+    .from("profiles")
+    .update(enabled ? { is_vp_notes: true, is_admin: true } : { is_vp_notes: false })
+    .eq("id", targetUserId);
+  if (error) {
+    console.error("Failed to update VP Notes role:", error);
+    throw new Error("Couldn't update this user's role.");
+  }
+
+  await supabaseAdmin.from("admin_audit_log").insert({
+    admin_id: caller.id,
+    target_type: "user",
+    target_id: targetUserId,
+    action_type: enabled ? "GRANT_VP_NOTES" : "REVOKE_VP_NOTES",
+    details: {},
+  });
+
+  revalidatePath("/admin/users");
+  revalidatePath(`/admin/users/${targetUserId}`);
+  return { success: true };
+}
+
+// Super admins grant or remove Notes Director (is_admin). Removing it also
+// removes VP Notes, since VP Notes sits above Notes Director, and frees
+// any notes they had claimed so nothing stays locked to someone who can
+// no longer open the queue.
+export async function setNotesDirectorAction(targetUserId: string, enabled: boolean) {
+  const supabase = await createServerClient();
+  const { data: { user: caller }, error: authError } = await supabase.auth.getUser();
+  if (authError || !caller) throw new Error("Unauthorized execution attempt.");
+
+  const { data: callerProfile } = await supabase
+    .from("profiles")
+    .select("is_super_admin")
+    .eq("id", caller.id)
+    .single();
+  if (!callerProfile?.is_super_admin) throw new Error("Only a Super Admin can change who is a Notes Director.");
+  if (targetUserId === caller.id) throw new Error("You can't change your own role.");
+
+  const { data: targetProfile } = await supabaseAdmin
+    .from("profiles")
+    .select("is_super_admin, status")
+    .eq("id", targetUserId)
+    .single();
+  if (!targetProfile) throw new Error("That user no longer exists.");
+  if (targetProfile.is_super_admin) throw new Error("Super Admins' roles can't be changed here.");
+  if (enabled && targetProfile.status === "BANNED") throw new Error("Unban this user before giving them a role.");
+
+  const { error } = await supabaseAdmin
+    .from("profiles")
+    .update(enabled ? { is_admin: true } : { is_admin: false, is_vp_notes: false })
+    .eq("id", targetUserId);
+  if (error) {
+    console.error("Failed to update Notes Director role:", error);
+    throw new Error("Couldn't update this user's role.");
+  }
+
+  if (!enabled) {
+    await supabaseAdmin
+      .from("notes")
+      .update({ reviewed_by: null, claimed_at: null })
+      .eq("reviewed_by", targetUserId);
+  }
+
+  await supabaseAdmin.from("admin_audit_log").insert({
+    admin_id: caller.id,
+    target_type: "user",
+    target_id: targetUserId,
+    action_type: enabled ? "GRANT_NOTES_DIRECTOR" : "REVOKE_NOTES_DIRECTOR",
+    details: {},
+  });
+
+  revalidatePath("/admin/users");
+  revalidatePath(`/admin/users/${targetUserId}`);
   return { success: true };
 }

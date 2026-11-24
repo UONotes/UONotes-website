@@ -4,9 +4,10 @@ import { useState } from "react";
 import Link from "next/link";
 import { AdminUser } from "@/lib/admin";
 import { banUserAction, unbanUserAction, fetchMoreUsersAction } from "@/app/admin/users/actions";
-import { Shield, Ban, CheckCircle2, X, Check, Unlock, ArrowRight } from "lucide-react";
+import { Ban, X, Check, Unlock, Shield, UserRound } from "lucide-react";
+import { RoleBadge } from "@/components/admin/users/RoleBadge";
 
-const VALID_ROLES = ["SUPER_ADMIN", "ADMIN", "STUDENT"] as const;
+const VALID_ROLES = ["SUPER_ADMIN", "VP_NOTES", "ADMIN", "STUDENT"] as const;
 type ValidRole = typeof VALID_ROLES[number];
 
 function isValidRole(role: unknown): role is ValidRole {
@@ -135,7 +136,7 @@ export function UserListTable({
   return (
     <>
       {successToast && (
-        <div className="fixed bottom-6 right-6 z-50 flex items-center gap-3 bg-[#23201D] text-white px-4 py-3 rounded-xl shadow-xl animate-in slide-in-from-bottom-5 duration-300">
+        <div className="fixed bottom-4 right-4 left-4 sm:left-auto z-50 flex items-center gap-3 bg-brand-dark text-white px-4 py-3 rounded-lg shadow-xl animate-in slide-in-from-bottom-5 duration-300">
           <div className="w-5 h-5 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0">
             <Check className="w-3 h-3 stroke-[3]" />
           </div>
@@ -147,138 +148,139 @@ export function UserListTable({
       )}
 
       {actionError && (
-        <div className="fixed bottom-6 right-6 z-50 flex items-center gap-3 bg-red-600 text-white px-4 py-3 rounded-xl shadow-xl animate-in slide-in-from-bottom-5 duration-300">
+        <div className="fixed bottom-4 right-4 left-4 sm:left-auto z-50 flex items-center gap-3 bg-rose-600 text-white px-4 py-3 rounded-lg shadow-xl animate-in slide-in-from-bottom-5 duration-300">
           <p className="text-xs font-medium">{actionError}</p>
         </div>
       )}
 
-      <div className="bg-white border border-black/5 rounded-2xl overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse min-w-[700px]">
-            <thead>
-              <tr className="bg-gray-50/60 border-b border-black/5 text-xs text-gray-400">
-                <th className="px-5 py-3 font-medium">Person</th>
-                <th className="px-5 py-3 font-medium">Role</th>
-                <th className="px-5 py-3 font-medium">Activity</th>
-                <th className="px-5 py-3 font-medium">Status</th>
-                <th className="px-5 py-3 font-medium text-right">Action</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-black/5 text-sm">
-              {users.length === 0 ? (
-                <tr>
-                  <td colSpan={5} className="px-5 py-12 text-center text-gray-400 text-sm">
-                    No users match this search or filter.
-                  </td>
-                </tr>
-              ) : (
-                users.map((user) => {
-                  const currentStatus = optimisticStatuses[user.id] || user.status;
-                  const isBanned = currentStatus === "BANNED";
-
-                  const safeRole = isValidRole(user.role) ? user.role : "STUDENT";
-                  const isSuperAdmin = safeRole === "SUPER_ADMIN";
-                  const isAdmin = safeRole === "ADMIN";
-                  const isSelf = user.id === viewerId;
-                  const isProtected = isSuperAdmin || isSelf || (isAdmin && !viewerIsSuperAdmin);
-
-                  return (
-                    <tr key={user.id} className={`hover:bg-gray-50/50 transition-colors ${isBanned ? "bg-gray-50/30" : ""}`}>
-                      <td className="px-5 py-3.5">
-                        <Link href={`/admin/users/${user.id}`} className="flex items-center gap-3 group">
-                          <div className={`w-8 h-8 rounded-full flex items-center justify-center font-semibold text-xs shrink-0 ${
-                            isSuperAdmin ? "bg-purple-600 text-white" : isBanned ? "bg-gray-100 text-gray-400" : "bg-red-50 text-brand-red"
-                          }`}>
-                            {user.name.charAt(0)}
-                          </div>
-                          <div className={isBanned ? "opacity-50" : ""}>
-                            <p className="font-semibold text-gray-900 leading-tight group-hover:text-brand-red transition-colors">{user.name}</p>
-                            <p className="text-xs text-gray-400">{user.email}</p>
-                          </div>
-                        </Link>
-                      </td>
-
-                      <td className="px-5 py-3.5">
-                        {isSuperAdmin ? (
-                          <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-purple-700 bg-purple-50 px-2.5 py-1 rounded-full">
-                            <Shield className="w-3 h-3" /> Super admin
-                          </span>
-                        ) : isAdmin ? (
-                          <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-brand-red bg-red-50 px-2.5 py-1 rounded-full">
-                            <Shield className="w-3 h-3" /> Admin
-                          </span>
-                        ) : (
-                          <span className="text-gray-400 text-xs">Student</span>
-                        )}
-                      </td>
-
-                      <td className="px-5 py-3.5">
-                        <Link href={`/admin/users/${user.id}`} className={`flex flex-col hover:text-brand-red transition-colors ${isBanned ? "opacity-50" : ""}`}>
-                          <span className="font-medium text-gray-800 text-sm">{user.submissionCount} submissions</span>
-                          <span className="text-xs text-gray-400">Joined {user.joinedAt}</span>
-                        </Link>
-                      </td>
-
-                      <td className="px-5 py-3.5">
-                        {isBanned ? (
-                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-rose-50 text-rose-600 text-xs font-semibold">
-                            <Ban className="w-3 h-3" /> Banned
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-600 text-xs font-semibold">
-                            <CheckCircle2 className="w-3 h-3" /> Active
-                          </span>
-                        )}
-                      </td>
-
-                      <td className="px-5 py-3.5 text-right">
-                        <div className="flex items-center justify-end gap-2">
-                          <Link
-                            href={`/admin/users/${user.id}`}
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#23201D] hover:bg-brand-red text-white text-xs font-semibold transition-colors whitespace-nowrap"
-                            title="View submissions and hours earned"
-                          >
-                            View <ArrowRight className="w-3 h-3" />
-                          </Link>
-
-                          {isBanned ? (
-                            <button
-                              onClick={() => { setActiveModal({ user, type: "UNBAN" }); setSelectedReasons([]); setCustomReason(""); }}
-                              disabled={isProcessing === user.id}
-                              className="px-3 py-1.5 text-xs font-semibold rounded-lg text-emerald-700 bg-emerald-50 hover:bg-emerald-100 transition-colors disabled:opacity-50"
-                            >
-                              {isProcessing === user.id ? "Working…" : "Restore access"}
-                            </button>
-                          ) : (
-                            <button
-                              onClick={() => { setActiveModal({ user, type: "BAN" }); setSelectedReasons([]); setCustomReason(""); }}
-                              disabled={isProcessing === user.id || isProtected}
-                              className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors ${
-                                isProtected
-                                  ? "text-gray-300 bg-gray-50 cursor-not-allowed"
-                                  : "text-rose-600 bg-rose-50/70 hover:bg-rose-100 disabled:opacity-50"
-                              }`}
-                              title={isProtected ? "Protected account" : "Suspend user"}
-                            >
-                              {isProcessing === user.id ? "Working…" : isProtected ? "Protected" : "Ban user"}
-                            </button>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
+      {users.length === 0 ? (
+        <div className="rounded-lg border border-brand-border-light bg-white px-5 py-14 text-center">
+          <p className="font-medium text-brand-dark">No one matches that</p>
+          <p className="text-sm text-brand-muted mt-1">Try a different name, email or role filter.</p>
         </div>
-      </div>
+      ) : (
+        <div className="rounded-lg border border-brand-border-light bg-white overflow-hidden">
+          {/* Column headings (tablet and up) */}
+          <div className="hidden md:grid grid-cols-[minmax(0,2.2fr)_minmax(0,1fr)_minmax(0,1fr)_15rem] gap-4 px-5 py-2.5 border-b border-brand-border-light bg-brand-surface/60 text-xs font-medium text-brand-muted">
+            <span>Person</span>
+            <span>Role</span>
+            <span>Submissions</span>
+            <span className="text-right">Actions</span>
+          </div>
+
+          <ul className="divide-y divide-brand-border-light">
+            {users.map((user) => {
+              const currentStatus = optimisticStatuses[user.id] || user.status;
+              const isBanned = currentStatus === "BANNED";
+
+              const safeRole = isValidRole(user.role) ? user.role : "STUDENT";
+              const isSuperAdmin = safeRole === "SUPER_ADMIN";
+              // Notes Directors and VP Notes can only be banned by a super admin.
+              const isStaffRole = safeRole === "ADMIN" || safeRole === "VP_NOTES";
+              const isSelf = user.id === viewerId;
+              const isProtected = isSuperAdmin || isSelf || (isStaffRole && !viewerIsSuperAdmin);
+              const busy = isProcessing === user.id;
+
+              const buttonBase =
+                "inline-flex items-center justify-center gap-1.5 rounded-md border px-3 py-1.5 text-xs font-semibold whitespace-nowrap transition-colors disabled:opacity-50";
+
+              const accountAction = isBanned ? (
+                <button
+                  onClick={() => { setActiveModal({ user, type: "UNBAN" }); setSelectedReasons([]); setCustomReason(""); }}
+                  disabled={busy}
+                  className={`${buttonBase} border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100`}
+                >
+                  <Unlock className="w-3.5 h-3.5" />
+                  {busy ? "Working…" : "Restore"}
+                </button>
+              ) : isProtected ? (
+                <span
+                  className={`${buttonBase} border-brand-border-light bg-brand-surface text-brand-muted cursor-not-allowed`}
+                  title={isSelf ? "This is you" : "Only a super admin can ban this account"}
+                >
+                  <Shield className="w-3.5 h-3.5" />
+                  {isSelf ? "You" : "Protected"}
+                </span>
+              ) : (
+                <button
+                  onClick={() => { setActiveModal({ user, type: "BAN" }); setSelectedReasons([]); setCustomReason(""); }}
+                  disabled={busy}
+                  className={`${buttonBase} border-rose-200 bg-white text-rose-600 hover:bg-rose-50 hover:border-rose-300`}
+                >
+                  <Ban className="w-3.5 h-3.5" />
+                  {busy ? "Working…" : "Ban"}
+                </button>
+              );
+
+              return (
+                <li
+                  key={user.id}
+                  className="relative grid grid-cols-[auto_minmax(0,1fr)_auto] md:grid-cols-[minmax(0,2.2fr)_minmax(0,1fr)_minmax(0,1fr)_15rem] items-center gap-x-3 md:gap-4 px-4 md:px-5 py-3 hover:bg-brand-surface/50 transition-colors"
+                >
+                  {/* Person — the link stretches over the whole row */}
+                  <div className="contents md:flex md:items-center md:gap-3 md:min-w-0">
+                    <div
+                      className={`w-9 h-9 rounded-full flex items-center justify-center font-semibold text-sm shrink-0 ${
+                        isBanned ? "bg-gray-100 text-gray-400" : "bg-brand-pink text-brand-red"
+                      }`}
+                    >
+                      {user.name.charAt(0).toUpperCase()}
+                    </div>
+                    <div className="min-w-0">
+                      <Link
+                        href={`/admin/users/${user.id}`}
+                        className={`font-semibold text-brand-dark hover:text-brand-red after:absolute after:inset-0 ${isBanned ? "opacity-60" : ""}`}
+                      >
+                        {user.name}
+                      </Link>
+                      <p className="text-xs text-brand-muted truncate">{user.email}</p>
+                      {/* Phone-only summary line */}
+                      <div className="md:hidden mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1">
+                        <RoleBadge role={safeRole} />
+                        <span className="text-xs text-brand-muted">
+                          {user.submissionCount} submission{user.submissionCount === 1 ? "" : "s"}
+                        </span>
+                        {isBanned && <span className="text-xs font-semibold text-rose-600">Banned</span>}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="hidden md:flex flex-col items-start gap-1">
+                    <RoleBadge role={safeRole} />
+                    {isBanned && (
+                      <span className="inline-flex items-center gap-1 text-xs font-semibold text-rose-600">
+                        <Ban className="w-3 h-3" /> Banned
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="hidden md:block text-sm">
+                    <span className="text-brand-dark tabular-nums">{user.submissionCount}</span>
+                    <span className="block text-xs text-brand-muted">Joined {user.joinedAt}</span>
+                  </div>
+
+                  {/* Sits above the row link so it stays clickable */}
+                  <div className="relative z-10 flex flex-col sm:flex-row items-stretch sm:items-center justify-end gap-2">
+                    <Link
+                      href={`/admin/users/${user.id}`}
+                      className={`${buttonBase} border-brand-border-light bg-white text-brand-dark hover:border-brand-red/40 hover:text-brand-red`}
+                    >
+                      <UserRound className="w-3.5 h-3.5" /> View profile
+                    </Link>
+                    {accountAction}
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      )}
       {hasMore && (
         <div className="flex justify-center py-6">
           <button
             onClick={handleShowMore}
             disabled={isLoadingMore}
-            className="px-5 py-2.5 bg-white border border-gray-200 text-gray-700 text-sm font-semibold rounded-xl hover:border-brand-red/40 hover:text-brand-red transition-colors disabled:opacity-60"
+            className="px-5 py-2.5 bg-white border border-gray-200 text-gray-700 text-sm font-semibold rounded-lg hover:border-brand-red/40 hover:text-brand-red transition-colors disabled:opacity-60"
           >
             {isLoadingMore ? "Loading…" : `Show More (${totalUsers - users.length} remaining)`}
           </button>
@@ -287,10 +289,10 @@ export function UserListTable({
 
       {activeModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs animate-in fade-in duration-200">
-          <div className="bg-white rounded-2xl shadow-2xl border border-black/5 w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200">
-            <div className="flex items-center justify-between px-6 pt-6 pb-4 border-b border-black/5">
+          <div className="bg-white rounded-lg shadow-2xl border border-brand-border-light w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between px-6 pt-6 pb-4 border-b border-brand-border-light">
               <div className="flex items-center gap-3">
-                <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${isBanMode ? "bg-rose-50 text-rose-600" : "bg-emerald-50 text-emerald-600"}`}>
+                <div className={`w-9 h-9 rounded-lg flex items-center justify-center ${isBanMode ? "bg-rose-50 text-rose-600" : "bg-emerald-50 text-emerald-600"}`}>
                   {isBanMode ? <Ban className="w-4 h-4" /> : <Unlock className="w-4 h-4" />}
                 </div>
                 <div>
@@ -318,7 +320,7 @@ export function UserListTable({
                         key={reason}
                         type="button"
                         onClick={() => handleCheckboxChange(reason)}
-                        className={`flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs text-left transition-all ${
+                        className={`flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-xs text-left transition-all ${
                           isChecked
                             ? "bg-gray-50 text-gray-900 font-medium border border-gray-200"
                             : "text-gray-600 hover:bg-gray-50 border border-transparent"
@@ -343,7 +345,7 @@ export function UserListTable({
                 <textarea
                   rows={3}
                   placeholder={isBanMode ? "What happened, specifically…" : "Why access is being restored…"}
-                  className={`w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:bg-white transition-all resize-none ${
+                  className={`w-full p-3 bg-gray-50 border border-gray-200 rounded-lg text-base sm:text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:bg-white transition-all resize-none ${
                     isBanMode ? "focus:border-rose-400 focus:ring-1 focus:ring-rose-400" : "focus:border-emerald-400 focus:ring-1 focus:ring-emerald-400"
                   }`}
                   value={customReason}
@@ -354,14 +356,14 @@ export function UserListTable({
               <div className="flex items-center gap-2.5 pt-1">
                 <button
                   onClick={() => setActiveModal(null)}
-                  className="flex-1 py-2.5 px-4 bg-gray-100 hover:bg-gray-200/70 text-gray-700 text-sm font-semibold rounded-xl transition-colors"
+                  className="flex-1 py-2.5 px-4 bg-gray-100 hover:bg-gray-200/70 text-gray-700 text-sm font-semibold rounded-lg transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   disabled={selectedReasons.length === 0 || !customReason.trim()}
                   onClick={executeAction}
-                  className={`flex-1 py-2.5 px-4 text-white text-sm font-semibold rounded-xl disabled:opacity-40 transition-all flex items-center justify-center gap-2 ${
+                  className={`flex-1 py-2.5 px-4 text-white text-sm font-semibold rounded-lg disabled:opacity-40 transition-all flex items-center justify-center gap-2 ${
                     isBanMode
                       ? "bg-rose-600 hover:bg-rose-700"
                       : "bg-emerald-600 hover:bg-emerald-700"

@@ -1,260 +1,245 @@
 import Link from "next/link";
 import {
-  Clock, ShieldAlert, RotateCcw, Users, ArrowRight,
-  CheckCircle2, AlertOctagon, Bell, Check, XCircle, MessageSquareText,
+  Clock, RotateCcw, ArrowRight, CheckCircle2, Megaphone, Check, XCircle, MessageSquareText,
+  Wrench, CheckCheck, ShieldCheck, Ban, Unlock, UserCog,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
+import { canFinalCheck } from "@/lib/review";
+import { roleOf, ROLE_LABEL } from "@/lib/admin";
 
 function formatRelativeTime(dateString: string): string {
-  const date = new Date(dateString);
-  const diffInSec = Math.floor((Date.now() - date.getTime()) / 1000);
-
-  if (diffInSec < 60) return `${diffInSec}s ago`;
+  const diffInSec = Math.floor((Date.now() - new Date(dateString).getTime()) / 1000);
+  if (diffInSec < 60) return "just now";
   if (diffInSec < 3600) return `${Math.floor(diffInSec / 60)}m ago`;
   if (diffInSec < 86400) return `${Math.floor(diffInSec / 3600)}h ago`;
   return `${Math.floor(diffInSec / 86400)}d ago`;
 }
 
-const ACTION_META: Record<string, { label: string; icon: typeof Check; color: string }> = {
-  NOTE_APPROVED: { label: "approved", icon: Check, color: "text-emerald-600" },
-  NOTE_REJECTED: { label: "rejected", icon: XCircle, color: "text-rose-600" },
-  NOTE_CHANGES_REQUESTED: { label: "requested fixes on", icon: MessageSquareText, color: "text-orange-600" },
+// How each audit entry reads in the activity feed: "<name> <phrase>".
+const ACTION_META: Record<string, { phrase: string; icon: typeof Check }> = {
+  NOTE_APPROVED: { phrase: "approved a note", icon: Check },
+  NOTE_APPROVED_WITH_FIXES: { phrase: "approved a fixed note", icon: CheckCheck },
+  NOTE_REJECTED: { phrase: "denied a note", icon: XCircle },
+  NOTE_SENT_TO_FINAL_CHECK: { phrase: "sent a note to final check", icon: ShieldCheck },
+  NOTE_SENT_BACK_TO_PENDING: { phrase: "sent a note back to pending", icon: RotateCcw },
+  NOTE_FIXES_STARTED: { phrase: "started fixing a note", icon: Wrench },
+  NOTE_FIXES_TAKEN_OVER: { phrase: "took over fixing a note", icon: Wrench },
+  NOTE_FIXES_CANCELLED: { phrase: "stopped fixing a note", icon: RotateCcw },
+  NOTE_FIX_SUBMITTED: { phrase: "submitted a fix", icon: Wrench },
+  NOTE_FIX_SENT_BACK: { phrase: "sent back a fix", icon: RotateCcw },
+  NOTE_CHANGES_REQUESTED: { phrase: "requested fixes on a note", icon: MessageSquareText },
+  BAN: { phrase: "banned a user", icon: Ban },
+  UNBAN: { phrase: "unbanned a user", icon: Unlock },
+  GRANT_NOTES_DIRECTOR: { phrase: "added a Notes Director", icon: UserCog },
+  REVOKE_NOTES_DIRECTOR: { phrase: "removed a Notes Director", icon: UserCog },
+  GRANT_VP_NOTES: { phrase: "made someone VP Notes", icon: UserCog },
+  REVOKE_VP_NOTES: { phrase: "removed a VP Notes role", icon: UserCog },
+};
+
+const STATUS_LABEL: Record<string, { label: string; dot: string }> = {
+  pending: { label: "Pending", dot: "bg-slate-400" },
+  flagged: { label: "Reported", dot: "bg-brand-red" },
+  in_revision: { label: "Being fixed", dot: "bg-amber-500" },
+  fix_review: { label: "Final check", dot: "bg-stone-700" },
 };
 
 type AuditRow = {
   id: string;
   action_type: string;
   created_at: string;
-  details: { reason?: string | null } | null;
   admin: { full_name: string | null; email: string | null } | { full_name: string | null; email: string | null }[] | null;
 };
 
+function greeting() {
+  const hour = Number(
+    new Date().toLocaleString("en-US", { timeZone: "America/Toronto", hour: "numeric", hour12: false })
+  );
+  if (hour < 12) return "Good morning";
+  if (hour < 18) return "Good afternoon";
+  return "Good evening";
+}
+
 export default async function AdminOverviewPage() {
   const supabase = await createClient();
-
   const { data: { user } } = await supabase.auth.getUser();
-  let adminName = "Administrator";
-  let adminEmail = user?.email || "";
 
-  if (user) {
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("email, full_name")
-      .eq("id", user.id)
-      .single();
+  const { data: profile } = user
+    ? await supabase.from("profiles").select("*").eq("id", user.id).single()
+    : { data: null };
 
-    if (profile?.email) adminEmail = profile.email;
+  const fullName: string =
+    profile?.full_name || user?.user_metadata?.full_name || (profile?.email || user?.email || "").split("@")[0];
+  const firstName = fullName.split(/[ ._-]/)[0] || "there";
+  const role = profile ? roleOf(profile) : null;
+  const isFinalChecker = canFinalCheck(profile);
 
-    if (profile?.full_name) {
-      adminName = profile.full_name;
-    } else if (user.user_metadata?.full_name) {
-      adminName = user.user_metadata.full_name;
-    } else if (adminEmail) {
-      const prefix = adminEmail.split("@")[0];
-      adminName = prefix
-        .split(/[._-]/)
-        .map((chunk: string) => chunk.charAt(0).toUpperCase() + chunk.slice(1))
-        .join(" ");
-    }
-  }
+  const count = (status: string) =>
+    supabase.from("notes").select("*", { count: "exact", head: true }).eq("status", status);
 
   const [
     { count: pendingCount },
     { count: flaggedCount },
-    { count: changesRequestedCount },
-    { count: userCount },
-    { count: personalReviewedCount },
+    { count: beingFixedCount },
+    { count: finalCheckCount },
     { data: queueItems },
     { data: settingsData },
     { data: recentActivity },
   ] = await Promise.all([
-    supabase.from("notes").select("*", { count: "exact", head: true }).eq("status", "pending"),
-    supabase.from("notes").select("*", { count: "exact", head: true }).eq("status", "flagged"),
-    supabase.from("notes").select("*", { count: "exact", head: true }).eq("status", "changes_requested"),
-    supabase.from("profiles").select("*", { count: "exact", head: true }),
-    user ? supabase.from("notes").select("*", { count: "exact", head: true }).eq("reviewed_by", user.id) : Promise.resolve({ count: 0 }),
+    count("pending"),
+    count("flagged"),
+    count("in_revision"),
+    count("fix_review"),
     supabase
       .from("notes")
-      .select("id, title, course_code, created_at, status, flag_reason")
-      .in("status", ["pending", "flagged", "changes_requested"])
+      .select("id, title, course_code, created_at, status")
+      .in("status", ["pending", "flagged", "in_revision", "fix_review"])
       .order("created_at", { ascending: true })
-      .limit(6),
+      .limit(7),
     supabase.from("platform_settings").select("announcement_banner").single(),
     supabase
       .from("admin_audit_log")
-      .select("id, action_type, created_at, details, admin:profiles(full_name, email)")
+      .select("id, action_type, created_at, admin:profiles(full_name, email)")
       .order("created_at", { ascending: false })
-      .limit(5),
+      .limit(8),
   ]);
 
-  const urgentCount = (pendingCount ?? 0) + (flaggedCount ?? 0);
-  const isHealthy = urgentCount === 0;
-  const activeAnnouncement = settingsData?.announcement_banner;
+  const waiting = (pendingCount ?? 0) + (flaggedCount ?? 0) + (finalCheckCount ?? 0);
+  const announcement = settingsData?.announcement_banner?.trim();
+
+  // Final checks come first for the people who can do them.
+  const stats = [
+    ...(isFinalChecker ? [{ label: "Final check", value: finalCheckCount ?? 0, href: "/admin/queue?filter=fix_review", dot: "bg-stone-700" }] : []),
+    { label: "Pending review", value: pendingCount ?? 0, href: "/admin/queue?filter=pending", dot: "bg-slate-400" },
+    { label: "Reported", value: flaggedCount ?? 0, href: "/admin/queue?filter=flagged", dot: "bg-brand-red" },
+    { label: "Being fixed", value: beingFixedCount ?? 0, href: "/admin/queue?filter=in_revision", dot: "bg-amber-500" },
+    ...(!isFinalChecker ? [{ label: "In final check", value: finalCheckCount ?? 0, href: "/admin/queue?filter=fix_review", dot: "bg-stone-700" }] : []),
+  ];
 
   return (
-    <div className="w-full max-w-6xl mx-auto space-y-10">
+    <div className="w-full space-y-8">
+      {/* Header */}
+      <header className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+        <div>
+          <p className="text-sm text-brand-muted">{role ? ROLE_LABEL[role] : "Admin console"}</p>
+          <h1 className="font-logo text-3xl font-bold text-brand-dark tracking-tight mt-1">
+            {greeting()}, {firstName}
+          </h1>
+        </div>
+        <p className="text-sm text-brand-body">
+          {waiting === 0 ? (
+            <span className="inline-flex items-center gap-1.5">
+              <CheckCircle2 className="w-4 h-4 text-emerald-600" /> Nothing is waiting on a decision.
+            </span>
+          ) : (
+            <>
+              <span className="font-semibold text-brand-dark">{waiting}</span> note{waiting === 1 ? "" : "s"} waiting on a
+              decision.
+            </>
+          )}
+        </p>
+      </header>
 
-      {activeAnnouncement && activeAnnouncement.trim() !== "" && (
-        <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex items-start gap-3 text-amber-950">
-          <Bell className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-wide text-amber-700">Announcement</p>
-            <p className="text-sm mt-0.5">{activeAnnouncement}</p>
-          </div>
+      {announcement && (
+        <div className="flex items-start gap-3 rounded-lg border border-brand-red/15 bg-brand-pink px-4 py-3">
+          <Megaphone className="w-4 h-4 text-brand-red shrink-0 mt-0.5" />
+          <p className="text-sm text-brand-dark">{announcement}</p>
         </div>
       )}
 
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-7 border-b border-black/5">
-        <div>
-          <p className="text-sm text-gray-400 mb-1">{adminEmail}</p>
-          <h1 className="font-logo text-3xl font-bold text-[#23201D] tracking-tight">
-            Welcome back, {adminName.split(" ")[0]}
-          </h1>
-        </div>
+      {/* Stats */}
+      <section className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        {stats.map((s) => (
+          <Link
+            key={s.label}
+            href={s.href}
+            className="group rounded-lg border border-brand-border-light bg-white p-4 hover:border-brand-red/30 transition-colors"
+          >
+            <p className="flex items-center gap-2 text-xs font-medium text-brand-muted">
+              <span className={`w-1.5 h-1.5 rounded-full ${s.dot}`} />
+              {s.label}
+            </p>
+            <p className="mt-2 text-3xl font-semibold text-brand-dark tabular-nums">{s.value}</p>
+          </Link>
+        ))}
+      </section>
 
-        <div className={`inline-flex items-center gap-2 px-3.5 py-2 rounded-full text-xs font-semibold w-fit ${
-          isHealthy ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-800"
-        }`}>
-          {isHealthy ? <CheckCircle2 className="w-4 h-4" /> : <AlertOctagon className="w-4 h-4" />}
-          {isHealthy ? "Queue is clear" : `${urgentCount} item${urgentCount === 1 ? "" : "s"} need attention`}
-        </div>
-      </div>
-
-      {/* Stat strip */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 divide-x divide-black/5 border border-black/5 rounded-2xl bg-white overflow-hidden">
-        <StatCell label="Pending" value={pendingCount ?? 0} accent="text-blue-600" />
-        <StatCell label="Awaiting fixes" value={changesRequestedCount ?? 0} accent="text-orange-600" />
-        <StatCell label="Flagged" value={flaggedCount ?? 0} accent="text-purple-600" />
-        <StatCell label="You've reviewed" value={personalReviewedCount ?? 0} accent="text-brand-red" />
-      </div>
-
-      {/* Main layout */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-
         {/* Worklist */}
-        <div className="lg:col-span-2 bg-white rounded-2xl border border-black/5 overflow-hidden flex flex-col">
-          <div className="px-5 py-4 border-b border-black/5 flex items-center justify-between">
-            <h2 className="font-logo text-lg font-bold text-[#23201D]">Needs a decision</h2>
+        <section className="lg:col-span-2 rounded-lg border border-brand-border-light bg-white overflow-hidden">
+          <div className="flex items-center justify-between px-5 py-4 border-b border-brand-border-light">
+            <h2 className="font-semibold text-brand-dark">Oldest in the queue</h2>
             <Link
               href="/admin/queue"
-              className="inline-flex items-center gap-1 text-xs font-semibold text-brand-red hover:text-brand-red-hover"
+              className="inline-flex items-center gap-1 text-sm font-medium text-brand-red hover:text-brand-red-hover"
             >
-              Full queue <ArrowRight className="w-3.5 h-3.5" />
+              Open queue <ArrowRight className="w-4 h-4" />
             </Link>
           </div>
 
-          <div className="divide-y divide-black/5 flex-1">
-            {!queueItems || queueItems.length === 0 ? (
-              <div className="py-16 text-center">
-                <CheckCircle2 className="w-8 h-8 text-emerald-500 mx-auto mb-2" />
-                <p className="text-sm font-semibold text-gray-900">Nothing waiting on you</p>
-                <p className="text-xs text-gray-400 mt-1">Every submission has been triaged.</p>
-              </div>
-            ) : (
-              queueItems.map((item) => {
-                const isFlagged = item.status === "flagged";
-                const isChangesRequested = item.status === "changes_requested";
-                const dotColor = isFlagged ? "bg-purple-500" : isChangesRequested ? "bg-orange-500" : "bg-blue-500";
-
-                return (
-                  <Link
-                    key={item.id}
-                    href={`/admin/review/${item.id}`}
-                    className="flex items-center justify-between gap-4 px-5 py-3.5 hover:bg-gray-50/80 transition-colors group"
-                  >
-                    <div className="flex items-center gap-3 min-w-0">
-                      <span className={`w-2 h-2 rounded-full shrink-0 ${dotColor}`} />
-                      <div className="min-w-0">
-                        <p className="text-sm font-semibold text-gray-900 truncate group-hover:text-brand-red transition-colors">
-                          {item.title}
-                        </p>
-                        <p className="text-xs text-gray-400">
-                          {item.course_code} · {formatRelativeTime(item.created_at)}
-                        </p>
-                      </div>
-                    </div>
-                    <ArrowRight className="w-4 h-4 text-gray-300 group-hover:text-brand-red shrink-0 transition-colors" />
-                  </Link>
-                );
-              })
-            )}
-          </div>
-        </div>
-
-        {/* Right column */}
-        <div className="space-y-6">
-
-          <div className="bg-white rounded-2xl border border-black/5 p-5">
-            <h2 className="font-logo text-lg font-bold text-[#23201D] mb-4">Shortcuts</h2>
-            <div className="space-y-1.5">
-              <Link
-                href="/admin/queue"
-                className="flex items-center justify-between px-3 py-2.5 rounded-xl hover:bg-gray-50 text-sm text-gray-700 transition-colors"
-              >
-                <span className="flex items-center gap-2.5">
-                  <ShieldAlert className="w-4 h-4 text-purple-500" /> Flagged reports
-                </span>
-                <span className="text-xs font-semibold text-gray-400">{flaggedCount ?? 0}</span>
-              </Link>
-              <Link
-                href="/admin/queue"
-                className="flex items-center justify-between px-3 py-2.5 rounded-xl hover:bg-gray-50 text-sm text-gray-700 transition-colors"
-              >
-                <span className="flex items-center gap-2.5">
-                  <RotateCcw className="w-4 h-4 text-orange-500" /> Awaiting fixes
-                </span>
-                <span className="text-xs font-semibold text-gray-400">{changesRequestedCount ?? 0}</span>
-              </Link>
-              <Link
-                href="/admin/users"
-                className="flex items-center justify-between px-3 py-2.5 rounded-xl hover:bg-gray-50 text-sm text-gray-700 transition-colors"
-              >
-                <span className="flex items-center gap-2.5">
-                  <Users className="w-4 h-4 text-gray-400" /> Users
-                </span>
-                <span className="text-xs font-semibold text-gray-400">{userCount ?? 0}</span>
-              </Link>
+          {!queueItems || queueItems.length === 0 ? (
+            <div className="px-5 py-14 text-center">
+              <p className="font-medium text-brand-dark">The queue is empty</p>
+              <p className="text-sm text-brand-muted mt-1">New submissions will show up here.</p>
             </div>
+          ) : (
+            <ul className="divide-y divide-brand-border-light">
+              {queueItems.map((item) => {
+                const status = STATUS_LABEL[item.status] ?? STATUS_LABEL.pending;
+                return (
+                  <li key={item.id}>
+                    <Link
+                      href={`/admin/review/${item.id}`}
+                      className="flex items-center gap-4 px-5 py-3 hover:bg-brand-surface/60 transition-colors group"
+                    >
+                      <span className="w-16 shrink-0 font-mono text-xs font-semibold text-brand-red">{item.course_code}</span>
+                      <span className="flex-1 min-w-0 truncate text-sm font-medium text-brand-dark group-hover:text-brand-red">
+                        {item.title}
+                      </span>
+                      <span className="hidden sm:inline-flex items-center gap-1.5 text-xs text-brand-muted shrink-0">
+                        <span className={`w-1.5 h-1.5 rounded-full ${status.dot}`} />
+                        {status.label}
+                      </span>
+                      <span className="w-14 text-right text-xs text-brand-muted shrink-0 tabular-nums">
+                        {formatRelativeTime(item.created_at)}
+                      </span>
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </section>
+
+        {/* Activity */}
+        <section className="rounded-lg border border-brand-border-light bg-white overflow-hidden">
+          <div className="px-5 py-4 border-b border-brand-border-light">
+            <h2 className="font-semibold text-brand-dark">Recent activity</h2>
           </div>
-
-          <div className="bg-white rounded-2xl border border-black/5 p-5">
-            <h2 className="font-logo text-lg font-bold text-[#23201D] mb-4">Recent activity</h2>
-            {!recentActivity || recentActivity.length === 0 ? (
-              <p className="text-xs text-gray-400">No reviews logged yet.</p>
-            ) : (
-              <ul className="space-y-3.5">
-                {(recentActivity as unknown as AuditRow[]).map((row) => {
-                  const meta = ACTION_META[row.action_type] ?? { label: row.action_type, icon: Clock, color: "text-gray-500" };
-                  const Icon = meta.icon;
-                  const adminInfo = Array.isArray(row.admin) ? row.admin[0] : row.admin;
-                  const adminLabel = adminInfo?.full_name || adminInfo?.email?.split("@")[0] || "An admin";
-
-                  return (
-                    <li key={row.id} className="flex items-start gap-2.5 text-xs">
-                      <Icon className={`w-3.5 h-3.5 mt-0.5 shrink-0 ${meta.color}`} />
-                      <p className="text-gray-600 leading-relaxed">
-                        <span className="font-semibold text-gray-900">{adminLabel}</span> {meta.label} a submission
-                        <span className="text-gray-400"> · {formatRelativeTime(row.created_at)}</span>
-                      </p>
-                    </li>
-                  );
-                })}
-              </ul>
-            )}
-          </div>
-
-        </div>
+          {!recentActivity || recentActivity.length === 0 ? (
+            <p className="px-5 py-8 text-sm text-brand-muted">Nothing logged yet.</p>
+          ) : (
+            <ul className="px-5 py-4 space-y-4">
+              {(recentActivity as unknown as AuditRow[]).map((row) => {
+                const meta = ACTION_META[row.action_type] ?? { phrase: row.action_type.toLowerCase().replace(/_/g, " "), icon: Clock };
+                const Icon = meta.icon;
+                const adminInfo = Array.isArray(row.admin) ? row.admin[0] : row.admin;
+                const name = adminInfo?.full_name || adminInfo?.email?.split("@")[0] || "Someone";
+                return (
+                  <li key={row.id} className="flex items-start gap-3">
+                    <span className="w-7 h-7 rounded-full bg-brand-surface flex items-center justify-center shrink-0">
+                      <Icon className="w-3.5 h-3.5 text-brand-muted" />
+                    </span>
+                    <p className="text-sm text-brand-body leading-snug">
+                      <span className="font-medium text-brand-dark">{name}</span> {meta.phrase}
+                      <span className="block text-xs text-brand-muted mt-0.5">{formatRelativeTime(row.created_at)}</span>
+                    </p>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </section>
       </div>
-    </div>
-  );
-}
-
-function StatCell({ label, value, accent }: { label: string; value: number; accent: string }) {
-  return (
-    <div className="p-5">
-      <p className={`text-2xl font-bold font-logo ${accent}`}>{value}</p>
-      <p className="text-xs text-gray-500 mt-0.5">{label}</p>
     </div>
   );
 }

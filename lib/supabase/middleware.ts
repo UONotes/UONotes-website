@@ -1,3 +1,4 @@
+import { isStaff } from "@/lib/admin";
 import { createServerClient, type CookieOptionsWithName } from "@supabase/ssr";
 import { createClient as createServiceClient } from "@supabase/supabase-js";
 import { NextResponse, type NextRequest } from "next/server";
@@ -67,11 +68,12 @@ export async function updateSession(request: NextRequest) {
   if (isAdminPath && user) {
     const { data: profile } = await supabase
       .from("profiles")
-      .select("is_admin")
+      // "*" so a role column that doesn't exist yet can't fail the lookup.
+      .select("*")
       .eq("id", user.id)
       .single();
 
-    if (!profile?.is_admin) {
+    if (!isStaff(profile)) {
       return NextResponse.redirect(new URL("/", request.url));
     }
 

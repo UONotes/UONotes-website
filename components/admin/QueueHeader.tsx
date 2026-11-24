@@ -10,16 +10,17 @@ type QueueHeaderProps = {
 const FILTER_LABEL: Record<string, string> = {
   pending: "Pending",
   flagged: "Flagged",
-  changes_requested: "Awaiting fixes",
+  in_revision: "Being fixed",
+  fix_review: "Final check",
   locked: "Claimed",
 };
 
 export function QueueHeader({ activeFilter, onClearFilter }: QueueHeaderProps) {
   return (
-    <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 pb-6 border-b border-black/5">
+    <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 pb-6 border-b border-brand-border-light">
       <div>
-        <h1 className="font-logo text-3xl font-bold text-[#23201D] tracking-tight">Review Queue</h1>
-        <p className="text-sm text-gray-500 mt-1">Approve, request fixes, or remove submitted notes.</p>
+        <h1 className="font-logo text-3xl font-bold text-brand-dark tracking-tight">Review Queue</h1>
+        <p className="text-sm text-gray-500 mt-1">Review and fix submitted notes. VP Notes does the final check before anything is published.</p>
       </div>
 
       {activeFilter !== "all" && (

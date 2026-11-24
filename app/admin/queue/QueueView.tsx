@@ -4,9 +4,11 @@ import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import { QueueHeader } from "@/components/admin/QueueHeader";
 import { QueueStats } from "@/components/admin/QueueStats";
-import { Loader2, FileText, AlertTriangle, Lock, RotateCcw, ArrowRight } from "lucide-react";
+import { Loader2, FileText, AlertTriangle, Lock, RotateCcw, ArrowRight, Wrench, ShieldCheck, CornerUpLeft } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { formatShortDate } from "@/lib/dateFormat";
+import { isClaimActive } from "@/lib/review";
+import type { QueueFilter } from "./filters";
 
 type QueueNote = {
   id: string;
@@ -15,12 +17,35 @@ type QueueNote = {
   status: string;
   created_at: string;
   reviewed_by: string | null;
+  claimed_at: string | null;
   author_email: string;
   flag_reason: string | null;
+  checked_by: string | null;
+  recommendation: "approve" | "reject" | null;
+  corrected_file_key: string | null;
+  returned_at: string | null;
+  return_note: string | null;
 };
 
-export type QueueFilter = "all" | "pending" | "flagged" | "changes_requested" | "locked";
-export const QUEUE_FILTERS: QueueFilter[] = ["all", "pending", "flagged", "changes_requested", "locked"];
+
+// Each note's status tab. Notes being fixed stay under Being fixed whether
+// or not the fixer's claim is still active; for everything else an active
+// claim moves the note out of its status tab, and a lapsed claim puts it
+// back up for grabs. The Claimed tab is separate (see inTab).
+function bucketOf(note: QueueNote): Exclude<QueueFilter, "all"> {
+  if (note.status === "in_revision") return "in_revision";
+  if (isClaimActive(note)) return "locked";
+  if (note.status === "fix_review") return "fix_review";
+  return note.status === "flagged" ? "flagged" : "pending";
+}
+
+// Claimed shows everything someone is actively holding right now, across
+// statuses — including notes being fixed and notes in final check.
+function inTab(note: QueueNote, filter: QueueFilter) {
+  if (filter === "all") return true;
+  if (filter === "locked") return isClaimActive(note);
+  return bucketOf(note) === filter;
+}
 
 export function QueueView({ initialFilter }: { initialFilter: QueueFilter }) {
   const [filter, setFilterState] = useState<QueueFilter>(initialFilter);
@@ -50,10 +75,16 @@ export function QueueView({ initialFilter }: { initialFilter: QueueFilter }) {
           status,
           created_at,
           reviewed_by,
+          claimed_at,
           author_email,
-          flag_reason
+          flag_reason,
+          checked_by,
+          recommendation,
+          corrected_file_key,
+          returned_at,
+          return_note
         `)
-        .in("status", ["pending", "flagged", "changes_requested"])
+        .in("status", ["pending", "flagged", "in_revision", "fix_review"])
         .order("created_at", { ascending: true });
 
       if (error) {
@@ -65,7 +96,7 @@ export function QueueView({ initialFilter }: { initialFilter: QueueFilter }) {
       setNotes(data || []);
 
       const reviewerIds = Array.from(
-        new Set((data || []).map((note) => note.reviewed_by).filter((id): id is string => Boolean(id)))
+        new Set((data || []).flatMap((note) => [note.reviewed_by, note.checked_by]).filter((id): id is string => Boolean(id)))
       );
 
       if (reviewerIds.length > 0) {
@@ -92,37 +123,17 @@ export function QueueView({ initialFilter }: { initialFilter: QueueFilter }) {
   }, []);
 
   const counts = useMemo(() => {
-    let pending = 0;
-    let flagged = 0;
-    let changesRequested = 0;
-    let locked = 0;
-
+    const c = { total: notes.length, pending: 0, flagged: 0, in_revision: 0, fix_review: 0, locked: 0 };
     notes.forEach((note) => {
-      if (note.reviewed_by) {
-        locked++;
-        return;
-      }
-      if (note.status === "flagged") {
-        flagged++;
-      } else if (note.status === "changes_requested") {
-        changesRequested++;
-      } else {
-        pending++;
-      }
+      const bucket = bucketOf(note);
+      if (bucket !== "locked") c[bucket]++;
+      if (isClaimActive(note)) c.locked++;
     });
-
-    return { total: notes.length, pending, flagged, changesRequested, locked };
+    return c;
   }, [notes]);
 
   const filteredNotes = useMemo(() => {
-    return notes.filter((note) => {
-      if (filter === "all") return true;
-      if (filter === "locked") return note.reviewed_by !== null;
-      if (filter === "flagged") return note.status === "flagged" && !note.reviewed_by;
-      if (filter === "changes_requested") return note.status === "changes_requested" && !note.reviewed_by;
-      if (filter === "pending") return note.status === "pending" && !note.reviewed_by;
-      return true;
-    });
+    return notes.filter((note) => inTab(note, filter));
   }, [notes, filter]);
 
   return (
@@ -138,11 +149,12 @@ export function QueueView({ initialFilter }: { initialFilter: QueueFilter }) {
         totalCount={counts.total}
         pendingCount={counts.pending}
         flaggedCount={counts.flagged}
-        changesRequestedCount={counts.changesRequested}
+        beingFixedCount={counts.in_revision}
+        finalCheckCount={counts.fix_review}
         lockedCount={counts.locked}
       />
 
-      <div className="bg-white rounded-2xl border border-black/5 overflow-hidden relative min-h-[300px]">
+      <div className="bg-white rounded-lg border border-brand-border-light overflow-hidden relative min-h-[300px]">
         {loading && (
           <div className="absolute inset-0 flex items-center justify-center bg-white/80 z-20">
             <Loader2 className="w-6 h-6 text-brand-red animate-spin" />
@@ -151,7 +163,7 @@ export function QueueView({ initialFilter }: { initialFilter: QueueFilter }) {
         
         <div className="overflow-x-auto w-full">
           <table className="w-full text-sm text-left">
-            <thead className="border-b border-black/5 text-xs text-gray-400">
+            <thead className="border-b border-brand-border-light text-xs text-gray-400">
               <tr>
                 <th className="px-5 py-3.5 font-medium">Document</th>
                 <th className="px-5 py-3.5 font-medium">Submitter</th>
@@ -160,7 +172,7 @@ export function QueueView({ initialFilter }: { initialFilter: QueueFilter }) {
                 <th className="px-5 py-3.5 font-medium text-right">Action</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-black/5">
+            <tbody className="divide-y divide-brand-border-light">
               {filteredNotes.length === 0 && !loading ? (
                 <tr>
                   <td colSpan={5} className="px-5 py-16 text-center text-gray-400 text-sm">
@@ -169,12 +181,19 @@ export function QueueView({ initialFilter }: { initialFilter: QueueFilter }) {
                 </tr>
               ) : (
                 filteredNotes.map((note) => {
-                  const isLocked = Boolean(note.reviewed_by);
+                  const isBeingFixed = note.status === "in_revision";
+                  const isLocked = !isBeingFixed && isClaimActive(note);
+                  const fixLapsed = isBeingFixed && !isClaimActive(note);
                   const isFlagged = note.status === "flagged";
-                  const isChangesRequested = note.status === "changes_requested";
-                  const wasResubmitted = note.status === "pending" && Boolean(note.flag_reason);
+                  const isFinalCheck = !isLocked && note.status === "fix_review";
+                  const wasSentBack = Boolean(note.returned_at);
+                  const hasEarlierFeedback = !wasSentBack && note.status === "pending" && Boolean(note.flag_reason);
+                  const checkerEmail = (note.checked_by && reviewerEmails[note.checked_by]) || "a director";
+                  const recommendationText = note.corrected_file_key
+                    ? "fixed it"
+                    : note.recommendation === "reject" ? "recommends rejecting" : "recommends approving";
 
-                  const adminEmail = (note.reviewed_by && reviewerEmails[note.reviewed_by]) || "Admin";
+                  const adminEmail = (note.reviewed_by && reviewerEmails[note.reviewed_by]) || "Director";
                   const adminName = adminEmail.split('@')[0];
                   
                   return (
@@ -182,14 +201,16 @@ export function QueueView({ initialFilter }: { initialFilter: QueueFilter }) {
                       <td className="px-5 py-3.5 min-w-[240px]">
                         <div className="flex items-center gap-3">
                           <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
-                            isLocked ? 'bg-amber-50 text-amber-600' :
-                            isFlagged ? 'bg-purple-50 text-purple-600' :
-                            isChangesRequested ? 'bg-orange-50 text-orange-600' :
-                            'bg-blue-50 text-blue-600'
+                            isBeingFixed ? 'bg-amber-50 text-amber-600' :
+                            isLocked ? 'bg-gray-100 text-gray-600' :
+                            isFinalCheck ? 'bg-stone-100 text-stone-700' :
+                            isFlagged ? 'bg-brand-pink text-brand-red' :
+                            'bg-slate-100 text-slate-600'
                           }`}>
-                            {isLocked ? <Lock className="w-3.5 h-3.5" /> : 
+                            {isBeingFixed ? <Wrench className="w-3.5 h-3.5" /> :
+                             isLocked ? <Lock className="w-3.5 h-3.5" /> : 
+                             isFinalCheck ? <ShieldCheck className="w-3.5 h-3.5" /> :
                              isFlagged ? <AlertTriangle className="w-3.5 h-3.5" /> :
-                             isChangesRequested ? <RotateCcw className="w-3.5 h-3.5" /> :
                              <FileText className="w-3.5 h-3.5" />}
                           </div>
                           <div className="flex flex-col min-w-0">
@@ -207,32 +228,50 @@ export function QueueView({ initialFilter }: { initialFilter: QueueFilter }) {
 
                       <td className="px-5 py-3.5">
                         <div className="flex items-center gap-1.5 flex-wrap">
-                          {isLocked ? (
-                            <span 
+                          {isBeingFixed ? (
+                            <span
                               className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-50 text-amber-700 text-[11px] font-semibold"
+                              title={fixLapsed ? `${adminEmail} went inactive — anyone can take this over` : `Being fixed by ${adminEmail}`}
+                            >
+                              <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                              {fixLapsed ? "Fix stalled" : `Fixing · ${adminName}`}
+                            </span>
+                          ) : isLocked ? (
+                            <span 
+                              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-gray-100 text-gray-700 text-[11px] font-semibold"
                               title={`Locked by ${adminEmail}`}
                             >
-                              <span className="w-1.5 h-1.5 rounded-full bg-amber-500" /> {adminName}
+                              <span className="w-1.5 h-1.5 rounded-full bg-gray-500" /> {adminName}
+                            </span>
+                          ) : isFinalCheck ? (
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-stone-100 text-stone-800 text-[11px] font-semibold"
+                              title={`Sent to final check by ${checkerEmail}, who ${recommendationText}`}
+                            >
+                              <span className="w-1.5 h-1.5 rounded-full bg-stone-600" /> Final check · {checkerEmail.split("@")[0]}
                             </span>
                           ) : isFlagged ? (
-                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-purple-50 text-purple-700 text-[11px] font-semibold">
-                              <span className="w-1.5 h-1.5 rounded-full bg-purple-500" /> Flagged
-                            </span>
-                          ) : isChangesRequested ? (
-                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-orange-50 text-orange-700 text-[11px] font-semibold">
-                              <span className="w-1.5 h-1.5 rounded-full bg-orange-500" /> Awaiting fixes
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-brand-pink text-brand-red text-[11px] font-semibold">
+                              <span className="w-1.5 h-1.5 rounded-full bg-brand-red" /> Flagged
                             </span>
                           ) : (
-                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-blue-50 text-blue-700 text-[11px] font-semibold">
-                              <span className="w-1.5 h-1.5 rounded-full bg-blue-500" /> Pending
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-100 text-slate-700 text-[11px] font-semibold">
+                              <span className="w-1.5 h-1.5 rounded-full bg-slate-500" /> Pending
                             </span>
                           )}
-                          {wasResubmitted && (
+                          {wasSentBack && (
+                            <span
+                              className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-amber-50 text-amber-700 text-[10px] font-semibold"
+                              title={`Sent back by VP Notes: ${note.return_note ?? ""}`}
+                            >
+                              <CornerUpLeft className="w-3 h-3" /> Sent back
+                            </span>
+                          )}
+                          {hasEarlierFeedback && (
                             <span
                               className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-slate-100 text-slate-600 text-[10px] font-semibold"
-                              title="Previously sent back for fixes, just resubmitted"
+                              title="Has feedback from an earlier review round"
                             >
-                              <RotateCcw className="w-3 h-3" /> Resubmitted
+                              <RotateCcw className="w-3 h-3" /> Re-review
                             </span>
                           )}
                         </div>
@@ -249,10 +288,10 @@ export function QueueView({ initialFilter }: { initialFilter: QueueFilter }) {
                           href={`/admin/review/${note.id}`}
                           prefetch={false}
                           className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-white text-xs font-semibold transition-colors ${
-                            isChangesRequested ? "bg-orange-600 hover:bg-orange-700" : "bg-[#23201D] hover:bg-brand-red"
+                            isBeingFixed ? "bg-amber-600 hover:bg-amber-700" : "bg-brand-red hover:bg-brand-red-hover"
                           }`}
                         >
-                          {isChangesRequested ? "View" : "Review"} <ArrowRight className="w-3 h-3" />
+                          {isBeingFixed ? (fixLapsed ? "Take over" : "View") : isFinalCheck ? "Check" : "Review"} <ArrowRight className="w-3 h-3" />
                         </Link>
                       </td>
                     </tr>

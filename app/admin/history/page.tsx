@@ -5,7 +5,7 @@ import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { createR2Client, R2_BUCKET_NAME } from "@/lib/r2";
 import { DecisionHistoryExplorer, type DecisionEntry, type DecisionType } from "@/components/admin/DecisionHistoryExplorer";
 
-const DECISION_ACTIONS: DecisionType[] = ["NOTE_APPROVED", "NOTE_REJECTED", "NOTE_CHANGES_REQUESTED"];
+import { DECISION_ACTIONS } from "@/lib/review";
 
 type NoteAuditDetails = {
   note_title?: string | null;
@@ -13,6 +13,7 @@ type NoteAuditDetails = {
   note_owner_id?: string | null;
   reason?: string | null;
   attachment_key?: string | null;
+  original_file_key?: string | null;
 };
 
 type ReviewerJoin = { id: string; full_name: string | null; email: string | null };
@@ -95,8 +96,11 @@ export default async function AdminHistoryPage() {
       const fallback = row.target_id ? noteFallbackMap.get(row.target_id) : undefined;
 
       let attachmentUrl: string | null = null;
-      if (row.details?.attachment_key) {
-        const command = new GetObjectCommand({ Bucket: R2_BUCKET_NAME, Key: row.details.attachment_key });
+      // Legacy fix requests carried a reviewer attachment; fixed notes keep
+      // the submitter's original upload.
+      const attachmentKey = row.details?.attachment_key || row.details?.original_file_key;
+      if (attachmentKey) {
+        const command = new GetObjectCommand({ Bucket: R2_BUCKET_NAME, Key: attachmentKey });
         attachmentUrl = await getSignedUrl(r2, command, { expiresIn: 3600 });
       }
 
@@ -137,10 +141,10 @@ export default async function AdminHistoryPage() {
 
   return (
     <div className="w-full max-w-6xl mx-auto space-y-6">
-      <div className="pb-6 border-b border-black/5">
-        <h1 className="font-logo text-3xl font-bold text-[#23201D] tracking-tight">Decision History</h1>
+      <div className="pb-6 border-b border-brand-border-light">
+        <h1 className="font-logo text-3xl font-bold text-brand-dark tracking-tight">Decision History</h1>
         <p className="text-sm text-gray-500 mt-1">
-          Every note that&apos;s been approved, rejected or sent back for fixes.
+          Every note that&apos;s been approved, fixed and approved, or rejected.
         </p>
       </div>
 

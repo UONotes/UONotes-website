@@ -15,18 +15,22 @@ const notebookStyle = {
 };
 
 const hideScrollbar = "[&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]";
-const FACULTIES = [
-  "All Faculties",
-  "Arts",
-  "Education",
-  "Engineering",
-  "Health Sciences",
-  "Law",
-  "Medicine",
-  "Science",
-  "Social Sciences",
-  "Telfer",
-];
+
+// Faculties in display order, with the course code prefixes filed under each.
+// Faculties that have no notes yet are moved to the end of the list.
+const FACULTY_PREFIXES: Record<string, string[]> = {
+  Science: ["MAT", "STA", "CHM", "PHY", "BIO", "BCH", "ENV", "GEG", "NSC", "MED", "ANP", "MDV", "BMG", "TMM"],
+  Law: ["DRC", "CML"],
+  "Health Sciences": ["HSS", "BPS", "NSG", "NUT", "APA", "REA", "ORA", "EPI"],
+  "Social Sciences": ["PSY", "SOC", "ECO", "POL", "CRM", "ANT", "GEO", "CMN", "FEM", "API", "PAP", "ISP"],
+  Telfer: ["ADM", "MBA", "MGT"],
+  Arts: ["ENG", "HIS", "PHI", "FRA", "ART", "MUS", "THE", "LIN", "CLA", "TRA", "ESP", "ITA", "CHN", "JPN", "RUS", "LCM", "FLS", "SRS"],
+  Education: ["EDU"],
+  Engineering: ["CSI", "SEG", "CEG", "ELG", "MCG", "CVG", "CHG", "GNG"],
+};
+
+const inFaculty = (note: { course_code: string }, faculty: string) =>
+  (FACULTY_PREFIXES[faculty] ?? []).some((p) => note.course_code.startsWith(p));
 
 export interface DatabaseNote {
   id: string;
@@ -44,6 +48,12 @@ export function NotesExplorer({ isLoggedIn = false, notes = [] }: NotesExplorerP
   const [activeFaculty, setActiveFaculty] = useState("All Faculties");
   const [searchQuery, setSearchQuery] = useState("");
   const [visibleCount, setVisibleCount] = useState(15);
+  const faculties = useMemo(() => {
+    const names = Object.keys(FACULTY_PREFIXES);
+    const hasNotes = (faculty: string) => notes.some((n) => inFaculty(n, faculty));
+    return ["All Faculties", ...names.filter(hasNotes), ...names.filter((f) => !hasNotes(f))];
+  }, [notes]);
+
   const topFolders = useMemo(() => {
     const counts = notes.reduce((acc, note) => {
       acc[note.course_code] = (acc[note.course_code] || 0) + 1;
@@ -66,18 +76,7 @@ export function NotesExplorer({ isLoggedIn = false, notes = [] }: NotesExplorerP
     }
 
     if (activeFaculty !== "All Faculties") {
-      const prefixes =
-        activeFaculty === "Arts" ? ["ENG", "HIS", "PHI", "FRA", "ART", "MUS", "THE", "LIN", "CLA", "TRA", "ESP", "ITA", "CHN", "JPN", "RUS", "LCM", "FLS", "SRS"] :
-        activeFaculty === "Education" ? ["EDU"] :
-        activeFaculty === "Engineering" ? ["CSI", "SEG", "CEG", "ELG", "MCG", "CVG", "CHG", "GNG"] :
-        activeFaculty === "Health Sciences" ? ["HSS", "BPS", "NSG", "NUT", "APA", "REA", "ORA", "EPI"] :
-        activeFaculty === "Law" ? ["DRC", "CML"] :
-        activeFaculty === "Medicine" ? ["MED", "ANP", "MDV", "BMG", "TMM"] :
-        activeFaculty === "Science" ? ["MAT", "STA", "CHM", "PHY", "BIO", "BCH", "ENV", "GEG", "NSC"] :
-        activeFaculty === "Social Sciences" ? ["PSY", "SOC", "ECO", "POL", "CRM", "ANT", "GEO", "CMN", "FEM", "API", "PAP", "ISP"] :
-        activeFaculty === "Telfer" ? ["ADM", "MBA", "MGT"] : [];
-
-      filtered = filtered.filter(n => prefixes.some(p => n.course_code.startsWith(p)));
+      filtered = filtered.filter(n => inFaculty(n, activeFaculty));
     }
 
        return filtered;
@@ -141,7 +140,7 @@ export function NotesExplorer({ isLoggedIn = false, notes = [] }: NotesExplorerP
 
               <div className="flex flex-col gap-5 lg:hidden">
                 <div className={`flex items-center gap-2 overflow-x-auto snap-x snap-mandatory pb-2 -mx-2 px-2 sm:mx-0 sm:px-0 ${hideScrollbar}`}>
-                  {FACULTIES.map((faculty) => (
+                  {faculties.map((faculty) => (
                     <button
                       key={faculty}
                       onClick={() => setActiveFaculty(faculty)}
@@ -301,7 +300,7 @@ export function NotesExplorer({ isLoggedIn = false, notes = [] }: NotesExplorerP
                 </div>
                 
                 <nav className="flex flex-col gap-1">
-                  {FACULTIES.map((faculty) => (
+                  {faculties.map((faculty) => (
                     <button
                       key={faculty}
                       onClick={() => setActiveFaculty(faculty)}

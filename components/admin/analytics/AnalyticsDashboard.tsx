@@ -71,10 +71,10 @@ export function AnalyticsDashboard({ initialData }: { initialData: AnalyticsData
   return (
     <div className="w-full pb-16">
       {/* ── Sticky toolbar ─────────────────────────────────── */}
-      <div className="sticky top-0 z-30 -mx-6 sm:-mx-10 -mt-6 sm:-mt-10 px-6 sm:px-10 pt-6 sm:pt-8 pb-0 bg-[#FBF8F3]/90 backdrop-blur-md border-b border-black/5">
+      <div className="sticky top-0 z-30 -mx-6 sm:-mx-10 -mt-6 sm:-mt-10 px-6 sm:px-10 pt-6 sm:pt-8 pb-0 bg-brand-surface/90 backdrop-blur-md border-b border-black/5">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="min-w-0">
-            <h1 className="font-logo text-2xl sm:text-3xl font-bold text-[#23201D] tracking-tight flex items-center gap-2.5">
+            <h1 className="font-logo text-2xl sm:text-3xl font-bold text-brand-dark tracking-tight flex items-center gap-2.5">
               Analytics
               {isPending && <Loader2 className="w-4 h-4 animate-spin text-gray-400" aria-label="Loading" />}
             </h1>
@@ -105,7 +105,7 @@ export function AnalyticsDashboard({ initialData }: { initialData: AnalyticsData
                     title={`Last ${RANGES[t.key].label}`}
                     onClick={() => changeRange(t.key)}
                     className={`h-8 px-3 rounded-md text-xs font-bold tabular-nums transition-colors cursor-pointer ${
-                      selected ? "bg-[#23201D] text-white" : "text-gray-500 hover:text-gray-900"
+                      selected ? "bg-brand-red text-white" : "text-gray-500 hover:text-gray-900"
                     }`}
                   >
                     {t.label}
@@ -126,7 +126,7 @@ export function AnalyticsDashboard({ initialData }: { initialData: AnalyticsData
                 document.getElementById(s.id)?.scrollIntoView({ behavior: "smooth", block: "start" });
               }}
               className={`shrink-0 px-3 py-2.5 text-[13px] font-semibold border-b-2 transition-colors ${
-                active === s.id ? "border-brand-red text-[#23201D]" : "border-transparent text-gray-400 hover:text-gray-700"
+                active === s.id ? "border-brand-red text-brand-dark" : "border-transparent text-gray-400 hover:text-gray-700"
               }`}
             >
               {s.label}
@@ -203,7 +203,7 @@ function Overview({ data, onMetric }: { data: AnalyticsData; onMetric: (m: Metri
                 <p className="text-xs sm:text-sm text-gray-500">{t.label}</p>
                 <Delta current={t.current} previous={t.previous} goodWhen={t.goodWhen} />
               </div>
-              <p className="font-logo text-3xl sm:text-4xl font-bold text-[#23201D] tracking-tight mt-1.5 tabular-nums">{t.value}</p>
+              <p className="font-logo text-3xl sm:text-4xl font-bold text-brand-dark tracking-tight mt-1.5 tabular-nums">{t.value}</p>
               <div className="mt-3 -mx-1">
                 <Sparkline values={t.series} labels={buckets} color={t.color ?? RED} format={t.format} />
               </div>
@@ -254,7 +254,7 @@ function AttentionBanner({
           <p className="text-sm font-semibold text-gray-900">You&apos;re all caught up</p>
           <p className="text-xs text-gray-500 mt-0.5">
             Nothing pending or flagged
-            {awaitingFixes > 0 ? `. ${awaitingFixes} ${awaitingFixes === 1 ? "note is" : "notes are"} waiting on the author to fix.` : "."}
+            {awaitingFixes > 0 ? `. ${awaitingFixes} ${awaitingFixes === 1 ? "note is" : "notes are"} being fixed by a director.` : "."}
           </p>
         </div>
       </div>
@@ -373,7 +373,7 @@ function Growth({ data, metric, setMetric }: { data: AnalyticsData; metric: Metr
                   aria-selected={selected}
                   onClick={() => setMetric(key)}
                   className={`shrink-0 text-left rounded-xl px-4 py-3 border transition-all cursor-pointer ${
-                    selected ? "border-[#23201D] bg-[#23201D] text-white" : "border-black/5 bg-gray-50/60 hover:bg-gray-100/80 text-gray-900"
+                    selected ? "border-brand-red bg-brand-red text-white" : "border-black/5 bg-gray-50/60 hover:bg-gray-100/80 text-gray-900"
                   }`}
                 >
                   <span className={`block text-xs ${selected ? "text-white/60" : "text-gray-500"}`}>{mm.label}</span>
@@ -481,7 +481,7 @@ function Reviews({ data }: { data: AnalyticsData }) {
   const statusRows = [
     { label: "Approved", value: status.approved, color: STATUS.approved },
     { label: "Pending", value: status.pending, color: STATUS.pending },
-    { label: "Awaiting fixes", value: status.changes, color: STATUS.changes },
+    { label: "Being fixed", value: status.changes, color: STATUS.changes },
     { label: "Flagged", value: status.flagged, color: STATUS.flagged },
     { label: "Rejected", value: status.rejected, color: STATUS.rejected },
   ];
@@ -517,7 +517,7 @@ function Reviews({ data }: { data: AnalyticsData }) {
             <Legend
               items={[
                 { label: "Approved", color: STATUS.approved },
-                { label: "Fixes requested", color: STATUS.changes },
+                { label: "Fixed & approved", color: STATUS.changes },
                 { label: "Rejected", color: STATUS.rejected },
               ]}
             />
@@ -528,7 +528,7 @@ function Reviews({ data }: { data: AnalyticsData }) {
               unit="decisions"
               series={[
                 { label: "Approved", color: STATUS.approved, values: decisions.approved },
-                { label: "Fixes requested", color: STATUS.changes, values: decisions.changes },
+                { label: "Fixed & approved", color: STATUS.changes, values: decisions.changes },
                 { label: "Rejected", color: STATUS.rejected, values: decisions.rejected },
               ]}
             />
@@ -726,7 +726,7 @@ function Community({ data }: { data: AnalyticsData }) {
         </Card>
         <Card>
           <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
-            <h3 className="font-logo text-lg font-bold text-[#23201D]">Top contributors</h3>
+            <h3 className="font-logo text-lg font-bold text-brand-dark">Top contributors</h3>
             <Toggle
               options={[
                 { value: "range" as const, label: `Last ${range.label}` },
@@ -743,7 +743,7 @@ function Community({ data }: { data: AnalyticsData }) {
       <Card>
         <div className="flex flex-wrap items-center justify-between gap-3 mb-5">
           <div>
-            <h3 className="font-logo text-lg font-bold text-[#23201D]">When it happens</h3>
+            <h3 className="font-logo text-lg font-bold text-brand-dark">When it happens</h3>
             <p className="text-xs text-gray-400 mt-0.5">All time, by day and 3-hour block. Hover or tap a square.</p>
           </div>
           <Toggle
@@ -770,7 +770,7 @@ function Leaderboard({ leaders }: { leaders: Leader[] }) {
         <li key={`${l.name}-${i}`} className="flex items-center gap-3 py-1.5">
           <span
             className={`w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-bold tabular-nums shrink-0 ${
-              i === 0 ? "bg-brand-red text-white" : i < 3 ? "bg-[#23201D] text-white" : "bg-gray-100 text-gray-500"
+              i === 0 ? "bg-brand-red text-white" : i < 3 ? "bg-brand-red text-white" : "bg-gray-100 text-gray-500"
             }`}
           >
             {i + 1}
@@ -859,7 +859,7 @@ function Team({ data }: { data: AnalyticsData }) {
             <table className="hidden md:table w-full text-sm">
               <thead className="text-xs text-gray-400 border-b border-black/5 bg-gray-50/50">
                 <tr>
-                  {header("name", "Admin", "text-left")}
+                  {header("name", "Reviewer", "text-left")}
                   <th className="px-4 py-3 font-medium text-left">All-time decisions</th>
                   {header("inRange", `Last ${range.label}`)}
                   {header("approvalRate", "Approval")}
@@ -956,7 +956,7 @@ function Section({ id, title, description, children }: { id: string; title: stri
   return (
     <section id={id} className="scroll-mt-40 space-y-4">
       <div>
-        <h2 className="font-logo text-2xl sm:text-[1.75rem] font-bold text-[#23201D] tracking-tight">{title}</h2>
+        <h2 className="font-logo text-2xl sm:text-[1.75rem] font-bold text-brand-dark tracking-tight">{title}</h2>
         <p className="text-sm text-gray-500 mt-0.5">{description}</p>
       </div>
       {children}
@@ -975,7 +975,7 @@ function Card({ children, padded = true }: { children: React.ReactNode; padded?:
 function CardTitle({ title, meta }: { title: string; meta?: string }) {
   return (
     <div className="flex items-baseline justify-between gap-3 mb-4">
-      <h3 className="font-logo text-lg font-bold text-[#23201D]">{title}</h3>
+      <h3 className="font-logo text-lg font-bold text-brand-dark">{title}</h3>
       {meta && <span className="text-xs text-gray-400 text-right">{meta}</span>}
     </div>
   );
@@ -1002,7 +1002,7 @@ function StatCard({
         <p className="text-xs text-gray-500">{label}</p>
         {extra}
       </div>
-      <p className="font-logo text-2xl sm:text-3xl font-bold text-[#23201D] tabular-nums mt-1">{value}</p>
+      <p className="font-logo text-2xl sm:text-3xl font-bold text-brand-dark tabular-nums mt-1">{value}</p>
       {sub && <p className="text-[11px] text-gray-400 mt-1 leading-snug">{sub}</p>}
       {children}
     </div>
@@ -1014,7 +1014,7 @@ function BigStat({ label, value, extra }: { label: string; value: string; extra?
     <div>
       <p className="text-[11px] sm:text-xs text-gray-500">{label}</p>
       <p className="flex flex-wrap items-center gap-2 mt-0.5">
-        <span className="font-logo text-2xl sm:text-3xl font-bold text-[#23201D] tabular-nums">{value}</span>
+        <span className="font-logo text-2xl sm:text-3xl font-bold text-brand-dark tabular-nums">{value}</span>
         {extra}
       </p>
     </div>
@@ -1026,7 +1026,7 @@ function RateStat({ label, value, sub, extra }: { label: string; value: number |
     <div>
       <p className="text-xs text-gray-500">{label}</p>
       <p className="flex flex-wrap items-center gap-2 mt-0.5">
-        <span className="font-logo text-2xl font-bold text-[#23201D] tabular-nums">{value === null ? "—" : `${value}%`}</span>
+        <span className="font-logo text-2xl font-bold text-brand-dark tabular-nums">{value === null ? "—" : `${value}%`}</span>
         {extra}
       </p>
       <p className="text-[11px] text-gray-400 leading-snug">{sub}</p>
@@ -1139,7 +1139,7 @@ function OnlineNow({
   return (
     <Card>
       <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
-        <h3 className="font-logo text-lg font-bold text-[#23201D] flex items-center gap-2.5">
+        <h3 className="font-logo text-lg font-bold text-brand-dark flex items-center gap-2.5">
           <span className="relative flex w-2.5 h-2.5">
             {connected && activeCount > 0 && (
               <span className="absolute inline-flex w-full h-full rounded-full bg-emerald-400 opacity-60 motion-safe:animate-ping" />
@@ -1208,7 +1208,7 @@ function OnlineStack() {
     >
       <span className="flex -space-x-2">
         {people.slice(0, 4).map((p) => (
-          <span key={p.userId} className="ring-2 ring-[#FBF8F3] rounded-full">
+          <span key={p.userId} className="ring-2 ring-brand-surface rounded-full">
             <Avatar name={p.name} presence={p} size="sm" />
           </span>
         ))}

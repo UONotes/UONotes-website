@@ -138,9 +138,9 @@ export function Navbar() {
           </div>
 
           {/* Desktop Actions (Sign in or Account Menu) */}
-          <div className="flex items-center">
+          <div className="flex items-center gap-2">
             {isLoggedIn ? (
-               <AccountMenu 
+               <AccountMenu
                  lang={lang} 
                  toggleLang={() => setLang((prev) => (prev === "EN" ? "FR" : "EN"))} 
                  onSignOut={handleSignOut}

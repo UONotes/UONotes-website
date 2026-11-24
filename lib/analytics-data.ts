@@ -160,9 +160,14 @@ export function computeAnalytics(
   const nameOf = (p?: ProfileRow) => p?.full_name || p?.email?.split("@")[0] || "Unknown";
   const contributorKey = (n: NoteRow) => n.uploader_id || n.author_name || null;
   const noteDecisions = audit.filter((r) => r.action_type.startsWith("NOTE_"));
+  // A director publishing their own corrected file is still an approval.
+  const isApproval = (type: string) => type === "NOTE_APPROVED" || type === "NOTE_APPROVED_WITH_FIXES";
+  // "Fixes" covers notes directors fixed themselves, plus old rows from
+  // when fixes were sent back to the submitter.
+  const isFixDecision = (type: string) => type === "NOTE_APPROVED_WITH_FIXES" || type === "NOTE_CHANGES_REQUESTED";
 
   // ── Metrics ──
-  const approvalsRows = noteDecisions.filter((r) => r.action_type === "NOTE_APPROVED").map((r) => ({ at: r.created_at }));
+  const approvalsRows = noteDecisions.filter((r) => isApproval(r.action_type)).map((r) => ({ at: r.created_at }));
   const approvedNotes = sortedNotes.filter((n) => n.status === "approved");
   const hoursRows = approvedNotes.filter((n) => n.reviewed_at).map((n) => ({ at: n.reviewed_at as string, value: n.hours_awarded || 0 }));
   const metric = (label: string, unit: string, rows: { at: string; value?: number }[]): Metric => {
@@ -201,7 +206,7 @@ export function computeAnalytics(
   const attention = {
     pending: pending.length,
     flagged: sortedNotes.filter((n) => n.status === "flagged").length,
-    awaitingFixes: sortedNotes.filter((n) => n.status === "changes_requested").length,
+    awaitingFixes: sortedNotes.filter((n) => n.status === "in_revision" || n.status === "fix_review").length,
     oldestHours: pending[0] ? ageH(pending[0]) : null,
     over48h: pending.filter((n) => ageH(n) > 48).length,
   };
@@ -228,7 +233,7 @@ export function computeAnalytics(
   const status = {
     approved: approvedNotes.length,
     pending: pending.length,
-    changes: count("changes_requested"),
+    changes: count("in_revision") + count("fix_review"),
     flagged: attention.flagged,
     rejected: count("rejected"),
     total: sortedNotes.length,
@@ -250,10 +255,11 @@ export function computeAnalytics(
     { label: "Still live", value: status.approved },
   ];
 
-  const decisionsIn = (pred: (iso: string) => boolean, type: string) => noteDecisions.filter((r) => r.action_type === type && pred(r.created_at)).length;
+  const decisionsIn = (pred: (iso: string) => boolean, match: (type: string) => boolean) =>
+    noteDecisions.filter((r) => match(r.action_type) && pred(r.created_at)).length;
   const approvalRateFor = (pred: (iso: string) => boolean) => {
-    const a = decisionsIn(pred, "NOTE_APPROVED");
-    return ratio(a, a + decisionsIn(pred, "NOTE_REJECTED"));
+    const a = decisionsIn(pred, isApproval);
+    return ratio(a, a + decisionsIn(pred, (type) => type === "NOTE_REJECTED"));
   };
   let resubApproved = 0;
   for (const id of sentBack) if (noteById.get(id)?.status === "approved") resubApproved++;
@@ -284,7 +290,8 @@ export function computeAnalytics(
   ] as const;
 
   // ── Decisions over time ──
-  const decisionSeries = (type: string) => series(noteDecisions.filter((r) => r.action_type === type).map((r) => ({ at: r.created_at })));
+  const decisionSeries = (match: (type: string) => boolean) =>
+    series(noteDecisions.filter((r) => match(r.action_type)).map((r) => ({ at: r.created_at })));
 
   // ── Library ──
   const courseCounts = new Map<string, number>();
@@ -364,6 +371,7 @@ export function computeAnalytics(
     const mine = noteDecisions.filter((r) => r.admin_id === p.id);
     const approved = mine.filter((r) => r.action_type === "NOTE_APPROVED").length;
     const rejected = mine.filter((r) => r.action_type === "NOTE_REJECTED").length;
+    const fixedApproved = mine.filter((r) => r.action_type === "NOTE_APPROVED_WITH_FIXES").length;
     const inRangeCount = inRangeDecisions.filter((r) => r.admin_id === p.id).length;
     return {
       id: p.id,
@@ -372,9 +380,9 @@ export function computeAnalytics(
       lastActive: p.last_admin_active_at,
       approved,
       rejected,
-      changes: mine.filter((r) => r.action_type === "NOTE_CHANGES_REQUESTED").length,
+      changes: mine.filter((r) => isFixDecision(r.action_type)).length,
       inRange: inRangeCount,
-      approvalRate: ratio(approved, approved + rejected),
+      approvalRate: ratio(approved + fixedApproved, approved + fixedApproved + rejected),
       share: ratio(inRangeCount, inRangeDecisions.length),
       medianHours: percentile(speedByAdmin.get(p.id) || [], 50),
     };
@@ -420,9 +428,9 @@ export function computeAnalytics(
     },
     queueAging,
     decisions: {
-      approved: decisionSeries("NOTE_APPROVED"),
-      changes: decisionSeries("NOTE_CHANGES_REQUESTED"),
-      rejected: decisionSeries("NOTE_REJECTED"),
+      approved: decisionSeries((type) => type === "NOTE_APPROVED"),
+      changes: decisionSeries(isFixDecision),
+      rejected: decisionSeries((type) => type === "NOTE_REJECTED"),
     },
     library: {
       published: approvedNotes.length,

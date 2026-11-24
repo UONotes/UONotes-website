@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { UserSearchControls } from "@/components/admin/users/UserSearchControls";
 import { UserListTable } from "@/components/admin/users/UserListTable";
 import { formatDate } from "@/lib/dateFormat";
+import { roleOf } from "@/lib/admin";
 
 type UserRow = {
   id: string;
@@ -9,6 +10,7 @@ type UserRow = {
   email: string | null;
   is_admin: boolean | null;
   is_super_admin: boolean | null;
+  is_vp_notes?: boolean | null;
   status: "ACTIVE" | "BANNED" | null;
   created_at: string;
   notes?: { count: number }[];
@@ -37,7 +39,7 @@ export default async function AdminUsersPage({
 
   let dbQuery = supabase
     .from("profiles")
-    .select("id, full_name, email, is_admin, is_super_admin, status, created_at, notes!notes_uploader_id_fkey(count)", { count: "exact" });
+    .select("id, full_name, email, is_admin, is_super_admin, is_vp_notes, status, created_at, notes!notes_uploader_id_fkey(count)", { count: "exact" });
 
   if (query) {
     dbQuery = dbQuery.or(`full_name.ilike.%${query}%,email.ilike.%${query}%`);
@@ -45,8 +47,10 @@ export default async function AdminUsersPage({
 
   if (roleFilter === "SUPER_ADMIN") {
     dbQuery = dbQuery.eq("is_super_admin", true);
+  } else if (roleFilter === "VP_NOTES") {
+    dbQuery = dbQuery.eq("is_vp_notes", true).eq("is_super_admin", false);
   } else if (roleFilter === "ADMIN") {
-    dbQuery = dbQuery.eq("is_admin", true).eq("is_super_admin", false);
+    dbQuery = dbQuery.eq("is_admin", true).eq("is_super_admin", false).eq("is_vp_notes", false);
   } else if (roleFilter === "STUDENT") {
     dbQuery = dbQuery.eq("is_admin", false);
   }
@@ -66,7 +70,7 @@ export default async function AdminUsersPage({
     name: user.full_name || "Unknown",
     email: user.email || "",
     // THE FIX: Explicitly cast the string to the expected union type to satisfy strict Next.js builds
-    role: (user.is_super_admin ? "SUPER_ADMIN" : user.is_admin ? "ADMIN" : "STUDENT") as "SUPER_ADMIN" | "ADMIN" | "STUDENT",
+    role: roleOf(user),
     status: user.status || "ACTIVE",
     joinedAt: formatDate(user.created_at),
     submissionCount: user.notes?.[0]?.count || 0,
@@ -75,7 +79,7 @@ export default async function AdminUsersPage({
   return (
     <div className="w-full max-w-6xl mx-auto flex flex-col gap-6">
       <div>
-        <h1 className="font-logo text-3xl font-bold text-[#23201D] tracking-tight">Users</h1>
+        <h1 className="font-logo text-3xl font-bold text-brand-dark tracking-tight">Users</h1>
         <p className="text-sm text-gray-500 mt-1">
           {totalUsers || 0} people registered on the platform.
         </p>

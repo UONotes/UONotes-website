@@ -4,7 +4,7 @@ import { useCallback, useRef, useState } from "react";
 import { ArrowDownRight, ArrowUpRight, Minus } from "lucide-react";
 
 // ─── Tokens ──────────────────────────────────────────────────────────
-export const INK = "#23201D";
+export const INK = "#2A2A2A";
 export const RED = "#8F0018";
 export const MUTED = "#B9B1A8"; // previous-period / comparison series
 export const GRID = "rgba(35,32,29,0.07)";
@@ -113,7 +113,7 @@ function Tooltip({ x, width, title, rows }: { x: number; width: number; title: s
   const flip = x > width * 0.6;
   return (
     <div
-      className="absolute top-0 z-20 pointer-events-none bg-[#23201D] text-white rounded-xl px-3 py-2 shadow-xl min-w-[9rem]"
+      className="absolute top-0 z-20 pointer-events-none bg-brand-red text-white rounded-xl px-3 py-2 shadow-xl min-w-[9rem]"
       style={{ left: x, transform: `translateX(${flip ? "calc(-100% - 12px)" : "12px"})` }}
     >
       <p className="text-[11px] text-white/60 mb-1">{title}</p>
@@ -376,7 +376,7 @@ export function Sparkline({
             style={{ left: `${px(hover)}%`, top: `${(py(values[hover]) / 48) * 100}%`, backgroundColor: color }}
           />
           <span
-            className="absolute -top-7 z-10 -translate-x-1/2 whitespace-nowrap bg-[#23201D] text-white text-[10px] rounded-md px-2 py-1 pointer-events-none"
+            className="absolute -top-7 z-10 -translate-x-1/2 whitespace-nowrap bg-brand-red text-white text-[10px] rounded-md px-2 py-1 pointer-events-none"
             style={{ left: `${Math.min(85, Math.max(15, px(hover)))}%` }}
           >
             {labels[hover]?.tooltip}: <b className="font-semibold">{format(values[hover])}</b>
@@ -522,7 +522,7 @@ export function Heatmap({ grid, unit }: { grid: number[][]; unit: string }) {
                 onFocus={() => setActive({ d, b })}
                 onClick={() => setActive({ d, b })}
                 className={`h-8 sm:h-9 rounded-[5px] transition-transform hover:scale-110 focus-visible:outline-none ${
-                  shown && shown.d === d && shown.b === b ? "ring-2 ring-[#23201D] ring-offset-2 ring-offset-white" : ""
+                  shown && shown.d === d && shown.b === b ? "ring-2 ring-brand-dark ring-offset-2 ring-offset-white" : ""
                 }`}
                 style={{ backgroundColor: RAMP[step(v)] }}
               />
@@ -538,7 +538,7 @@ export function Heatmap({ grid, unit }: { grid: number[][]; unit: string }) {
             <>
               <p className="font-semibold text-gray-900 mt-0.5">{DAY_NAMES[shown.d]}</p>
               <p className="text-sm text-gray-600">{BLOCK_RANGES[shown.b]}</p>
-              <p className="font-logo text-3xl font-bold text-[#23201D] mt-2 tabular-nums">{grid[shown.d][shown.b]}</p>
+              <p className="font-logo text-3xl font-bold text-brand-dark mt-2 tabular-nums">{grid[shown.d][shown.b]}</p>
               <p className="text-[11px] text-gray-400">{unit}</p>
             </>
           ) : (

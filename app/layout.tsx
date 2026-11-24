@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import "./globals.css";
 import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
-import { ChangesRequestedNotice } from "@/components/notes/ChangesRequestedNotice";
 import { Analytics } from "@vercel/analytics/next";
 
 export const metadata: Metadata = {
@@ -45,7 +44,6 @@ export default function RootLayout({
         </main>
         <Footer />
         <Analytics />
-        <ChangesRequestedNotice />
       </body>
     </html>
   );

@@ -5,6 +5,7 @@ import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { createR2Client, R2_BUCKET_NAME } from "@/lib/r2";
 import { HistoryDocumentViewer } from "@/components/admin/HistoryDocumentViewer";
 import { DecisionDetailPanel, type DecisionDetail, type DecisionType } from "@/components/admin/DecisionDetailPanel";
+import { DECISION_ACTIONS } from "@/lib/review";
 
 type NoteAuditDetails = {
   note_title?: string | null;
@@ -12,6 +13,9 @@ type NoteAuditDetails = {
   note_owner_id?: string | null;
   reason?: string | null;
   attachment_key?: string | null;
+  original_file_key?: string | null;
+  checked_by?: string | null;
+  recommendation?: "approve" | "reject" | null;
 };
 
 type ReviewerJoin = { id: string; full_name: string | null; email: string | null };
@@ -57,7 +61,7 @@ export default async function AdminHistoryDetailPage({
 
   if (
     row.target_type !== "note" ||
-    !["NOTE_APPROVED", "NOTE_REJECTED", "NOTE_CHANGES_REQUESTED"].includes(row.action_type)
+    !(DECISION_ACTIONS as readonly string[]).includes(row.action_type)
   ) {
     notFound();
   }
@@ -70,6 +74,7 @@ export default async function AdminHistoryDetailPage({
     title: string;
     course_code: string;
     file_key: string | null;
+    file_type: string | null;
     file_size: number | null;
     language: string | null;
     note_types: string[] | null;
@@ -84,7 +89,7 @@ export default async function AdminHistoryDetailPage({
   if (row.target_id) {
     const { data: noteRow } = await supabase
       .from("notes")
-      .select("id, title, course_code, file_key, file_size, language, note_types, author_email, author_name, uploader_id, created_at, status, hours_awarded")
+      .select("id, title, course_code, file_key, file_type, file_size, language, note_types, author_email, author_name, uploader_id, created_at, status, hours_awarded")
       .eq("id", row.target_id)
       .single();
     note = noteRow ?? null;
@@ -98,9 +103,12 @@ export default async function AdminHistoryDetailPage({
   }
 
   let attachmentUrl: string | null = null;
-  if (row.details?.attachment_key) {
+  // Legacy fix requests carried a reviewer attachment; fixed notes keep
+  // the submitter's original upload.
+  const attachmentKey = row.details?.attachment_key || row.details?.original_file_key;
+  if (attachmentKey) {
     const r2 = createR2Client();
-    const command = new GetObjectCommand({ Bucket: R2_BUCKET_NAME, Key: row.details.attachment_key });
+    const command = new GetObjectCommand({ Bucket: R2_BUCKET_NAME, Key: attachmentKey });
     attachmentUrl = await getSignedUrl(r2, command, { expiresIn: 3600 });
   }
 
@@ -117,6 +125,16 @@ export default async function AdminHistoryDetailPage({
     submitterName = submitterName ?? ownerProfile?.full_name ?? null;
   }
 
+  let checkerName: string | null = null;
+  if (row.details?.checked_by) {
+    const { data: checkerProfile } = await supabase
+      .from("profiles")
+      .select("full_name, email")
+      .eq("id", row.details.checked_by)
+      .single();
+    checkerName = checkerProfile?.full_name || checkerProfile?.email || "Unknown director";
+  }
+
   const title = row.details?.note_title || note?.title || "Note no longer available";
   const courseCode = row.details?.course_code || note?.course_code || "—";
 
@@ -125,6 +143,8 @@ export default async function AdminHistoryDetailPage({
     decidedAt: row.created_at,
     reviewerName,
     reviewerEmail: reviewer?.email || "",
+    checkerName,
+    checkerRecommendation: row.details?.recommendation ?? null,
     reason: row.details?.reason || null,
     attachmentUrl,
     hoursAwarded: note?.hours_awarded ?? null,
@@ -141,12 +161,14 @@ export default async function AdminHistoryDetailPage({
   };
 
   return (
-    <div className="flex flex-col lg:flex-row h-full bg-[#FBF8F3] overflow-hidden relative">
-      <div className="flex-1 h-full bg-[#3D3A36] overflow-hidden relative z-0">
-        <HistoryDocumentViewer title={title} fileUrl={fileUrl} />
+    <div className="flex flex-col lg:flex-row h-full bg-brand-surface overflow-y-auto lg:overflow-hidden relative">
+      {/* Phones and tablets: document on top at a fixed height, details and
+          actions scroll underneath. Laptops and up: side by side. */}
+      <div className="h-[60dvh] md:h-[70dvh] lg:h-full lg:flex-1 shrink-0 lg:shrink lg:min-w-0 bg-[#262626] overflow-hidden relative z-0">
+        <HistoryDocumentViewer title={title} fileUrl={fileUrl} fileType={note?.file_type ?? null} fileKey={note?.file_key ?? null} />
       </div>
 
-      <div className="w-full lg:w-[420px] h-full bg-white border-l border-black/5 flex flex-col overflow-y-auto z-10">
+      <div className="w-full lg:w-[380px] xl:w-[420px] lg:h-full shrink-0 bg-white border-t lg:border-t-0 lg:border-l border-brand-border-light flex flex-col lg:overflow-y-auto z-10">
         <DecisionDetailPanel detail={detail} />
       </div>
     </div>

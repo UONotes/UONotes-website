@@ -1,11 +1,14 @@
 import Link from "next/link";
 import { redirect, notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { ArrowLeft, Shield, Ban, CheckCircle2, Award, FileStack, CalendarDays } from "lucide-react";
+import { ArrowLeft, Ban, CheckCircle2, Award, FileStack, CalendarDays } from "lucide-react";
 import { UserSubmissionsList, type UserSubmission, type SubmissionStatus } from "@/components/admin/users/UserSubmissionsList";
 import { formatDate } from "@/lib/dateFormat";
+import { RoleControls } from "@/components/admin/users/RoleControls";
+import { RoleBadge } from "@/components/admin/users/RoleBadge";
+import { roleOf } from "@/lib/admin";
 
-const DECISION_ACTIONS = ["NOTE_APPROVED", "NOTE_REJECTED", "NOTE_CHANGES_REQUESTED"] as const;
+import { DECISION_ACTIONS } from "@/lib/review";
 
 type NoteRow = {
   id: string;
@@ -41,7 +44,7 @@ export default async function AdminUserDetailPage({
 
   const { data: callerProfile } = await supabase
     .from("profiles")
-    .select("is_admin")
+    .select("is_admin, is_super_admin")
     .eq("id", caller.id)
     .single();
 
@@ -49,7 +52,7 @@ export default async function AdminUserDetailPage({
 
   const { data: targetUser } = await supabase
     .from("profiles")
-    .select("id, full_name, email, is_admin, is_super_admin, status, created_at")
+    .select("id, full_name, email, is_admin, is_super_admin, is_vp_notes, status, created_at")
     .eq("id", id)
     .single();
 
@@ -90,7 +93,7 @@ export default async function AdminUserDetailPage({
 
   const submissions: UserSubmission[] = notes.map((note) => {
     const decision = latestDecisionByNote.get(note.id);
-    const isActive = note.status === "pending" || note.status === "flagged" || note.status === "changes_requested";
+    const isActive = note.status === "pending" || note.status === "flagged" || note.status === "in_revision" || note.status === "fix_review";
 
     return {
       id: note.id,
@@ -115,7 +118,7 @@ export default async function AdminUserDetailPage({
     approved: submissions.filter((s) => s.status === "approved").length,
     rejected: submissions.filter((s) => s.status === "rejected").length,
     pending: submissions.filter((s) => s.status === "pending").length,
-    changesRequested: submissions.filter((s) => s.status === "changes_requested").length,
+    beingFixed: submissions.filter((s) => s.status === "in_revision").length,
     flagged: submissions.filter((s) => s.status === "flagged").length,
     totalHours: submissions.reduce((sum, s) => sum + (s.hoursAwarded || 0), 0),
   };
@@ -123,7 +126,8 @@ export default async function AdminUserDetailPage({
   const name = targetUser.full_name || targetUser.email?.split("@")[0] || "Unknown";
   const isBanned = targetUser.status === "BANNED";
   const isSuperAdmin = targetUser.is_super_admin;
-  const isAdmin = targetUser.is_admin;
+  // Only super admins manage roles, and never their own or another super admin's.
+  const canManageRoles = Boolean(callerProfile.is_super_admin) && !isSuperAdmin && !isBanned && targetUser.id !== caller.id;
 
   return (
     <div className="w-full max-w-6xl mx-auto space-y-6">
@@ -131,48 +135,42 @@ export default async function AdminUserDetailPage({
         <ArrowLeft className="w-3.5 h-3.5" /> Back to users
       </Link>
 
-      <div className="flex flex-col sm:flex-row sm:items-center gap-4 pb-6 border-b border-black/5">
-        <div className={`w-14 h-14 rounded-2xl flex items-center justify-center font-semibold text-xl shrink-0 ${
-          isSuperAdmin ? "bg-purple-600 text-white" : isBanned ? "bg-gray-100 text-gray-400" : "bg-red-50 text-brand-red"
-        }`}>
-          {name.charAt(0).toUpperCase()}
-        </div>
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 flex-wrap">
-            <h1 className="font-logo text-2xl font-bold text-[#23201D] tracking-tight">{name}</h1>
-            {isSuperAdmin ? (
-              <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-purple-700 bg-purple-50 px-2.5 py-1 rounded-full">
-                <Shield className="w-3 h-3" /> Super admin
-              </span>
-            ) : isAdmin ? (
-              <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-brand-red bg-red-50 px-2.5 py-1 rounded-full">
-                <Shield className="w-3 h-3" /> Admin
-              </span>
-            ) : null}
-            {isBanned && (
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-rose-50 text-rose-600 text-xs font-semibold">
-                <Ban className="w-3 h-3" /> Banned
-              </span>
-            )}
+      <header className="rounded-lg border border-brand-border-light bg-white p-5 sm:p-6">
+        <div className="flex flex-col md:flex-row md:items-center gap-4">
+          <div className="flex items-center gap-4 flex-1 min-w-0">
+            <div
+              className={`w-14 h-14 rounded-full flex items-center justify-center font-semibold text-xl shrink-0 ${
+                isBanned ? "bg-gray-100 text-gray-400" : "bg-brand-pink text-brand-red"
+              }`}
+            >
+              {name.charAt(0).toUpperCase()}
+            </div>
+            <div className="min-w-0">
+              <h1 className="font-logo text-2xl font-bold text-brand-dark tracking-tight truncate">{name}</h1>
+              <p className="text-sm text-brand-muted truncate">{targetUser.email}</p>
+              <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1.5">
+                <RoleBadge role={roleOf(targetUser)} />
+                {isBanned && (
+                  <span className="inline-flex items-center gap-1 text-xs font-semibold text-rose-600">
+                    <Ban className="w-3 h-3" /> Banned
+                  </span>
+                )}
+                <span className="inline-flex items-center gap-1 text-xs text-brand-muted">
+                  <CalendarDays className="w-3.5 h-3.5" /> Joined {formatDate(targetUser.created_at)}
+                </span>
+              </div>
+            </div>
           </div>
-          <p className="text-sm text-gray-500 mt-0.5">{targetUser.email}</p>
+          {canManageRoles && <RoleControls userId={targetUser.id} role={roleOf(targetUser)} userName={name} />}
         </div>
-        <div className="text-right shrink-0">
-          <p className="text-xs text-gray-400 flex items-center gap-1 justify-end">
-            <CalendarDays className="w-3.5 h-3.5" /> Joined
-          </p>
-          <p className="text-sm font-semibold text-gray-900">
-            {formatDate(targetUser.created_at)}
-          </p>
-        </div>
-      </div>
+      </header>
 
       {/* Stat strip */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 divide-x divide-black/5 border border-black/5 rounded-2xl bg-white overflow-hidden">
-        <StatCell label="Submissions" value={stats.total} icon={FileStack} accent="text-gray-700" />
-        <StatCell label="Approved" value={stats.approved} icon={CheckCircle2} accent="text-emerald-600" />
-        <StatCell label="Rejected" value={stats.rejected} icon={Ban} accent="text-rose-600" />
-        <StatCell label="Hours earned" value={stats.totalHours} icon={Award} accent="text-amber-600" />
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <StatCell label="Submissions" value={stats.total} icon={FileStack} />
+        <StatCell label="Approved" value={stats.approved} icon={CheckCircle2} />
+        <StatCell label="Rejected" value={stats.rejected} icon={Ban} />
+        <StatCell label="Hours earned" value={stats.totalHours} icon={Award} />
       </div>
 
       <UserSubmissionsList submissions={submissions} />
@@ -184,20 +182,17 @@ function StatCell({
   label,
   value,
   icon: Icon,
-  accent,
 }: {
   label: string;
   value: number;
   icon: typeof FileStack;
-  accent: string;
 }) {
   return (
-    <div className="p-5 flex items-center gap-3">
-      <Icon className={`w-4 h-4 ${accent} shrink-0`} />
-      <div>
-        <p className={`text-xl font-bold font-logo ${accent}`}>{value}</p>
-        <p className="text-xs text-gray-500 mt-0.5">{label}</p>
-      </div>
+    <div className="rounded-lg border border-brand-border-light bg-white p-4">
+      <p className="flex items-center gap-1.5 text-xs font-medium text-brand-muted">
+        <Icon className="w-3.5 h-3.5" /> {label}
+      </p>
+      <p className="mt-2 text-2xl font-semibold text-brand-dark tabular-nums">{value}</p>
     </div>
   );
 }
