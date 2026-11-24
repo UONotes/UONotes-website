@@ -36,11 +36,11 @@ export function fmtDuration(hours: number | null | undefined) {
   return `${(hours / 24).toFixed(1)}d`;
 }
 
-/** Rounds up to a 1/2/2.5/5 × 10ⁿ step so gridlines land on readable numbers. */
+/** Rounds up so the top and middle gridlines both land on readable numbers. */
 function niceMax(value: number) {
-  if (value <= 0) return 1;
+  if (value <= 2) return 2;
   const mag = 10 ** Math.floor(Math.log10(value));
-  const step = [1, 2, 2.5, 5, 10].find((s) => s * mag >= value) ?? 10;
+  const step = [1, 2, 4, 6, 8, 10].find((s) => s * mag >= value) ?? 10;
   return step * mag;
 }
 
